@@ -1,0 +1,1404 @@
+<?xml version="1.0"?>
+<robot name="hdt_michigan" xmlns:xacro="http://www.ros.org/wiki/xacro">
+    <xacro:macro name="collision_visual" params="name *origin *geometry *material">
+        <collision name="${name}_collision">
+            <xacro:insert_block name="origin"/>
+            <xacro:insert_block name="geometry"/>
+        </collision>
+        <visual name="${name}_visual">
+            <xacro:insert_block name="origin"/>
+            <xacro:insert_block name="geometry"/>
+            <xacro:insert_block name="material"/>
+        </visual>
+    </xacro:macro>
+    <xacro:property name="robot_name" default="hdt_michigan"/>
+    <xacro:property name="hardware_interface" default="hardware_interface/PositionJointInterface"/>
+    <xacro:property name="gripper_joint_damping" value="0.01"/>
+    <xacro:property name="joint_friction" value="0.01"/>
+    <xacro:property name="kinematic_arms" value="1"/>
+
+    <xacro:include filename="$(find hdt_michigan_description)/urdf/transmission.xacro"/>
+
+    <!-- constants -->
+    <xacro:property name="M_PI" value="3.1415926535897931"/>
+
+    <!-- materials -->
+    <material name="black">
+        <color rgba="${0/255} ${0/255} ${0/255} 1.0"/>
+    </material>
+
+    <material name="grey">
+        <color rgba="${60/255} ${60/255} ${60/255} 1.0"/>
+    </material>
+
+    <material name="orange">
+        <color rgba="${255/255} ${140/255} ${0/255} 1.0"/>
+    </material>
+
+    <material name="maroon">
+        <color rgba="${128/255} ${0/255} ${0/255} 1.0"/>
+    </material>
+
+    <material name="white">
+        <color rgba="${255/255} ${255/255} ${255/255} 1.0"/>
+    </material>
+
+    <material name="blue">
+        <color rgba="${4/255} ${30/255} ${66/255} 1.0"/>
+    </material>
+
+    <material name="maize">
+        <color rgba="${255/255} ${199/255} ${44/255} 1.0"/>
+    </material>
+
+    <!-- import gazebo definitions -->
+    <xacro:include filename="$(find hdt_michigan_description)/urdf/hdt_michigan.gazebo.xacro"/>
+
+    <!-- segment 0 -->
+    <link name="${robot_name}_root"/>
+
+    <joint name="husky_joint" type="fixed">
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <parent link="hdt_michigan_root"/>
+        <child link="husky"/>
+    </joint>
+
+    <link name="husky">
+        <inertial>
+            <origin xyz="0 -0.32 -0.25" rpy="0 0 0"/>
+            <mass value="25"/>
+            <inertia ixx="2.338"
+                     ixy="0"
+                     ixz="0"
+                     iyy="2.338"
+                     iyz="0"
+                     izz="4.166"/>
+        </inertial>
+
+        <xacro:collision_visual name="husky_base">
+            <!-- NOTE: the order of the following elements matters! -->
+            <origin xyz="0 -0.32 -0.15" rpy="0 0 0"/>
+            <geometry>
+                <box size="1 1 0.37"/>
+            </geometry>
+            <material name="black"/>
+        </xacro:collision_visual>
+
+        <xacro:collision_visual name="protect_cables">
+            <origin xyz="0.0 -0.1 0.18" rpy="0 0 0"/>
+            <geometry>
+                <box size="0.2 0.2 0.4"/>
+            </geometry>
+            <material name="maize"/>
+        </xacro:collision_visual>
+
+        <xacro:collision_visual name="battery">
+            <origin xyz="0 -0.50 0.10" rpy="0 0 0"/>
+            <geometry>
+                <box size="1 0.65 0.4"/>
+            </geometry>
+            <material name="maize"/>
+        </xacro:collision_visual>
+    </link>
+
+    <joint name="base" type="fixed">
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <parent link="hdt_michigan_root"/>
+        <child link="base"/>
+    </joint>
+
+    <link name="base"/>
+
+    <link name="realsense">
+        <collision name="realsense_collision">
+            <origin xyz="0.038 0 0.48" rpy="0 0 0"/>
+            <geometry>
+                <box size="0.26 0.15 0.2"/>
+            </geometry>
+        </collision>
+        <visual name="realsense_visual">
+            <origin xyz="0.035 0.032 0.521" rpy="1.5707 0 3.14159"/>
+            <geometry>
+                <mesh filename="package://hdt_michigan_description/meshes/VAL_REALSENSE_MOUNT.STL" scale="1.0 1.0 1.0"/>
+            </geometry>
+            <material name="grey"/>
+        </visual>
+    </link>
+
+    <joint name="realsense_joint" type="fixed">
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <parent link="torso"/>
+        <child link="realsense"/>
+    </joint>
+
+    <!-- mounting plate -->
+    <joint name="pedestal_joint" type="fixed">
+        <origin xyz="0 0 0" rpy="-${M_PI/2} 0 0"/>
+        <parent link="base"/>
+        <child link="pedestal_link"/>
+    </joint>
+
+    <link name="pedestal_link">
+        <collision>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+                <mesh filename="package://hdt_michigan_description/meshes/PEDESTAL_ASSEMBLY.STL" scale="1.0 1.0 1.0"/>
+            </geometry>
+        </collision>
+
+        <visual>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+                <mesh filename="package://hdt_michigan_description/meshes/PEDESTAL_ASSEMBLY.STL"/>
+            </geometry>
+            <material name="maize"/>
+        </visual>
+
+        <inertial>
+            <origin xyz="0.00824926 0.00007832 0.02192315" rpy="0 0 0"/>
+            <mass value="0.25375688"/>
+            <inertia
+                    ixx="0.00014143" ixy="0.0" ixz="0.0"
+                    iyy="0.00016740" iyz="0.0"
+                    izz="0.00020523"/>
+        </inertial>
+
+    </link>
+
+
+    <!-- Drive 56 -->
+    <joint name="joint0" type="fixed">
+        <origin xyz="0 0 .0891" rpy="${-M_PI/2} 0 0"/>
+        <parent link="pedestal_link"/>
+        <child link="drive56"/>
+    </joint>
+
+    <link name="drive56">
+        <collision>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+                <mesh filename="package://hdt_michigan_description/meshes/MK4_MT.STL" scale="1.0 1.0 1.0"/>
+            </geometry>
+        </collision>
+
+        <visual>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+                <mesh filename="package://hdt_michigan_description/meshes/MK4_MT.STL"/>
+            </geometry>
+            <material name="blue"/>
+        </visual>
+
+
+        <inertial>
+            <origin xyz="-0.00004358 0.00244867 0.00739686" rpy="0 0 0"/>
+            <mass value="1.73427319"/>
+            <inertia
+                    ixx="0.00212963" ixy="-0.00000090" ixz="-0.00000052"
+                    iyy="0.00199851" iyz="-0.00004418"
+                    izz="0.00138126"/>
+        </inertial>
+
+    </link>
+
+    <!-- Drive 57 -->
+    <joint name="joint56" type="revolute">
+        <hdt id="56" kmin="100" kmax="200" inertia="0.1"/>
+        <axis xyz="0 -1 0"/>
+        <limit effort="180.0" lower="${-2*M_PI}" upper="${2*M_PI}" velocity="0.45"/>
+        <origin xyz="0 0 -.082642" rpy="${M_PI/2} 0 ${M_PI/2}"/>
+        <parent link="drive56"/>
+        <child link="drive57"/>
+        <dynamics damping="2.0" friction="${joint_friction}"/>
+    </joint>
+    <xacro:hdt_transmission hardware_interface="${hardware_interface}" joint_name="joint56"/>
+
+    <link name="drive57">
+        <collision>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+                <mesh filename="package://hdt_michigan_description/meshes/MK4_MT.STL" scale="1.0 1.0 1.0"/>
+            </geometry>
+        </collision>
+
+        <visual>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+                <mesh filename="package://hdt_michigan_description/meshes/MK4_MT.STL"/>
+            </geometry>
+            <material name="blue"/>
+        </visual>
+
+        <inertial>
+            <origin xyz="-0.00003658 0.00177045 0.00631346" rpy="0 0 0"/>
+            <mass value="1.39278013"/>
+            <inertia
+                    ixx="0.00159582" ixy="-0.00000077" ixz="-0.00000081"
+                    iyy="0.00151230" iyz="-0.00002261"
+                    izz="0.00105406"/>
+        </inertial>
+    </link>
+
+    <!-- torso bracket -->
+    <joint name="joint57" type="revolute">
+        <hdt id="57" kmin="100" kmax="200" inertia="0.1"/>
+        <axis xyz="-1 0 0"/>
+        <limit effort="360.0" lower="-${M_PI/2}" upper="${M_PI/2}" velocity="0.45"/>
+        <origin xyz="0 0 -.04085" rpy="${M_PI/2} -${M_PI/2} 0"/>
+        <parent link="drive57"/>
+        <child link="torso"/>
+        <dynamics damping="1.0" friction="${joint_friction}"/>
+    </joint>
+    <xacro:hdt_transmission hardware_interface="${hardware_interface}" joint_name="joint57"/>
+
+    <link name="torso">
+        <collision>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+                <mesh filename="package://hdt_michigan_description/meshes/TORSO.STL" scale="1.0 1.0 1.0"/>
+            </geometry>
+        </collision>
+
+        <visual>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+                <mesh filename="package://hdt_michigan_description/meshes/TORSO.STL"/>
+            </geometry>
+            <material name="maize"/>
+        </visual>
+        <inertial>
+            <origin xyz="0.00013570 -0.04958110 0.01659126" rpy="0 0 0"/>
+            <mass value="0.48998269"/>
+            <inertia ixx="0.00762375"
+                     ixy="0"
+                     ixz="0"
+                     iyy="0.01156795"
+                     iyz="0"
+                     izz="0.00440141"/>
+        </inertial>
+    </link>
+
+    <!-- Drive 41 -->
+    <joint name="left0" type="fixed">
+        <origin xyz="-.092094 0 .44399" rpy="-${M_PI/2} 0 -${M_PI/2}"/>
+        <parent link="torso"/>
+        <child link="drive41"/>
+    </joint>
+
+    <link name="drive41">
+        <collision>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+                <mesh filename="package://hdt_michigan_description/meshes/MK4_MT.STL" scale="1.0 1.0 1.0"/>
+            </geometry>
+        </collision>
+
+        <visual>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+                <mesh filename="package://hdt_michigan_description/meshes/MK4_MT.STL"/>
+            </geometry>
+            <material name="blue"/>
+        </visual>
+
+
+        <inertial>
+            <origin xyz="-0.00004358 0.00244867 0.00739686" rpy="0 0 0"/>
+            <mass value="1.73427319"/>
+            <inertia
+                    ixx="0.00212963" ixy="0.0" ixz="0.0"
+                    iyy="0.00199851" iyz="0.0"
+                    izz="0.00138126"/>
+        </inertial>
+
+    </link>
+
+    <!-- Drive 42 -->
+    <joint name="joint41" type="revolute">
+        <hdt id="41" kmin="100" kmax="200" inertia="0.1"/>
+        <axis xyz="0 1 0"/>
+        <limit effort="18.0" lower="${-2*M_PI}" upper="${2*M_PI}" velocity="0.45"/>
+        <origin xyz="0 0 -.082642" rpy="${M_PI/2} 0 -${M_PI/2}"/>
+        <parent link="drive41"/>
+        <child link="drive42"/>
+        <dynamics damping="1.0" friction="${joint_friction}"/>
+    </joint>
+    <xacro:hdt_transmission hardware_interface="${hardware_interface}" joint_name="joint41"/>
+
+    <link name="drive42">
+        <collision>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+                <mesh filename="package://hdt_michigan_description/meshes/MK4_LT.STL" scale="1.0 1.0 1.0"/>
+            </geometry>
+        </collision>
+
+        <visual>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+                <mesh filename="package://hdt_michigan_description/meshes/MK4_LT.STL"/>
+            </geometry>
+            <material name="blue"/>
+        </visual>
+
+        <inertial>
+            <origin xyz="-0.00003658 0.00177045 0.00631346" rpy="0 0 0"/>
+            <mass value="1.39278013"/>
+            <inertia
+                    ixx="0.00159582" ixy="-0.00000077" ixz="-0.00000081"
+                    iyy="0.00151230" iyz="-0.00002261"
+                    izz="0.00105406"/>
+        </inertial>
+    </link>
+
+
+    <!-- Left Shoulder bracket -->
+    <joint name="joint42" type="revolute">
+        <hdt id="42" kmin="100" kmax="200" inertia="0.1"/>
+        <axis xyz="0 0 1"/>
+        <limit effort="90.0" lower="-.15" upper="${M_PI}" velocity="0.45"/>
+        <origin xyz="0 0 -.07526" rpy="0 0 -${M_PI/2}"/>
+        <parent link="drive42"/>
+        <child link="leftshoulder"/>
+        <dynamics damping="1.0" friction="${joint_friction}"/>
+    </joint>
+    <xacro:hdt_transmission hardware_interface="${hardware_interface}" joint_name="joint42"/>
+
+    <link name="leftshoulder">
+        <collision>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+                <mesh filename="package://hdt_michigan_description/meshes/SHOULDER_BRACKET.STL" scale="1.0 1.0 1.0"/>
+            </geometry>
+        </collision>
+
+        <visual>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+                <mesh filename="package://hdt_michigan_description/meshes/SHOULDER_BRACKET.STL"/>
+            </geometry>
+            <material name="maize"/>
+        </visual>
+
+        <inertial>
+            <origin xyz="0.00013570 -0.04958110 0.01659126" rpy="0 0 0"/>
+            <mass value="0.48998269"/>
+            <inertia
+                    ixx="0.00124111" ixy="-0.00000083" ixz="-0.00000019"
+                    iyy="0.00020695" iyz="0.00001359"
+                    izz="0.00132624"/>
+        </inertial>
+    </link>
+
+    <!-- Drive 43 -->
+    <joint name="leftshoulder" type="fixed">
+        <origin xyz="0 -.1 .07526" rpy="${-M_PI/2} 0 0"/>
+        <parent link="leftshoulder"/>
+        <child link="drive43"/>
+    </joint>
+
+    <link name="drive43">
+        <collision>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+                <mesh filename="package://hdt_michigan_description/meshes/MK4_LT.STL" scale="1.0 1.0 1.0"/>
+            </geometry>
+        </collision>
+
+        <visual>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+                <mesh filename="package://hdt_michigan_description/meshes/MK4_LT.STL"/>
+            </geometry>
+            <material name="blue"/>
+        </visual>
+
+        <inertial>
+            <origin xyz="-0.00003658 0.00177045 0.00631346" rpy="0 0 0"/>
+            <mass value="1.39278013"/>
+            <inertia
+                    ixx="0.00159582" ixy="-0.00000077" ixz="-0.00000081"
+                    iyy="0.00151230" iyz="-0.00002261"
+                    izz="0.00105406"/>
+        </inertial>
+    </link>
+
+
+    <!-- Left Proximal tube -->
+    <joint name="joint43" type="revolute">
+        <hdt id="43" kmin="100" kmax="200" inertia="0.1"/>
+        <axis xyz="0 0 -1"/>
+        <limit effort="90.0" lower="${-2*M_PI}" upper="${2*M_PI}" velocity="0.45"/>
+        <origin xyz="0 0 -.115888" rpy="${-M_PI} 0 0"/>
+        <parent link="drive43"/>
+        <child link="lefttube"/>
+        <dynamics damping="0.5" friction="${joint_friction}"/>
+    </joint>
+    <xacro:hdt_transmission hardware_interface="${hardware_interface}" joint_name="joint43"/>
+
+    <link name="lefttube">
+        <collision>
+            <origin xyz="0 0 0" rpy="0 ${M_PI/2} 0"/>
+            <geometry>
+                <mesh filename="package://hdt_michigan_description/meshes/PROXIMAL_TUBE.STL" scale="1.0 1.0 1.0"/>
+            </geometry>
+        </collision>
+
+        <visual>
+            <origin xyz="0 0 0" rpy="0 ${M_PI/2} 0"/>
+            <geometry>
+                <mesh filename="package://hdt_michigan_description/meshes/PROXIMAL_TUBE.STL"/>
+            </geometry>
+            <material name="maize"/>
+        </visual>
+
+        <inertial>
+            <origin xyz="-0.00003112 0.00004034 -0.06064495" rpy="0 0 0"/>
+            <mass value="0.30359918"/>
+            <inertia
+                    ixx="0.00099336" ixy="0.00000000" ixz="-0.00000021"
+                    iyy="0.00099312" iyz="-0.00000024"
+                    izz="0.00020564"/>
+        </inertial>
+    </link>
+
+    <!-- Drive 44 -->
+    <joint name="lefttube" type="fixed">
+        <origin xyz="0 0 0.0486304" rpy="${-M_PI/2} 0 ${M_PI/2}"/>
+        <parent link="lefttube"/>
+        <child link="drive44"/>
+    </joint>
+
+    <link name="drive44">
+        <collision>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+                <mesh filename="package://hdt_michigan_description/meshes/MK4_LT.STL" scale="1.0 1.0 1.0"/>
+            </geometry>
+        </collision>
+
+        <visual>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+                <mesh filename="package://hdt_michigan_description/meshes/MK4_LT.STL"/>
+            </geometry>
+            <material name="blue"/>
+        </visual>
+
+        <inertial>
+            <origin xyz="-0.00003658 0.00177045 0.00631346" rpy="0 0 0"/>
+            <mass value="1.39278013"/>
+            <inertia
+                    ixx="0.00159582" ixy="-0.00000077" ixz="-0.00000081"
+                    iyy="0.00151230" iyz="-0.00002261"
+                    izz="0.00105406"/>
+        </inertial>
+    </link>
+
+
+    <!-- Left Forearm bracket -->
+    <joint name="joint44" type="revolute">
+        <hdt id="44" kmin="100" kmax="200" inertia="0.1"/>
+        <axis xyz="0 0 1"/>
+        <limit effort="90.0" lower="-${M_PI}" upper="1.0" velocity="0.45"/>
+        <origin xyz="0 0 -.06758" rpy="0 0 ${M_PI/2}"/>
+        <parent link="drive44"/>
+        <child link="leftforearm"/>
+        <dynamics damping="0.1" friction="${joint_friction}"/>
+    </joint>
+    <xacro:hdt_transmission hardware_interface="${hardware_interface}" joint_name="joint44"/>
+
+    <link name="leftforearm">
+        <collision>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+                <mesh filename="package://hdt_michigan_description/meshes/FOREARM_BRACKET.STL" scale="1.0 1.0 1.0"/>
+            </geometry>
+        </collision>
+
+        <visual>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+                <mesh filename="package://hdt_michigan_description/meshes/FOREARM_BRACKET.STL"/>
+            </geometry>
+            <material name="maize"/>
+        </visual>
+
+        <inertial>
+            <origin xyz="-0.00009916 -0.03803734 0.01245969" rpy="0 0 0"/>
+            <mass value="0.29009416"/>
+            <inertia
+                    ixx="0.00060152" ixy="-0.00000038" ixz="0.00000003"
+                    iyy="0.00009927" iyz="-0.00000788"
+                    izz="0.00065009"/>
+        </inertial>
+    </link>
+
+    <!-- Drive 45 -->
+    <joint name="leftforearm" type="fixed">
+        <origin xyz="0 -.17 0.05749" rpy="${-M_PI/2} 0 0"/>
+        <parent link="leftforearm"/>
+        <child link="drive45"/>
+    </joint>
+
+    <link name="drive45">
+        <collision>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+                <mesh filename="package://hdt_michigan_description/meshes/A35_DRIVE.STL" scale="1.0 1.0 1.0"/>
+            </geometry>
+        </collision>
+
+        <visual>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+                <mesh filename="package://hdt_michigan_description/meshes/A35_DRIVE.STL"/>
+            </geometry>
+            <material name="blue"/>
+        </visual>
+
+        <inertial>
+            <origin xyz="0.00000913 0.00110529 -0.01094052" rpy="0 0 0"/>
+            <mass value="0.30279069"/>
+            <inertia
+                    ixx="0.00012394" ixy="-0.00000001" ixz="-0.00000007"
+                    iyy="0.00011824" iyz="0.00000325"
+                    izz="0.00008729"/>
+        </inertial>
+    </link>
+
+    <!-- Drive 46 -->
+    <joint name="joint45" type="revolute">
+        <hdt id="45" kmin="100" kmax="200" inertia="0.1"/>
+        <axis xyz="0 1 0"/>
+        <limit effort="35.0" lower="${-2*M_PI}" upper="${2*M_PI}" velocity="${2*M_PI/3}"/>
+        <origin xyz="0 0 -.067262" rpy="${M_PI/2} 0 ${M_PI/2}"/>
+        <parent link="drive45"/>
+        <child link="drive46"/>
+        <dynamics damping="0.01" friction="${joint_friction}"/>
+    </joint>
+    <xacro:hdt_transmission hardware_interface="${hardware_interface}" joint_name="joint45"/>
+
+    <link name="drive46">
+        <collision>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+                <mesh filename="package://hdt_michigan_description/meshes/A35_DRIVE.STL" scale="1.0 1.0 1.0"/>
+            </geometry>
+        </collision>
+
+        <visual>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+                <mesh filename="package://hdt_michigan_description/meshes/A35_DRIVE.STL"/>
+            </geometry>
+            <material name="blue"/>
+        </visual>
+
+        <inertial>
+            <origin xyz="0.00000913 0.00110529 -0.01094052" rpy="0 0 0"/>
+            <mass value="0.30279069"/>
+            <inertia
+                    ixx="0.00012394" ixy="-0.00000001" ixz="-0.00000007"
+                    iyy="0.00011824" iyz="0.00000325"
+                    izz="0.00008729"/>
+        </inertial>
+    </link>
+
+
+    <!-- Left wrist -->
+    <joint name="joint46" type="revolute">
+        <hdt id="46" kmin="100" kmax="200" inertia="0.1"/>
+        <axis xyz="0 0 -1"/>
+        <limit effort="35.0" lower="-${M_PI/2}" upper="${M_PI/2}" velocity="${2*M_PI/3}"/>
+        <origin xyz="0 0 -.0566728" rpy="0 0 0"/>
+        <parent link="drive46"/>
+        <child link="leftwrist"/>
+        <dynamics damping="0.01" friction="${joint_friction}"/>
+    </joint>
+    <xacro:hdt_transmission hardware_interface="${hardware_interface}" joint_name="joint46"/>
+    <link name="leftwrist">
+        <collision>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+                <mesh filename="package://hdt_michigan_description/meshes/A35_BRACKET.STL" scale="1.0 1.0 1.0"/>
+            </geometry>
+        </collision>
+
+
+        <visual>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+                <mesh filename="package://hdt_michigan_description/meshes/A35_BRACKET.STL"/>
+            </geometry>
+            <material name="maize"/>
+        </visual>
+
+        <inertial>
+            <origin xyz="-0.00001212 -0.02930845 0.01300716" rpy="0 0 0"/>
+            <mass value="0.14250708"/>
+            <inertia
+                    ixx="0.00011554" ixy="0.00000005" ixz="-0.00000003"
+                    iyy="0.00003814" iyz="-0.00000988"
+                    izz="0.00012738"/>
+        </inertial>
+    </link>
+
+    <!-- Drive 47 -->
+    <joint name="leftwrist" type="fixed">
+        <origin xyz="0 -.05 .0566728" rpy="${-M_PI/2} 0 0"/>
+        <parent link="leftwrist"/>
+        <child link="drive47"/>
+    </joint>
+
+    <link name="drive47">
+        <collision>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+                <mesh filename="package://hdt_michigan_description/meshes/A35_DRIVE.STL" scale="1.0 1.0 1.0"/>
+            </geometry>
+        </collision>
+
+        <visual>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+                <mesh filename="package://hdt_michigan_description/meshes/A35_DRIVE.STL"/>
+            </geometry>
+            <material name="blue"/>
+        </visual>
+
+        <inertial>
+            <origin xyz="0.00000913 0.00110529 -0.01094052" rpy="0 0 0"/>
+            <mass value="0.30279069"/>
+            <inertia
+                    ixx="0.00012394" ixy="-0.00000001" ixz="-0.00000007"
+                    iyy="0.00011824" iyz="0.00000325"
+                    izz="0.00008729"/>
+        </inertial>
+    </link>
+
+
+    <!-- Left Pincer Housing -->
+    <joint name="joint47" type="revolute">
+        <hdt id="47" kmin="100" kmax="200" inertia="0.1"/>
+        <axis xyz="0 0 -1"/>
+        <limit effort="35.0" lower="${-2*M_PI}" upper="${2*M_PI}" velocity="${M_PI}"/>
+        <origin xyz="0 0 -.036" rpy="${M_PI} 0 ${M_PI}"/>
+        <parent link="drive47"/>
+        <child link="drive50"/>
+        <dynamics damping="0.01" friction="${joint_friction}"/>
+    </joint>
+    <xacro:hdt_transmission hardware_interface="${hardware_interface}" joint_name="joint47"/>
+
+    <link name="drive50">
+    </link>
+
+    <joint name="housing_left" type="fixed">
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <parent link="drive50"/>
+        <child link="end_effector_left"/>
+    </joint>
+
+    <link name="end_effector_left">
+        <collision>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+                <mesh filename="package://hdt_michigan_description/meshes/PINCER_HOUSING2.STL" scale="1.0 1.0 1.0"/>
+            </geometry>
+        </collision>
+
+        <visual>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+                <mesh filename="package://hdt_michigan_description/meshes/PINCER_HOUSING2.STL"/>
+            </geometry>
+            <material name="maize"/>
+        </visual>
+
+        <inertial>
+            <origin xyz="-0.02828166 0.00000247 -0.01722827" rpy="-${M_PI/2} 0 0"/>
+            <mass value="0.27265869"/>
+            <inertia
+                    ixx="0.00009278" ixy="0.0" ixz="0.00000608"
+                    iyy="0.00010001" iyz="0.0"
+                    izz="0.00007523"/>
+        </inertial>
+    </link>
+
+    <!-- Left Pincers -->
+    <joint name="leftgripper" type="revolute">
+        <hdt id="50a" kmin="75" kmax="150" inertia="0.075"/>
+        <axis xyz="0 0 1"/>
+        <limit effort="35.0" lower="-0.1166" upper="1" velocity="0.5"/>
+        <origin xyz="0 0.0135 0.068553" rpy="${M_PI/2} -0.42 -${M_PI/2}"/>
+        <parent link="end_effector_left"/>
+        <child link="leftgripper_link"/>
+        <dynamics damping="${gripper_joint_damping}" friction="0"/>
+    </joint>
+    <xacro:hdt_transmission hardware_interface="${hardware_interface}" joint_name="leftgripper"/>
+
+
+    <link name="leftgripper_link">
+        <collision>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+                <mesh filename="package://hdt_michigan_description/meshes/PINCER_FINGER.STL" scale="1.0 1.0 1.0"/>
+            </geometry>
+        </collision>
+
+        <visual>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+                <mesh filename="package://hdt_michigan_description/meshes/PINCER_FINGER.STL"/>
+            </geometry>
+            <material name="blue"/>
+        </visual>
+
+        <inertial>
+            <origin xyz="0.034 0.055 0.007" rpy="0 0 0"/>
+            <mass value="0.06821764"/>
+            <inertia ixx="0.00007499"
+                     ixy="0"
+                     ixz="0"
+                     iyy="0.00002842"
+                     iyz="0"
+                     izz="0.00010118"/>
+        </inertial>
+
+    </link>
+
+    <!-- Left EE 2 -->
+    <!-- THIS IS THE SECOND PINCER, NEEDS TO MOVE EQUAL BUT OPPOSITE AS PINCER 1 -->
+    <joint name="leftgripper2" type="revolute">
+        <hdt id="50b" kmin="75" kmax="150" inertia="0.075"/>
+        <axis xyz="0 0 1"/>
+        <origin xyz="0 -0.0135 0.068553" rpy="${M_PI/2} -0.42 ${M_PI/2}"/>
+        <parent link="end_effector_left"/>
+        <child link="leftgripper2_link"/>
+        <calibration rising="0.0"/>
+        <dynamics damping="${gripper_joint_damping}" friction="${joint_friction}"/>
+        <limit effort="35.0" lower="-0.1166" upper="1" velocity="0.5"/>
+    </joint>
+    <xacro:hdt_transmission hardware_interface="${hardware_interface}" joint_name="leftgripper2"/>
+
+
+    <link name="leftgripper2_link">
+        <collision>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+                <mesh filename="package://hdt_michigan_description/meshes/PINCER_FINGER.STL" scale="1.0 1.0 1.0"/>
+            </geometry>
+        </collision>
+
+        <visual>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+                <mesh filename="package://hdt_michigan_description/meshes/PINCER_FINGER.STL"/>
+            </geometry>
+            <material name="blue"/>
+        </visual>
+
+        <inertial>
+            <origin xyz="0.034 0.055 0.007" rpy="0 0 0"/>
+            <mass value="0.06821764"/>
+            <inertia ixx="0.00007499"
+                     ixy="0"
+                     ixz="0"
+                     iyy="0.00002842"
+                     iyz="0"
+                     izz="0.00010118"/>
+        </inertial>
+
+    </link>
+
+    <!-- Drive 1 -->
+    <joint name="right0" type="fixed">
+        <origin xyz=".167906 0 .44399" rpy="-${M_PI/2} 0 ${M_PI/2}"/>
+        <parent link="torso"/>
+        <child link="drive1"/>
+    </joint>
+
+    <link name="drive1">
+        <collision>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+                <mesh filename="package://hdt_michigan_description/meshes/MK4_MT.STL" scale="1.0 1.0 1.0"/>
+            </geometry>
+        </collision>
+
+        <visual>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+                <mesh filename="package://hdt_michigan_description/meshes/MK4_MT.STL"/>
+            </geometry>
+            <material name="blue"/>
+        </visual>
+
+
+        <inertial>
+            <origin xyz="-0.00004358 0.00244867 0.00739686" rpy="0 0 0"/>
+            <mass value="1.73427319"/>
+            <inertia
+                    ixx="0.00212963" ixy="0.0" ixz="0.0"
+                    iyy="0.00199851" iyz="0.0"
+                    izz="0.00138126"/>
+        </inertial>
+
+    </link>
+
+
+    <!-- Drive 2 -->
+    <joint name="joint1" type="revolute">
+        <hdt id="1" kmin="100" kmax="200" inertia="0.1"/>
+        <axis xyz="0 -1 0"/>
+        <limit effort="180.0" lower="${-2*M_PI}" upper="${2*M_PI}" velocity="0.45"/>
+        <origin xyz="0 0 -.082642" rpy="${M_PI/2} 0 ${M_PI/2}"/>
+        <parent link="drive1"/>
+        <child link="drive2"/>
+        <dynamics damping="1.0" friction="${joint_friction}"/>
+    </joint>
+    <xacro:hdt_transmission hardware_interface="${hardware_interface}" joint_name="joint1"/>
+
+    <link name="drive2">
+        <collision>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+                <mesh filename="package://hdt_michigan_description/meshes/MK4_LT.STL" scale="1.0 1.0 1.0"/>
+            </geometry>
+        </collision>
+
+        <visual>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+                <mesh filename="package://hdt_michigan_description/meshes/MK4_LT.STL"/>
+            </geometry>
+            <material name="blue"/>
+        </visual>
+
+        <inertial>
+            <origin xyz="-0.00003658 0.00177045 0.00631346" rpy="0 0 0"/>
+            <mass value="1.39278013"/>
+            <inertia
+                    ixx="0.00159582" ixy="-0.00000077" ixz="-0.00000081"
+                    iyy="0.00151230" iyz="-0.00002261"
+                    izz="0.00105406"/>
+        </inertial>
+    </link>
+
+    <!-- Right Shoulder bracket -->
+    <joint name="joint2" type="revolute">
+        <hdt id="2" kmin="100" kmax="200" inertia="0.1"/>
+        <axis xyz="0 0 1"/>
+        <limit effort="90.0" lower="${-M_PI}" upper=".15" velocity="0.45"/>
+        <origin xyz="0 0 -.07526" rpy="0 0 ${M_PI/2}"/>
+        <parent link="drive2"/>
+        <child link="rightshoulder"/>
+        <dynamics damping="1.0" friction="${joint_friction}"/>
+    </joint>
+    <xacro:hdt_transmission hardware_interface="${hardware_interface}" joint_name="joint2"/>
+
+    <link name="rightshoulder">
+        <collision>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+                <mesh filename="package://hdt_michigan_description/meshes/SHOULDER_BRACKET.STL" scale="1.0 1.0 1.0"/>
+            </geometry>
+        </collision>
+
+        <visual>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+                <mesh filename="package://hdt_michigan_description/meshes/SHOULDER_BRACKET.STL"/>
+            </geometry>
+            <material name="maize"/>
+        </visual>
+
+        <inertial>
+            <origin xyz="0.00013570 -0.04958110 0.01659126" rpy="0 0 0"/>
+            <mass value="0.48998269"/>
+            <inertia
+                    ixx="0.00124111" ixy="-0.00000083" ixz="-0.00000019"
+                    iyy="0.00020695" iyz="0.00001359"
+                    izz="0.00132624"/>
+        </inertial>
+    </link>
+
+    <!-- Drive 3 -->
+    <joint name="rightshoulder" type="fixed">
+        <origin xyz="0 -.1 .07526" rpy="${-M_PI/2} 0 0"/>
+        <parent link="rightshoulder"/>
+        <child link="drive3"/>
+    </joint>
+
+    <link name="drive3">
+        <collision>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+                <mesh filename="package://hdt_michigan_description/meshes/MK4_LT.STL" scale="1.0 1.0 1.0"/>
+            </geometry>
+        </collision>
+
+        <visual>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+                <mesh filename="package://hdt_michigan_description/meshes/MK4_LT.STL"/>
+            </geometry>
+            <material name="blue"/>
+        </visual>
+
+        <inertial>
+            <origin xyz="-0.00003658 0.00177045 0.00631346" rpy="0 0 0"/>
+            <mass value="1.39278013"/>
+            <inertia
+                    ixx="0.00159582" ixy="-0.00000077" ixz="-0.00000081"
+                    iyy="0.00151230" iyz="-0.00002261"
+                    izz="0.00105406"/>
+        </inertial>
+    </link>
+
+
+    <!-- Right Proximal tube -->
+    <joint name="joint3" type="revolute">
+        <hdt id="3" kmin="100" kmax="200" inertia="0.1"/>
+        <axis xyz="0 0 -1"/>
+        <limit effort="90.0" lower="${-2*M_PI}" upper="${2*M_PI}" velocity="0.45"/>
+        <origin xyz="0 0 -.115888" rpy="${-M_PI} 0 ${M_PI}"/>
+        <parent link="drive3"/>
+        <child link="righttube"/>
+        <dynamics damping="0.5" friction="${joint_friction}"/>
+    </joint>
+    <xacro:hdt_transmission hardware_interface="${hardware_interface}" joint_name="joint3"/>
+
+    <link name="righttube">
+        <collision>
+            <origin xyz="0 0 0" rpy="0 ${M_PI/2} 0"/>
+            <geometry>
+                <mesh filename="package://hdt_michigan_description/meshes/PROXIMAL_TUBE.STL" scale="1.0 1.0 1.0"/>
+            </geometry>
+        </collision>
+
+        <visual>
+            <origin xyz="0 0 0" rpy="0 ${M_PI/2} 0"/>
+            <geometry>
+                <mesh filename="package://hdt_michigan_description/meshes/PROXIMAL_TUBE.STL"/>
+            </geometry>
+            <material name="maize"/>
+        </visual>
+
+        <inertial>
+            <origin xyz="-0.00003112 0.00004034 -0.06064495" rpy="0 0 0"/>
+            <mass value="0.30359918"/>
+            <inertia
+                    ixx="0.00099336" ixy="0.00000000" ixz="-0.00000021"
+                    iyy="0.00099312" iyz="-0.00000024"
+                    izz="0.00020564"/>
+        </inertial>
+    </link>
+
+    <!-- Drive 4 -->
+    <joint name="righttube" type="fixed">
+        <origin xyz="0 0 0.0486304" rpy="${-M_PI/2} 0 ${M_PI/2}"/>
+        <parent link="righttube"/>
+        <child link="drive4"/>
+    </joint>
+
+    <link name="drive4">
+        <collision>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+                <mesh filename="package://hdt_michigan_description/meshes/MK4_LT.STL" scale="1.0 1.0 1.0"/>
+            </geometry>
+        </collision>
+
+        <visual>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+                <mesh filename="package://hdt_michigan_description/meshes/MK4_LT.STL"/>
+            </geometry>
+            <material name="blue"/>
+        </visual>
+
+        <inertial>
+            <origin xyz="-0.00003658 0.00177045 0.00631346" rpy="0 0 0"/>
+            <mass value="1.39278013"/>
+            <inertia
+                    ixx="0.00159582" ixy="-0.00000077" ixz="-0.00000081"
+                    iyy="0.00151230" iyz="-0.00002261"
+                    izz="0.00105406"/>
+        </inertial>
+    </link>
+
+
+    <!-- Right Forearm bracket -->
+    <joint name="joint4" type="revolute">
+        <hdt id="4" kmin="100" kmax="200" inertia="0.1"/>
+        <axis xyz="0 0 -1"/>
+        <limit effort="90.0" lower="${-M_PI}" upper="1.0" velocity="0.45"/>
+        <origin xyz="0 0 -.06758" rpy="0 0 -${M_PI/2}"/>
+        <parent link="drive4"/>
+        <child link="rightforearm"/>
+        <dynamics damping="0.1" friction="${joint_friction}"/>
+    </joint>
+    <xacro:hdt_transmission hardware_interface="${hardware_interface}" joint_name="joint4"/>
+
+    <link name="rightforearm">
+        <collision>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+                <mesh filename="package://hdt_michigan_description/meshes/FOREARM_BRACKET.STL" scale="1.0 1.0 1.0"/>
+            </geometry>
+        </collision>
+
+        <visual>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+                <mesh filename="package://hdt_michigan_description/meshes/FOREARM_BRACKET.STL"/>
+            </geometry>
+            <material name="maize"/>
+        </visual>
+
+        <inertial>
+            <origin xyz="-0.00009916 -0.03803734 0.01245969" rpy="0 0 0"/>
+            <mass value="0.29009416"/>
+            <inertia
+                    ixx="0.00060152" ixy="-0.00000038" ixz="0.00000003"
+                    iyy="0.00009927" iyz="-0.00000788"
+                    izz="0.00065009"/>
+        </inertial>
+    </link>
+
+    <!-- Drive 5 -->
+    <joint name="rightforearm" type="fixed">
+        <origin xyz="0 -.17 0.05749" rpy="${-M_PI/2} 0 0"/>
+        <parent link="rightforearm"/>
+        <child link="drive5"/>
+    </joint>
+
+    <link name="drive5">
+        <collision>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+                <mesh filename="package://hdt_michigan_description/meshes/A35_DRIVE.STL" scale="1.0 1.0 1.0"/>
+            </geometry>
+        </collision>
+
+        <visual>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+                <mesh filename="package://hdt_michigan_description/meshes/A35_DRIVE.STL"/>
+            </geometry>
+            <material name="blue"/>
+        </visual>
+
+        <inertial>
+            <origin xyz="0.00000913 0.00110529 -0.01094052" rpy="0 0 0"/>
+            <mass value="0.30279069"/>
+            <inertia
+                    ixx="0.00012394" ixy="-0.00000001" ixz="-0.00000007"
+                    iyy="0.00011824" iyz="0.00000325"
+                    izz="0.00008729"/>
+        </inertial>
+    </link>
+
+    <!-- Drive 6 -->
+    <joint name="joint5" type="revolute">
+        <hdt id="5" kmin="100" kmax="200" inertia="0.1"/>
+        <axis xyz="0 1 0"/>
+        <limit effort="35.0" lower="${-2*M_PI}" upper="${2*M_PI}" velocity="${2*M_PI/3}"/>
+        <origin xyz="0 0 -.067262" rpy="${M_PI/2} 0 ${-M_PI/2}"/>
+        <parent link="drive5"/>
+        <child link="drive6"/>
+        <dynamics damping="0.01" friction="${joint_friction}"/>
+    </joint>
+    <xacro:hdt_transmission hardware_interface="${hardware_interface}" joint_name="joint5"/>
+
+    <link name="drive6">
+        <collision>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+                <mesh filename="package://hdt_michigan_description/meshes/A35_DRIVE.STL" scale="1.0 1.0 1.0"/>
+            </geometry>
+        </collision>
+
+        <visual>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+                <mesh filename="package://hdt_michigan_description/meshes/A35_DRIVE.STL"/>
+            </geometry>
+            <material name="blue"/>
+        </visual>
+
+        <inertial>
+            <origin xyz="0.00000913 0.00110529 -0.01094052" rpy="0 0 0"/>
+            <mass value="0.30279069"/>
+            <inertia
+                    ixx="0.00012394" ixy="-0.00000001" ixz="-0.00000007"
+                    iyy="0.00011824" iyz="0.00000325"
+                    izz="0.00008729"/>
+        </inertial>
+    </link>
+
+
+    <!-- Right Wrist -->
+    <joint name="joint6" type="revolute">
+        <hdt id="6" kmin="100" kmax="200" inertia="0.1"/>
+        <axis xyz="0 0 -1"/>
+        <limit effort="35.0" lower="${-M_PI/2}" upper="${M_PI/2}" velocity="${2*M_PI/3}"/>
+        <origin xyz="0 0 -.0566728" rpy="0 0 0"/>
+        <parent link="drive6"/>
+        <child link="rightwrist"/>
+        <dynamics damping="0.01" friction="${joint_friction}"/>
+    </joint>
+    <xacro:hdt_transmission hardware_interface="${hardware_interface}" joint_name="joint6"/>
+
+    <link name="rightwrist">
+        <collision>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+                <mesh filename="package://hdt_michigan_description/meshes/A35_BRACKET.STL" scale="1.0 1.0 1.0"/>
+            </geometry>
+        </collision>
+
+        <visual>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+                <mesh filename="package://hdt_michigan_description/meshes/A35_BRACKET.STL"/>
+            </geometry>
+            <material name="maize"/>
+        </visual>
+
+        <inertial>
+            <origin xyz="-0.00001212 -0.02930845 0.01300716" rpy="0 0 0"/>
+            <mass value="0.14250708"/>
+            <inertia
+                    ixx="0.00011554" ixy="0.00000005" ixz="-0.00000003"
+                    iyy="0.00003814" iyz="-0.00000988"
+                    izz="0.00012738"/>
+        </inertial>
+    </link>
+
+    <!-- Drive 7 -->
+    <joint name="rightwrist" type="fixed">
+        <origin xyz="0 -.05 .0566728" rpy="${-M_PI/2} 0 0"/>
+        <parent link="rightwrist"/>
+        <child link="drive7"/>
+    </joint>
+
+    <link name="drive7">
+        <collision>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+                <mesh filename="package://hdt_michigan_description/meshes/A35_DRIVE.STL" scale="1.0 1.0 1.0"/>
+            </geometry>
+        </collision>
+
+        <visual>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+                <mesh filename="package://hdt_michigan_description/meshes/A35_DRIVE.STL"/>
+            </geometry>
+            <material name="blue"/>
+        </visual>
+
+        <inertial>
+            <origin xyz="0.00000913 0.00110529 -0.01094052" rpy="0 0 0"/>
+            <mass value="0.30279069"/>
+            <inertia
+                    ixx="0.00012394" ixy="-0.00000001" ixz="-0.00000007"
+                    iyy="0.00011824" iyz="0.00000325"
+                    izz="0.00008729"/>
+        </inertial>
+    </link>
+
+
+    <!-- Right Pincer Housing -->
+    <joint name="joint7" type="revolute">
+        <hdt id="7" kmin="100" kmax="200" inertia="0.1"/>
+        <axis xyz="0 0 -1"/>
+        <limit effort="35.0" lower="${-2*M_PI}" upper="${2*M_PI}" velocity="${M_PI}"/>
+        <origin xyz="0 0 -.036" rpy="${M_PI} 0 0"/>
+        <parent link="drive7"/>
+        <child link="drive10"/>
+        <dynamics damping="0.01" friction="${joint_friction}"/>
+    </joint>
+    <xacro:hdt_transmission hardware_interface="${hardware_interface}" joint_name="joint7"/>
+
+    <link name="drive10">
+    </link>
+
+    <joint name="housing_right" type="fixed">
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <parent link="drive10"/>
+        <child link="end_effector_right"/>
+    </joint>
+
+    <link name="end_effector_right">
+        <collision>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+                <mesh filename="package://hdt_michigan_description/meshes/PINCER_HOUSING2.STL" scale="1.0 1.0 1.0"/>
+            </geometry>
+        </collision>
+
+        <visual>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+                <mesh filename="package://hdt_michigan_description/meshes/PINCER_HOUSING2.STL"/>
+            </geometry>
+            <material name="maize"/>
+        </visual>
+
+        <inertial>
+            <origin xyz="-0.02828166 0.00000247 -0.01722827" rpy="-${M_PI/2} 0 0"/>
+            <mass value="0.27265869"/>
+            <inertia
+                    ixx="0.00009278" ixy="0.0" ixz="0.00000608"
+                    iyy="0.00010001" iyz="0.0"
+                    izz="0.00007523"/>
+        </inertial>
+    </link>
+
+    <!-- Right Pincers-->
+    <joint name="rightgripper" type="revolute">
+        <hdt id="10a" kmin="75" kmax="150" inertia="0.075"/>
+        <axis xyz="0 0 1"/>
+        <limit effort="35.0" lower="-0.1166" upper="1" velocity="0.5"/>
+        <origin xyz="0 0.0135 0.068553" rpy="${M_PI/2} -0.42 -${M_PI/2}"/>
+        <parent link="end_effector_right"/>
+        <child link="rightgripper_link"/>
+        <dynamics damping="${gripper_joint_damping}" friction="0"/>
+    </joint>
+    <xacro:hdt_transmission hardware_interface="${hardware_interface}" joint_name="rightgripper"/>
+
+
+    <link name="rightgripper_link">
+        <collision>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+                <mesh filename="package://hdt_michigan_description/meshes/PINCER_FINGER.STL" scale="1.0 1.0 1.0"/>
+            </geometry>
+        </collision>
+
+        <visual>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+                <mesh filename="package://hdt_michigan_description/meshes/PINCER_FINGER.STL"/>
+            </geometry>
+            <material name="blue"/>
+        </visual>
+
+        <inertial>
+            <origin xyz="0.034 0.055 0.007" rpy="0 0 0"/>
+            <mass value="0.06821764"/>
+            <inertia ixx="0.00007499"
+                     ixy="0"
+                     ixz="0"
+                     iyy="0.00002842"
+                     iyz="0"
+                     izz="0.00010118"/>
+        </inertial>
+
+    </link>
+
+    <!-- Right EE 2 -->
+    <!-- THIS IS THE SECOND PINCER, NEEDS TO MOVE EQUAL BUT OPPOSITE AS PINCER 1 -->
+    <joint name="rightgripper2" type="revolute">
+        <hdt id="10b" kmin="75" kmax="150" inertia="0.075"/>
+        <axis xyz="0 0 1"/>
+        <origin xyz="0 -0.0135 0.068553" rpy="${M_PI/2} -0.42 ${M_PI/2}"/>
+        <parent link="end_effector_right"/>
+        <child link="rightgripper2_link"/>
+        <calibration rising="0.0"/>
+        <dynamics damping="${gripper_joint_damping}" friction="0"/>
+        <limit effort="35.0" lower="-0.116" upper="1" velocity="0.5"/>
+    </joint>
+    <xacro:hdt_transmission hardware_interface="${hardware_interface}" joint_name="rightgripper2"/>
+
+
+    <link name="rightgripper2_link">
+        <collision>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+                <mesh filename="package://hdt_michigan_description/meshes/PINCER_FINGER.STL" scale="1.0 1.0 1.0"/>
+            </geometry>
+        </collision>
+
+        <visual>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+                <mesh filename="package://hdt_michigan_description/meshes/PINCER_FINGER.STL"/>
+            </geometry>
+            <material name="blue"/>
+        </visual>
+
+        <inertial>
+            <origin xyz="0.034 0.055 0.007" rpy="0 0 0"/>
+            <mass value="0.06821764"/>
+            <inertia ixx="0.00007499"
+                     ixy="0"
+                     ixz="0"
+                     iyy="0.00002842"
+                     iyz="0"
+                     izz="0.00010118"/>
+        </inertial>
+
+    </link>
+
+    <!-- NOTE: defining tools here allows moveit to plan with respect to these frames very easily.
+      I think it makes sense to leave this file un-modified on shared accounts, and overwrite the robot description
+      on the parameter server from your local modified copy on a personal account. -->
+    <link name="left_tool">
+        <visual name="left_tool_visual">
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+                <sphere radius="0.002"/>
+            </geometry>
+        </visual>
+        <inertial>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <mass value="0.001"/>
+            <inertia ixx="0"
+                     ixy="0"
+                     ixz="0"
+                     iyy="0"
+                     iyz="0"
+                     izz="0"/>
+        </inertial>
+    </link>
+    <joint name="left_tool_joint" type="fixed">
+        <parent link="end_effector_left"/>
+        <child link="left_tool"/>
+        <origin xyz="0.0 0.0 0.181" rpy="0 0 0"/>
+    </joint>
+
+    <link name="right_tool">
+        <visual name="right_tool_visual">
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+                <sphere radius="0.002"/>
+            </geometry>
+        </visual>
+        <inertial>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <mass value="0.001"/>
+            <inertia ixx="0"
+                     ixy="0"
+                     ixz="0"
+                     iyy="0"
+                     iyz="0"
+                     izz="0"/>
+        </inertial>
+    </link>
+    <joint name="right_tool_joint" type="fixed">
+        <parent link="end_effector_right"/>
+        <child link="right_tool"/>
+        <origin xyz="0.0 0.0 0.181" rpy="0 0 0"/>
+    </joint>
+    <xacro:include filename="$(find hdt_michigan_description)/urdf/gazebo_utilities.xacro"/>
+
+    <xacro:add_gazebo_control_plugin robot_namespace="${robot_name}"/>
+    <xacro:add_moveit_planning_scene_plugin robot_namespace="${robot_name}" root_frame_id="${robot_name}_root"/>
+
+    <xacro:add_gazebo_fixed_link base_link="${robot_name}_root"/>
+</robot>
+
