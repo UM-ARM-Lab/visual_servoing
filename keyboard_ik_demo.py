@@ -1,6 +1,7 @@
 from src.utils import draw_pose, erase_pos
 from src.val import *
-
+import matplotlib.pyplot as plt
+import matplotlib.image as mpimg
 # Control end effector position with keyboard
 
 
@@ -26,6 +27,29 @@ target = val.get_eef_pos("left") + perturb
 
 #target_marker = draw_sphere_marker(target[0:3], 0.01, (1.0, 0.0, 0.0, 1.0))
 marker = draw_pose(target[0:3], p.getQuaternionFromEuler(target[3:6]))
+
+
+#camera 
+projectionMatrix = p.computeProjectionMatrixFOV(
+        fov=45.0,
+        aspect=1.0,
+        nearVal=0.1,
+        farVal=3.1)
+viewMatrix = p.computeViewMatrix(
+    cameraEyePosition=[-2, 0, 0],
+    cameraTargetPosition=[0, 0, 0],
+    cameraUpVector=[0, 0, 1])
+width, height, rgbImg, depthImg, segImg = p.getCameraImage(
+    width=1000,
+    height=1000,
+    viewMatrix=viewMatrix,
+    projectionMatrix=projectionMatrix)
+rgb_img = np.array(rgbImg)[:, :, :3]
+depth_img = np.array(depthImg)
+plt.imshow(rgb_img)
+plt.show()
+plt.figure()
+
 
 while(True):
     marker_new = draw_pose(target[0:3], p.getQuaternionFromEuler(target[3:6]))

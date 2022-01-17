@@ -99,6 +99,7 @@ class Val:
 
     def psuedoinv_ik(self, side, target, current):
         x_prime = target - current
+        
 
         J = self.get_arm_jacobian(side)
         lmda = 0.0000001
@@ -107,10 +108,11 @@ class Val:
         
         q_prime = np.dot(J_pinv, x_prime)
         if(np.linalg.norm(q_prime) > 0.005):
-            q_prime = 0.6 * q_prime/np.linalg.norm(q_prime)
+            q_prime = 5.6 * q_prime/np.linalg.norm(q_prime) * np.linalg.norm(x_prime)
 
         # joint limits 
         
         # control
         joint_list = self.left_arm_joints if (side == "left") else right_arm_joints
+
         p.setJointMotorControlArray(self.urdf, joint_list, p.VELOCITY_CONTROL, targetVelocities=q_prime)
