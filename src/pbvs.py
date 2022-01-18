@@ -40,5 +40,5 @@ def detect_markers(frame):
     cv2.imshow('frame',frame)
     cv2.waitKey(0)
 
-im = cv2.imread("ar_0.jpg")
-detect_markers(im)
+#im = cv2.imread("PINCER_HOUSING2.png")
+#detect_markers(im)

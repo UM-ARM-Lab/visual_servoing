@@ -1,5 +1,6 @@
 from src.utils import draw_pose, erase_pos
 from src.val import *
+from src.pbvs import *
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 # Control end effector position with keyboard
@@ -46,9 +47,11 @@ width, height, rgbImg, depthImg, segImg = p.getCameraImage(
     projectionMatrix=projectionMatrix)
 rgb_img = np.array(rgbImg)[:, :, :3]
 depth_img = np.array(depthImg)
-plt.imshow(rgb_img)
-plt.show()
-plt.figure()
+print(rgb_img[:, :, 0])
+detect_markers(np.copy(rgb_img))
+#plt.imshow(rgb_img)
+#plt.show()
+#plt.figure()
 
 
 while(True):
