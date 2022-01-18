@@ -59,6 +59,18 @@ while(True):
     erase_pos(marker)
     marker = marker_new
 
+    width, height, rgbImg, depthImg, segImg = p.getCameraImage(
+    width=1000,
+    height=1000,
+    viewMatrix=viewMatrix,
+    projectionMatrix=projectionMatrix)
+    rgb_img = np.array(rgbImg)[:, :, :3]
+    depth_img = np.array(depthImg)
+    print(rgb_img[:, :, 0])
+    detect_markers(np.copy(rgb_img))
+    cv2.waitKey(10)
+
+
     events = p.getKeyboardEvents()
     print(events)
     if(KEY_LEFT in events):
