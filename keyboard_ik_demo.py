@@ -49,5 +49,8 @@ while(True):
     elif(KEY_DOWN in events):
         target -= np.array([0.00, 0.00, 0.01, 0.0, 0.0, 0.0])
 
+    if(KEY_U in events):
+        target += np.array([0.00, 0.00, 0.00, 0.01, 0.0, 0.0])
+
     # IK controller to target
     val.psuedoinv_ik("left", target, val.get_eef_pos("left"))
