@@ -4,22 +4,24 @@ import numpy as np
 
 class PVBS:
 
-    def get_static_camera_img(self): 
-        # TODO replace magic numbers with class params
-        projectionMatrix = p.computeProjectionMatrixFOV(
+    def __init__(self):
+        self.projectionMatrix = p.computeProjectionMatrixFOV(
             fov=45.0,
             aspect=1.0,
             nearVal=0.1,
             farVal=3.1)
-        viewMatrix = p.computeViewMatrix(
+        self.viewMatrix = p.computeViewMatrix(
             cameraEyePosition=[-2, 0, 0],
             cameraTargetPosition=[0, 0, 0],
             cameraUpVector=[0, 0, 1])
+
+    def get_static_camera_img(self): 
+        # TODO replace magic numbers with class params
         width, height, rgbImg, depthImg, segImg = p.getCameraImage(
             width=1000,
             height=1000,
-            viewMatrix=viewMatrix,
-            projectionMatrix=projectionMatrix)
+            viewMatrix=self.viewMatrix,
+            projectionMatrix=self.projectionMatrix)
         rgb_img = np.array(rgbImg)[:, :, :3]
         depth_img = np.array(depthImg)
         return rgb_img, depth_img
@@ -58,7 +60,13 @@ class PVBS:
                 center_x = int((top_left[0] + bottom_right[0]) / 2.0)
                 center_y = int((top_left[1] + bottom_right[1]) / 2.0)
                 cv2.circle(frame, (center_x, center_y), 4, (0, 0, 255), -1)
+
                 
+                if(len(corners) >= 4):
+                    # pose estimate
+                    dist = np.ndarray([0])
+                    rvec, tvec, _ = cv2.aruco.estimatePoseSingleMarkers(np.array(corners), 10.0, self.projectionMatrix, dist)
+                #print(out)
     
         # Display the resulting frame
         cv2.imshow('frame',frame)
