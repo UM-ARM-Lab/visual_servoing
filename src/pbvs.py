@@ -65,8 +65,15 @@ class PVBS:
                 if(len(corners) >= 4):
                     # pose estimate
                     dist = np.ndarray([0])
-                    rvec, tvec, _ = cv2.aruco.estimatePoseSingleMarkers(np.array(corners), 10.0, self.projectionMatrix, dist)
-                #print(out)
+                    print(np.array(marker_corner))
+                  
+                    proj_4x4 = np.array(self.projectionMatrix).reshape(4,4)
+                    proj_3x3 = np.array(self.projectionMatrix).reshape(4,4)[:3, :3]
+                    rvec, tvec, _ = cv2.aruco.estimatePoseSingleMarkers(marker_corner, 0.183, proj_3x3, 0)
+                    print(rvec)
+                    print(tvec)
+                    cv2.aruco.drawAxis(frame, proj_3x3, 0, rvec[0], tvec[0], 0.3)
+
     
         # Display the resulting frame
         cv2.imshow('frame',frame)
