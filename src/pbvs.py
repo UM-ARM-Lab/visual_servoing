@@ -2,7 +2,7 @@ import cv2
 import pybullet as p
 import numpy as np
 
-class PVBS:
+class PBVS:
 
     def __init__(self):
         self.projectionMatrix = p.computeProjectionMatrixFOV(
@@ -11,15 +11,15 @@ class PVBS:
             nearVal=0.1,
             farVal=3.1)
         self.viewMatrix = p.computeViewMatrix(
-            cameraEyePosition=[-2, 0, 0],
-            cameraTargetPosition=[0, 0, 0],
+            cameraEyePosition=[-1.5, 1, 0],
+            cameraTargetPosition=[0, 0.3, 0],
             cameraUpVector=[0, 0, 1])
 
     def get_static_camera_img(self): 
         # TODO replace magic numbers with class params
         width, height, rgbImg, depthImg, segImg = p.getCameraImage(
-            width=1920,
-            height=1080,
+            width=1000,
+            height=1000,
             viewMatrix=self.viewMatrix,
             projectionMatrix=self.projectionMatrix)
         rgb_img = np.array(rgbImg)[:, :, :3]
@@ -34,7 +34,9 @@ class PVBS:
 
         (corners, ids, rejected) = cv2.aruco.detectMarkers(
         frame, dict, parameters=aruco_params)
-        
+        R = np.zeros((3,3))
+        tvec = np.zeros((3, 1))
+
         if(len(corners) > 0):
             # Flatten the ArUco IDs list
             ids = ids.flatten()
@@ -79,5 +81,5 @@ class PVBS:
         # Display the resulting frame with annotations
         cv2.imshow('frame',frame)
 
-        # return the location of the tag
-        return (center_x, center_y)
+        # return the location of the tag and pose
+        return R, tvec[0].T, (center_x, center_y)
