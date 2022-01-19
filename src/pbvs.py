@@ -18,8 +18,8 @@ class PVBS:
     def get_static_camera_img(self): 
         # TODO replace magic numbers with class params
         width, height, rgbImg, depthImg, segImg = p.getCameraImage(
-            width=1000,
-            height=1000,
+            width=1920,
+            height=1080,
             viewMatrix=self.viewMatrix,
             projectionMatrix=self.projectionMatrix)
         rgb_img = np.array(rgbImg)[:, :, :3]
@@ -27,6 +27,8 @@ class PVBS:
         return rgb_img, depth_img
 
     def detect_markers(self, frame):
+        center_x = -1
+        center_y = -1
         dict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_6X6_250)
         aruco_params = cv2.aruco.DetectorParameters_create()
 
@@ -62,21 +64,20 @@ class PVBS:
                 cv2.circle(frame, (center_x, center_y), 4, (0, 0, 255), -1)
 
                 
-                if(len(corners) >= 4):
-                    # pose estimate
-                    dist = np.ndarray([0])
-                    #print(np.array(marker_corner))
-                  
-                    proj_4x4 = np.array(self.projectionMatrix).reshape(4,4)
-                    proj_3x3 = np.array(self.projectionMatrix).reshape(4,4)[:3, :3]
-                    rvec, tvec, _ = cv2.aruco.estimatePoseSingleMarkers(marker_corner, 0.183, proj_3x3, 0)
-                    
-                    cv2.aruco.drawAxis(frame, proj_3x3, 0, rvec[0], tvec[0], 0.3)
+                # Marker pose estimation with PnP (no depth)
+                proj_4x4 = np.array(self.projectionMatrix).reshape(4,4)
+                proj_3x3 = np.array(self.projectionMatrix).reshape(4,4)[:3, :3]
+                rvec, tvec, _ = cv2.aruco.estimatePoseSingleMarkers(marker_corner, 0.183, proj_3x3, 0)
+                cv2.aruco.drawAxis(frame, proj_3x3, 0, rvec[0], tvec[0], 0.3)
 
-                    # compute end effector distance with solve pnp vs depth map truth
-                    R = cv2.Rodrigues(rvec)
-                    print(R)
+                # compute end effector distance with PnP vs depth map truth
+                R, _ = cv2.Rodrigues(rvec[0])
+                offset = np.dot(-R.T, tvec[0].T)   
+                dist_pnp = np.linalg.norm(offset)
+                print(f"[PnP] dist: {dist_pnp}, depth: {offset[2]}")
     
-        # Display the resulting frame
+        # Display the resulting frame with annotations
         cv2.imshow('frame',frame)
 
+        # return the location of the tag
+        return (center_x, center_y)

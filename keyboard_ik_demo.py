@@ -34,7 +34,9 @@ while(True):
 
     # Get camera feed and detect markers
     rgb, depth = pvbs.get_static_camera_img()
-    pvbs.detect_markers(np.copy(rgb))
+    tag_center = pvbs.detect_markers(np.copy(rgb))
+
+    print(f"[Stereo] dist: {0}, depth: {depth[tag_center[1]][tag_center[0]] }")
     cv2.waitKey(10)
 
     # Process keyboard to adjust target position
