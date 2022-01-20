@@ -1,5 +1,6 @@
 # Control end effector position with keyboard
 
+from torch import nonzero
 from src.utils import draw_pose, erase_pos
 from src.val import *
 from src.pbvs import *
@@ -23,28 +24,38 @@ p.setRealTimeSimulation(1)
 perturb = np.zeros((6)) 
 perturb[0:3] = 0.1
 target = val.get_eef_pos("left") + perturb
-marker = draw_pose(target[0:3], p.getQuaternionFromEuler(target[3:6]))
+#marker = draw_pose(target[0:3], p.getQuaternionFromEuler(target[3:6]))
 
-draw_pose(val.get_eef_pos("left")[0:3], p.getQuaternionFromEuler(val.get_eef_pos("left")[3:6]))
+#draw_pose(val.get_eef_pos("left")[0:3], p.getQuaternionFromEuler(val.get_eef_pos("left")[3:6]))
+
+draw_sphere_marker(pbvs.camera_eye, 0.07, (1.0, 0.0, 0.0, 1.0))
+uids = None
 
 while(True):
     # Move target marker based on updated target position
-    marker_new = draw_pose(target[0:3], p.getQuaternionFromEuler(target[3:6]))
-    erase_pos(marker)
-    marker = marker_new
+    #marker_new = draw_pose(target[0:3], p.getQuaternionFromEuler(target[3:6]))
+    #erase_pos(marker)
+    #marker = marker_new
 
     # Get camera feed and detect markers
     rgb, depth = pbvs.get_static_camera_img()
     # Rotation of camera in AR tag relative frame
     Rac, t, tag_center = pbvs.detect_markers(np.copy(rgb))
-    # Rotation of ar tag in camera relative frame
-    Rca = Rac.T
-    # note that viewMatrix of the camera is rotation of the world relative to the camera
-    Rcw = np.array(pbvs.viewMatrix)[0:3, 0:3].reshape(3, 3)
-    Rwc = Rcw.T
-    # Rotation of ar tag in world relative frame by adding known camera rotation
-    Rwa = np.matmul(Rca, Rwc)
-    #draw_pose()
+    if(tag_center[0] != -1):
+        # Rotation of ar tag in camera relative frame
+        Rca = Rac.T
+        # note that viewMatrix of the camera is rotation of the world relative to the camera
+        Rcw = np.array(pbvs.viewMatrix).reshape(4, 4)[0:3, 0:3]
+        Rwc = Rcw.T
+        # Rotation of ar tag in world relative frame by adding known camera rotation
+        Rwa = np.matmul(Rca, Rwc)
+        offset = np.dot(-Rac.T, t)  
+
+        #erase_pos(uids)
+        #uids = draw_pose(val.get_eef_pos("left")[0:3], Rwa, mat=True, uids=uids)
+        #print(pbvs.camera_eye.reshape(-1, 1) - offset)
+    #draw_pose(offset , p.getQuaternionFromEuler(val.get_eef_pos("left")[3:6]))
+    #draw_sphere_marker(offset, 0.07, (0.0, 0.0, 1.0, 1.0))
 
     #print(f"[Stereo] dist: {0}, depth: {depth[tag_center[1]][tag_center[0]] }")
     cv2.waitKey(10)

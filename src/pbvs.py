@@ -5,21 +5,23 @@ import numpy as np
 class PBVS:
 
     def __init__(self):
+        self.camera_eye = np.array([-1.7, 1.5, 0.5])
+        self.target_pos = np.array([0, 0.5, 0])
         self.projectionMatrix = p.computeProjectionMatrixFOV(
             fov=45.0,
             aspect=1.0,
             nearVal=0.1,
             farVal=3.1)
         self.viewMatrix = p.computeViewMatrix(
-            cameraEyePosition=[-1.5, 1, 0],
-            cameraTargetPosition=[0, 0.3, 0],
+            cameraEyePosition=self.camera_eye,
+            cameraTargetPosition=self.target_pos,
             cameraUpVector=[0, 0, 1])
 
     def get_static_camera_img(self): 
         # TODO replace magic numbers with class params
         width, height, rgbImg, depthImg, segImg = p.getCameraImage(
-            width=1000,
-            height=1000,
+            width=2000,
+            height=2000,
             viewMatrix=self.viewMatrix,
             projectionMatrix=self.projectionMatrix)
         rgb_img = np.array(rgbImg)[:, :, :3]
@@ -69,14 +71,23 @@ class PBVS:
                 # Marker pose estimation with PnP (no depth)
                 proj_4x4 = np.array(self.projectionMatrix).reshape(4,4)
                 proj_3x3 = np.array(self.projectionMatrix).reshape(4,4)[:3, :3]
+                print(proj_4x4)
+                
+                proj_3x3 = proj_3x3 * 1000/2
+                proj_3x3[0, 2] = 500
+                proj_3x3[1, 2] = 500
+                proj_3x3[2, 2] = 1
+                print(proj_3x3)
+
+
                 rvec, tvec, _ = cv2.aruco.estimatePoseSingleMarkers(marker_corner, 0.183, proj_3x3, 0)
-                cv2.aruco.drawAxis(frame, proj_3x3, 0, rvec[0], tvec[0], 0.3)
+                cv2.aruco.drawAxis(frame, proj_3x3, 0, rvec[0], tvec[0], 0.1) #tvec[0]
 
                 # compute end effector distance with PnP vs depth map truth
                 R, _ = cv2.Rodrigues(rvec[0])
                 offset = np.dot(-R.T, tvec[0].T)   
                 dist_pnp = np.linalg.norm(offset)
-                print(f"[PnP] dist: {dist_pnp}, depth: {offset[2]}")
+                #print(f"[PnP] dist: {dist_pnp}, depth: {offset[2]}")
     
         # Display the resulting frame with annotations
         cv2.imshow('frame',frame)
