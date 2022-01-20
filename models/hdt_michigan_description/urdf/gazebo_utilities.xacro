@@ -72,8 +72,8 @@
                 <robotNamespace>${robot_namespace}</robotNamespace>
                 <!--  This must be the same as the root frame of the robot you're using -->
                 <frameId>${root_frame_id}</frameId>
-                <excludedModels>collision_sphere</excludedModels>
-                <scalePrimitivesFactor>1.1</scalePrimitivesFactor>
+                <excludedModels>collision_sphere my_ground_plane</excludedModels>
+                <scalePrimitivesFactor>1.0</scalePrimitivesFactor>
             </plugin>
         </gazebo>
     </xacro:macro>

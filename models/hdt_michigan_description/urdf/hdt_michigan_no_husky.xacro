@@ -1,16 +1,5 @@
 <?xml version="1.0"?>
-<robot name="hdt_michigan" xmlns:xacro="http://www.ros.org/wiki/xacro">
-    <xacro:macro name="collision_visual" params="name *origin *geometry *material">
-        <collision name="${name}_collision">
-            <xacro:insert_block name="origin"/>
-            <xacro:insert_block name="geometry"/>
-        </collision>
-        <visual name="${name}_visual">
-            <xacro:insert_block name="origin"/>
-            <xacro:insert_block name="geometry"/>
-            <xacro:insert_block name="material"/>
-        </visual>
-    </xacro:macro>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
     <xacro:property name="robot_name" default="hdt_michigan"/>
     <xacro:property name="hardware_interface" default="hardware_interface/PositionJointInterface"/>
     <xacro:property name="gripper_joint_damping" value="0.01"/>
@@ -21,11 +10,7 @@
 
     <!-- constants -->
     <xacro:property name="M_PI" value="3.1415926535897931"/>
-
-    <!-- materials -->
-    <material name="black">
-        <color rgba="${0/255} ${0/255} ${0/255} 1.0"/>
-    </material>
+    <xacro:property name="CONTINUOUS_LIM" value="6.2"/>
 
     <material name="grey">
         <color rgba="${60/255} ${60/255} ${60/255} 1.0"/>
@@ -39,10 +24,6 @@
         <color rgba="${128/255} ${0/255} ${0/255} 1.0"/>
     </material>
 
-    <material name="white">
-        <color rgba="${255/255} ${255/255} ${255/255} 1.0"/>
-    </material>
-
     <material name="blue">
         <color rgba="${4/255} ${30/255} ${66/255} 1.0"/>
     </material>
@@ -54,60 +35,15 @@
     <!-- import gazebo definitions -->
     <xacro:include filename="$(find hdt_michigan_description)/urdf/hdt_michigan.gazebo.xacro"/>
 
-    <!-- segment 0 -->
     <link name="${robot_name}_root"/>
 
-    <joint name="husky_joint" type="fixed">
-        <origin xyz="0 0 0" rpy="0 0 0"/>
-        <parent link="hdt_michigan_root"/>
-        <child link="husky"/>
-    </joint>
-
-    <link name="husky">
-        <inertial>
-            <origin xyz="0 -0.32 -0.25" rpy="0 0 0"/>
-            <mass value="25"/>
-            <inertia ixx="2.338"
-                     ixy="0"
-                     ixz="0"
-                     iyy="2.338"
-                     iyz="0"
-                     izz="4.166"/>
-        </inertial>
-
-        <xacro:collision_visual name="husky_base">
-            <!-- NOTE: the order of the following elements matters! -->
-            <origin xyz="0 -0.32 -0.15" rpy="0 0 0"/>
-            <geometry>
-                <box size="1 1 0.37"/>
-            </geometry>
-            <material name="black"/>
-        </xacro:collision_visual>
-
-        <xacro:collision_visual name="protect_cables">
-            <origin xyz="0.0 -0.1 0.18" rpy="0 0 0"/>
-            <geometry>
-                <box size="0.2 0.2 0.4"/>
-            </geometry>
-            <material name="maize"/>
-        </xacro:collision_visual>
-
-        <xacro:collision_visual name="battery">
-            <origin xyz="0 -0.50 0.10" rpy="0 0 0"/>
-            <geometry>
-                <box size="1 0.65 0.4"/>
-            </geometry>
-            <material name="maize"/>
-        </xacro:collision_visual>
-    </link>
+    <link name="base"/>
 
     <joint name="base" type="fixed">
         <origin xyz="0 0 0" rpy="0 0 0"/>
-        <parent link="hdt_michigan_root"/>
+        <parent link="${robot_name}_root"/>
         <child link="base"/>
     </joint>
-
-    <link name="base"/>
 
     <link name="realsense">
         <collision name="realsense_collision">
@@ -205,7 +141,7 @@
     <joint name="joint56" type="revolute">
         <hdt id="56" kmin="100" kmax="200" inertia="0.1"/>
         <axis xyz="0 -1 0"/>
-        <limit effort="180.0" lower="${-2*M_PI}" upper="${2*M_PI}" velocity="0.45"/>
+        <limit effort="180.0" lower="${-CONTINUOUS_LIM}" upper="${CONTINUOUS_LIM}" velocity="0.45"/>
         <origin xyz="0 0 -.082642" rpy="${M_PI/2} 0 ${M_PI/2}"/>
         <parent link="drive56"/>
         <child link="drive57"/>
@@ -317,7 +253,7 @@
     <joint name="joint41" type="revolute">
         <hdt id="41" kmin="100" kmax="200" inertia="0.1"/>
         <axis xyz="0 1 0"/>
-        <limit effort="18.0" lower="${-2*M_PI}" upper="${2*M_PI}" velocity="0.45"/>
+        <limit effort="180.0" lower="${-CONTINUOUS_LIM}" upper="${CONTINUOUS_LIM}" velocity="0.45"/>
         <origin xyz="0 0 -.082642" rpy="${M_PI/2} 0 -${M_PI/2}"/>
         <parent link="drive41"/>
         <child link="drive42"/>
@@ -428,7 +364,7 @@
     <joint name="joint43" type="revolute">
         <hdt id="43" kmin="100" kmax="200" inertia="0.1"/>
         <axis xyz="0 0 -1"/>
-        <limit effort="90.0" lower="${-2*M_PI}" upper="${2*M_PI}" velocity="0.45"/>
+        <limit effort="90.0" lower="${-CONTINUOUS_LIM}" upper="${CONTINUOUS_LIM}" velocity="0.45"/>
         <origin xyz="0 0 -.115888" rpy="${-M_PI} 0 0"/>
         <parent link="drive43"/>
         <child link="lefttube"/>
@@ -571,7 +507,7 @@
     <joint name="joint45" type="revolute">
         <hdt id="45" kmin="100" kmax="200" inertia="0.1"/>
         <axis xyz="0 1 0"/>
-        <limit effort="35.0" lower="${-2*M_PI}" upper="${2*M_PI}" velocity="${2*M_PI/3}"/>
+        <limit effort="35.0" lower="${-CONTINUOUS_LIM}" upper="${CONTINUOUS_LIM}" velocity="${2*M_PI/3}"/>
         <origin xyz="0 0 -.067262" rpy="${M_PI/2} 0 ${M_PI/2}"/>
         <parent link="drive45"/>
         <child link="drive46"/>
@@ -682,7 +618,7 @@
     <joint name="joint47" type="revolute">
         <hdt id="47" kmin="100" kmax="200" inertia="0.1"/>
         <axis xyz="0 0 -1"/>
-        <limit effort="35.0" lower="${-2*M_PI}" upper="${2*M_PI}" velocity="${M_PI}"/>
+        <limit effort="35.0" lower="${-CONTINUOUS_LIM}" upper="${CONTINUOUS_LIM}" velocity="${M_PI}"/>
         <origin xyz="0 0 -.036" rpy="${M_PI} 0 ${M_PI}"/>
         <parent link="drive47"/>
         <child link="drive50"/>
@@ -707,6 +643,13 @@
             </geometry>
         </collision>
 
+        <collision>
+            <origin xyz="0.0625 0 0.045" rpy="0 0 0"/>
+            <geometry>
+                <box size="0.03 0.10 0.10"/>
+            </geometry>
+        </collision>
+
         <visual>
             <origin xyz="0 0 0" rpy="0 0 0"/>
             <geometry>
@@ -724,7 +667,6 @@
                     izz="0.00007523"/>
         </inertial>
     </link>
-
     <!-- Left Pincers -->
     <joint name="leftgripper" type="revolute">
         <hdt id="50a" kmin="75" kmax="150" inertia="0.075"/>
@@ -851,7 +793,7 @@
     <joint name="joint1" type="revolute">
         <hdt id="1" kmin="100" kmax="200" inertia="0.1"/>
         <axis xyz="0 -1 0"/>
-        <limit effort="180.0" lower="${-2*M_PI}" upper="${2*M_PI}" velocity="0.45"/>
+        <limit effort="180.0" lower="${-CONTINUOUS_LIM}" upper="${CONTINUOUS_LIM}" velocity="0.45"/>
         <origin xyz="0 0 -.082642" rpy="${M_PI/2} 0 ${M_PI/2}"/>
         <parent link="drive1"/>
         <child link="drive2"/>
@@ -961,7 +903,7 @@
     <joint name="joint3" type="revolute">
         <hdt id="3" kmin="100" kmax="200" inertia="0.1"/>
         <axis xyz="0 0 -1"/>
-        <limit effort="90.0" lower="${-2*M_PI}" upper="${2*M_PI}" velocity="0.45"/>
+        <limit effort="90.0" lower="${-CONTINUOUS_LIM}" upper="${CONTINUOUS_LIM}" velocity="0.45"/>
         <origin xyz="0 0 -.115888" rpy="${-M_PI} 0 ${M_PI}"/>
         <parent link="drive3"/>
         <child link="righttube"/>
@@ -1104,7 +1046,7 @@
     <joint name="joint5" type="revolute">
         <hdt id="5" kmin="100" kmax="200" inertia="0.1"/>
         <axis xyz="0 1 0"/>
-        <limit effort="35.0" lower="${-2*M_PI}" upper="${2*M_PI}" velocity="${2*M_PI/3}"/>
+        <limit effort="35.0" lower="${-CONTINUOUS_LIM}" upper="${CONTINUOUS_LIM}" velocity="${2*M_PI/3}"/>
         <origin xyz="0 0 -.067262" rpy="${M_PI/2} 0 ${-M_PI/2}"/>
         <parent link="drive5"/>
         <child link="drive6"/>
@@ -1215,7 +1157,7 @@
     <joint name="joint7" type="revolute">
         <hdt id="7" kmin="100" kmax="200" inertia="0.1"/>
         <axis xyz="0 0 -1"/>
-        <limit effort="35.0" lower="${-2*M_PI}" upper="${2*M_PI}" velocity="${M_PI}"/>
+        <limit effort="35.0" lower="${-CONTINUOUS_LIM}" upper="${CONTINUOUS_LIM}" velocity="${M_PI}"/>
         <origin xyz="0 0 -.036" rpy="${M_PI} 0 0"/>
         <parent link="drive7"/>
         <child link="drive10"/>
@@ -1239,6 +1181,14 @@
                 <mesh filename="package://hdt_michigan_description/meshes/PINCER_HOUSING2.STL" scale="1.0 1.0 1.0"/>
             </geometry>
         </collision>
+        <collision>
+
+            <origin xyz="0.0625 0 0.045" rpy="0 0 0"/>
+            <geometry>
+                <box size="0.03 0.10 0.10"/>
+            </geometry>
+        </collision>
+
 
         <visual>
             <origin xyz="0 0 0" rpy="0 0 0"/>
@@ -1398,7 +1348,5 @@
 
     <xacro:add_gazebo_control_plugin robot_namespace="${robot_name}"/>
     <xacro:add_moveit_planning_scene_plugin robot_namespace="${robot_name}" root_frame_id="${robot_name}_root"/>
-
-    <xacro:add_gazebo_fixed_link base_link="${robot_name}_root"/>
 </robot>
 
