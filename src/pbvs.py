@@ -65,7 +65,7 @@ class PBVS:
                 # Calculate and draw the center of the ArUco marker
                 center_x = int((top_left[0] + bottom_right[0]) / 2.0)
                 center_y = int((top_left[1] + bottom_right[1]) / 2.0)
-                cv2.circle(frame, (center_x, center_y), 4, (0, 0, 255), -1)
+                #cv2.circle(frame, (center_x, center_y), 4, (0, 0, 255), -1)
 
                 
                 # Marker pose estimation with PnP (no depth)
@@ -81,7 +81,7 @@ class PBVS:
 
 
                 rvec, tvec, _ = cv2.aruco.estimatePoseSingleMarkers(marker_corner, 0.183, proj_3x3, 0)
-                cv2.aruco.drawAxis(frame, proj_3x3, 0, rvec[0], tvec[0], 0.1) #tvec[0]
+                cv2.aruco.drawAxis(frame, proj_3x3, 0, rvec[0], tvec[0], 0.4) #tvec[0]
 
                 # compute end effector distance with PnP vs depth map truth
                 R, _ = cv2.Rodrigues(rvec[0])
