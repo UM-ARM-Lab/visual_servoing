@@ -1,6 +1,4 @@
 # Control end effector position with keyboard
-
-from torch import nonzero
 from src.utils import draw_pose, erase_pos
 from src.val import *
 from src.pbvs import *
@@ -55,7 +53,7 @@ while(True):
         #uids = draw_pose(val.get_eef_pos("left")[0:3], Rwa, mat=True, uids=uids)
         #print(pbvs.camera_eye.reshape(-1, 1) - offset)
     #draw_pose(offset , p.getQuaternionFromEuler(val.get_eef_pos("left")[3:6]))
-    draw_sphere_marker(offset, 0.07, (0.0, 0.0, 1.0, 1.0))
+    #draw_sphere_marker(offset, 0.07, (0.0, 0.0, 1.0, 1.0))
 
     #print(f"[Stereo] dist: {0}, depth: {depth[tag_center[1]][tag_center[0]] }")
     cv2.waitKey(10)
