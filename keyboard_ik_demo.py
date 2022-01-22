@@ -1,6 +1,4 @@
 # Control end effector position with keyboard
-
-from torch import nonzero
 from src.utils import draw_pose, erase_pos
 from src.val import *
 from src.pbvs import *
