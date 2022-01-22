@@ -5,11 +5,14 @@ import numpy as np
 class PBVS:
 
     def __init__(self):
-        self.camera_eye = np.array([-1.7, 1.5, 0.5])
+        self.image_width = 2000
+        self.image_height = 2000
+
+        self.camera_eye = np.array([-0.9, 0.5, 0.5])
         self.target_pos = np.array([0, 0.5, 0])
         self.projectionMatrix = p.computeProjectionMatrixFOV(
             fov=45.0,
-            aspect=1.0,
+            aspect=self.image_width/self.image_height,
             nearVal=0.1,
             farVal=3.1)
         self.viewMatrix = p.computeViewMatrix(
@@ -17,16 +20,31 @@ class PBVS:
             cameraTargetPosition=self.target_pos,
             cameraUpVector=[0, 0, 1])
 
+        
+
     def get_static_camera_img(self): 
         # TODO replace magic numbers with class params
+        
         width, height, rgbImg, depthImg, segImg = p.getCameraImage(
-            width=2000,
-            height=2000,
+            width= self.image_width,
+            height= self.image_height,
             viewMatrix=self.viewMatrix,
             projectionMatrix=self.projectionMatrix)
         rgb_img = np.array(rgbImg)[:, :, :3]
         depth_img = np.array(depthImg)
         return rgb_img, depth_img
+    
+    def get_intrinsics(self):
+        proj_4x4 = np.array(self.projectionMatrix).reshape(4,4)
+        proj_3x3 = np.array(self.projectionMatrix).reshape(4,4)[:3, :3]
+        
+        proj_3x3[0, 0] = proj_3x3[0, 0] * self.image_width/2
+        proj_3x3[1, 1] = proj_3x3[1, 1] * self.image_height/2
+        proj_3x3[0, 2] = self.image_width/2
+        proj_3x3[1, 2] = self.image_height/2
+        proj_3x3[2, 2] = 1
+
+        return proj_3x3
 
     def detect_markers(self, frame):
         center_x = -1
@@ -69,14 +87,7 @@ class PBVS:
 
                 
                 # Marker pose estimation with PnP (no depth)
-                proj_4x4 = np.array(self.projectionMatrix).reshape(4,4)
-                proj_3x3 = np.array(self.projectionMatrix).reshape(4,4)[:3, :3]
-                print(proj_4x4)
-                
-                proj_3x3 = proj_3x3 * 1000/2
-                proj_3x3[0, 2] = 500
-                proj_3x3[1, 2] = 500
-                proj_3x3[2, 2] = 1
+                proj_3x3 = self.get_intrinsics()
                 print(proj_3x3)
 
 
@@ -88,6 +99,7 @@ class PBVS:
                 offset = np.dot(-R.T, tvec[0].T)   
                 dist_pnp = np.linalg.norm(offset)
                 #print(f"[PnP] dist: {dist_pnp}, depth: {offset[2]}")
+                print(tvec)
     
         # Display the resulting frame with annotations
         cv2.imshow('frame',frame)

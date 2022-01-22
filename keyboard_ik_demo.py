@@ -7,6 +7,9 @@ from src.pbvs import *
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 
+import open3d
+
+
 # Key bindings
 KEY_U = 117
 KEY_I = 105
@@ -39,6 +42,20 @@ while(True):
 
     # Get camera feed and detect markers
     rgb, depth = pbvs.get_static_camera_img()
+    cv2.imshow("depth", depth)
+
+    rgb_o3d = open3d.geometry.Image((rgb * 255).astype(np.uint8))
+    depth_o3d = open3d.geometry.Image((depth * 255).astype(np.uint8))
+    rgbd = open3d.geometry.RGBDImage.create_from_color_and_depth(rgb_o3d, depth_o3d, convert_rgb_to_intensity = False)
+    intrinsics = pbvs.get_intrinsics()
+    intrinsics_o3d =  open3d.camera.PinholeCameraIntrinsic(pbvs.image_width, pbvs.image_height, intrinsics[0,0],intrinsics[1,1], intrinsics[0,2], intrinsics[1,2] )
+    #pcd = open3d.geometry.PointCloud.create_from_rgbd_image(rgb_o3d, intrinsics_o3d)
+
+    # flip the orientation, so it looks upright, not upside-down
+    #pcd.transform([[1,0,0,0],[0,-1,0,0],[0,0,-1,0],[0,0,0,1]])
+
+    #open3d.geometry.draw_geometries([pcd])    # visualize the point cloud
+
     # Rotation of camera in AR tag relative frame
     Rac, t, tag_center = pbvs.detect_markers(np.copy(rgb))
     if(tag_center[0] != -1):
@@ -50,15 +67,17 @@ while(True):
         # Rotation of ar tag in world relative frame by adding known camera rotation
         Rwa = np.matmul(Rca, Rwc)
         offset = np.dot(-Rac.T, t)  
-
+        #print(f"[Stereo] depth: {depth[tag_center[1]][tag_center[0]] }")
         #erase_pos(uids)
         #uids = draw_pose(val.get_eef_pos("left")[0:3], Rwa, mat=True, uids=uids)
         #print(pbvs.camera_eye.reshape(-1, 1) - offset)
-    #draw_pose(offset , p.getQuaternionFromEuler(val.get_eef_pos("left")[3:6]))
-    draw_sphere_marker(offset, 0.07, (0.0, 0.0, 1.0, 1.0))
-
-    #print(f"[Stereo] dist: {0}, depth: {depth[tag_center[1]][tag_center[0]] }")
+        #draw_pose(offset , p.getQuaternionFromEuler(val.get_eef_pos("left")[3:6]))
+        #draw_sphere_marker(t, 0.07, (0.0, 0.0, 1.0, 1.0))
+        #draw_sphere_marker(offset, 0.07, (0.0, 1.0, 1.0, 1.0))
+        #print(t)
+        
     cv2.waitKey(10)
+
 
     # Process keyboard to adjust target position
     events = p.getKeyboardEvents()
