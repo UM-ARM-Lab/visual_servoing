@@ -91,7 +91,7 @@ class PBVS:
                 print(proj_3x3)
 
 
-                rvec, tvec, _ = cv2.aruco.estimatePoseSingleMarkers(marker_corner, 0.183, proj_3x3, 0)
+                rvec, tvec, _ = cv2.aruco.estimatePoseSingleMarkers(marker_corner, 0.242, proj_3x3, 0)
                 cv2.aruco.drawAxis(frame, proj_3x3, 0, rvec[0], tvec[0], 0.4) #tvec[0]
 
                 # compute end effector distance with PnP vs depth map truth
