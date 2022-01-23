@@ -34,3 +34,13 @@ def erase_pos(line_ids):
     if(line_ids is not None):
         for line_id in line_ids:
             p.removeUserDebugItem(line_id)
+
+def get_true_depth(depth_img, zNear, zFar):
+    #z_n = 2.0 * depth_img - 1.0
+    #return 2.0 * zNear * zFar / (zFar + zNear - z_n * (zFar - zNear))
+    depth = zFar * zNear / (zFar - (zFar - zNear) * depth_img)
+    return depth
+
+    #nonLinearDepth = (zFar + zNear - 2.0 * zNear * zFar / depth_img) / (zFar - zNear)
+    #nonLinearDepth = (nonLinearDepth + 1.0) / 2.0
+    #return nonLinearDepth

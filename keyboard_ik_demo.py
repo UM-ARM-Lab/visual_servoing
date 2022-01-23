@@ -1,12 +1,13 @@
 # Control end effector position with keyboard
-from src.utils import draw_pose, erase_pos
+from pygame import pixelcopy
+from src.utils import draw_pose, erase_pos, get_true_depth
 from src.val import *
 from src.pbvs import *
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 
 import open3d
-
+import glm
 
 # Key bindings
 KEY_U = 117
@@ -29,7 +30,8 @@ target = val.get_eef_pos("left") + perturb
 
 #draw_pose(val.get_eef_pos("left")[0:3], p.getQuaternionFromEuler(val.get_eef_pos("left")[3:6]))
 
-draw_sphere_marker(pbvs.camera_eye, 0.07, (1.0, 0.0, 0.0, 1.0))
+#draw_sphere_marker(pbvs.camera_eye, 0.07, (1.0, 0.0, 0.0, 1.0))
+draw_pose(pbvs.camera_eye, pbvs.get_view(), mat=True)
 uids = None
 
 while(True):
@@ -51,6 +53,7 @@ while(True):
 
     # flip the orientation, so it looks upright, not upside-down
     #pcd.transform([[1,0,0,0],[0,-1,0,0],[0,0,-1,0],[0,0,0,1]])
+    #draw_sphere_marker((0.1, 1, 3), 0.07, (0.0, 0.0, 1.0, 1.0)) 
 
     #open3d.geometry.draw_geometries([pcd])    # visualize the point cloud
 
@@ -58,13 +61,13 @@ while(True):
     Rac, t, tag_center = pbvs.detect_markers(np.copy(rgb))
     if(tag_center[0] != -1):
         # Rotation of ar tag in camera relative frame
-        Rca = Rac.T
+        #Rca = Rac.T
         # note that viewMatrix of the camera is rotation of the world relative to the camera
-        Rcw = np.array(pbvs.viewMatrix).reshape(4, 4)[0:3, 0:3]
-        Rwc = Rcw.T
+        #Rcw = np.array(pbvs.viewMatrix).reshape(4, 4)[0:3, 0:3]
+        #Rwc = Rcw.T
         # Rotation of ar tag in world relative frame by adding known camera rotation
-        Rwa = np.matmul(Rca, Rwc)
-        offset = np.dot(-Rac.T, t)  
+        #Rwa = np.matmul(Rca, Rwc)
+        #offset = np.dot(-Rac.T, t)  
         #print(f"[Stereo] depth: {depth[tag_center[1]][tag_center[0]] }")
         #erase_pos(uids)
         #uids = draw_pose(val.get_eef_pos("left")[0:3], Rwa, mat=True, uids=uids)
@@ -73,6 +76,20 @@ while(True):
         #draw_sphere_marker(t, 0.07, (0.0, 0.0, 1.0, 1.0))
         #draw_sphere_marker(offset, 0.07, (0.0, 1.0, 1.0, 1.0))
         #print(t)
+        
+        projectionMatrix = np.asarray(pbvs.projectionMatrix).reshape([4,4],order='F')
+        viewMatrix = np.asarray(pbvs.viewMatrix).reshape([4,4],order='F')
+        T = np.linalg.inv(np.matmul(projectionMatrix, viewMatrix))
+        x = (2*tag_center[0]- pbvs.image_width)/pbvs.image_width
+        y = -(2*tag_center[1]- pbvs.image_height)/pbvs.image_height
+        z = 2 * depth[tag_center[1], tag_center[0]] - 1
+        pix = np.asarray([x, y, z, 1])
+        pos = np.matmul(T, pix)
+        pos /= pos[3]
+        print(pos)
+
+        draw_sphere_marker(pos[0:3], 0.03, (1.0, 0.0, 1.0, 1.0)) 
+        pass
         
     cv2.waitKey(10)
 

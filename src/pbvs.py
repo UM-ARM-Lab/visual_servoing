@@ -43,8 +43,13 @@ class PBVS:
         proj_3x3[0, 2] = self.image_width/2
         proj_3x3[1, 2] = self.image_height/2
         proj_3x3[2, 2] = 1
-
+        #print(proj_3x3)
         return proj_3x3
+    
+    def get_view(self):
+        view_4x4 = np.array(self.viewMatrix).reshape(4,4)
+        view_3x3 = np.array(self.viewMatrix).reshape(4,4)[:3, :3]
+        return view_3x3
 
     def detect_markers(self, frame):
         center_x = -1
@@ -60,7 +65,7 @@ class PBVS:
         if(len(corners) > 0):
             # Flatten the ArUco IDs list
             ids = ids.flatten()
-            
+            print(ids)
             # Loop over the detected ArUco corners
             for (marker_corner, marker_id) in zip(corners, ids):
                 
@@ -88,19 +93,24 @@ class PBVS:
                 
                 # Marker pose estimation with PnP (no depth)
                 proj_3x3 = self.get_intrinsics()
-                print(proj_3x3)
+                #print(proj_3x3)
 
 
                 rvec, tvec, _ = cv2.aruco.estimatePoseSingleMarkers(marker_corner, 0.242, proj_3x3, 0)
                 cv2.aruco.drawAxis(frame, proj_3x3, 0, rvec[0], tvec[0], 0.4) #tvec[0]
 
                 # compute end effector distance with PnP vs depth map truth
-                R, _ = cv2.Rodrigues(rvec[0])
-                offset = np.dot(-R.T, tvec[0].T)   
-                dist_pnp = np.linalg.norm(offset)
+                #R, _ = cv2.Rodrigues(rvec[0])
+                #offset = np.dot(-R.T, tvec[0].T)   
+                #dist_pnp = np.linalg.norm(offset)
                 #print(f"[PnP] dist: {dist_pnp}, depth: {offset[2]}")
-                print(tvec)
-    
+                #print(tvec)
+
+            # board stuff
+            #board = cv2.aruco.GridBoard_create(2, 2, 0.01045, 0.00417, dict, firstMarker = 1)
+            #_, rvec, tvec = cv2.aruco.estimatePoseBoard(corners, ids, board, self.get_intrinsics(), 0, None, None)
+            #cv2.aruco.drawAxis(frame, self.get_intrinsics(), 0, rvec, tvec, 0.4)
+
         # Display the resulting frame with annotations
         cv2.imshow('frame',frame)
 
