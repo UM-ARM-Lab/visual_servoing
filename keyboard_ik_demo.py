@@ -77,6 +77,7 @@ while(True):
         #draw_sphere_marker(offset, 0.07, (0.0, 1.0, 1.0, 1.0))
         #print(t)
         
+        # source: https://stackoverflow.com/questions/59128880/getting-world-coordinates-from-opengl-depth-buffer
         projectionMatrix = np.asarray(pbvs.projectionMatrix).reshape([4,4],order='F')
         viewMatrix = np.asarray(pbvs.viewMatrix).reshape([4,4],order='F')
         T = np.linalg.inv(np.matmul(projectionMatrix, viewMatrix))
