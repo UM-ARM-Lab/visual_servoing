@@ -1,13 +1,10 @@
 # Control end effector position with keyboard
-from pygame import pixelcopy
 from src.utils import draw_pose, erase_pos, get_true_depth
 from src.val import *
 from src.pbvs import *
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 
-import open3d
-import glm
 
 # Key bindings
 KEY_U = 117
@@ -31,7 +28,14 @@ target = val.get_eef_pos("left") + perturb
 #draw_pose(val.get_eef_pos("left")[0:3], p.getQuaternionFromEuler(val.get_eef_pos("left")[3:6]))
 
 #draw_sphere_marker(pbvs.camera_eye, 0.07, (1.0, 0.0, 0.0, 1.0))
+Q = np.array([
+    [0.0, -1.0, 0.0], 
+    [1.0, 0.0, 0.0],
+    [0.0, 0.0, -1.0],
+])
 draw_pose(pbvs.camera_eye, pbvs.get_view(), mat=True)
+#draw_pose(pbvs.camera_eye, Q, mat=True)
+
 uids = None
 
 while(True):
@@ -42,40 +46,19 @@ while(True):
 
     # Get camera feed and detect markers
     rgb, depth = pbvs.get_static_camera_img()
-    cv2.imshow("depth", depth)
+    #cv2.imshow("depth", depth)
 
-    rgb_o3d = open3d.geometry.Image((rgb * 255).astype(np.uint8))
-    depth_o3d = open3d.geometry.Image((depth * 255).astype(np.uint8))
-    rgbd = open3d.geometry.RGBDImage.create_from_color_and_depth(rgb_o3d, depth_o3d, convert_rgb_to_intensity = False)
-    intrinsics = pbvs.get_intrinsics()
-    intrinsics_o3d =  open3d.camera.PinholeCameraIntrinsic(pbvs.image_width, pbvs.image_height, intrinsics[0,0],intrinsics[1,1], intrinsics[0,2], intrinsics[1,2] )
-    #pcd = open3d.geometry.PointCloud.create_from_rgbd_image(rgb_o3d, intrinsics_o3d)
-
-    # flip the orientation, so it looks upright, not upside-down
-    #pcd.transform([[1,0,0,0],[0,-1,0,0],[0,0,-1,0],[0,0,0,1]])
-    #draw_sphere_marker((0.1, 1, 3), 0.07, (0.0, 0.0, 1.0, 1.0)) 
-
-    #open3d.geometry.draw_geometries([pcd])    # visualize the point cloud
-
-    # Rotation of camera in AR tag relative frame
-    Rac, t, tag_center = pbvs.detect_markers(np.copy(rgb))
+    # Rotation from ar tag frame to camera 
+    Rca, t, tag_center = pbvs.detect_markers(np.copy(rgb))
     if(tag_center[0] != -1):
+        print(Rca)
         # Rotation of ar tag in camera relative frame
-        #Rca = Rac.T
         # note that viewMatrix of the camera is rotation of the world relative to the camera
-        #Rcw = np.array(pbvs.viewMatrix).reshape(4, 4)[0:3, 0:3]
+        Rwc = pbvs.get_view()
         #Rwc = Rcw.T
         # Rotation of ar tag in world relative frame by adding known camera rotation
-        #Rwa = np.matmul(Rca, Rwc)
-        #offset = np.dot(-Rac.T, t)  
-        #print(f"[Stereo] depth: {depth[tag_center[1]][tag_center[0]] }")
-        #erase_pos(uids)
-        #uids = draw_pose(val.get_eef_pos("left")[0:3], Rwa, mat=True, uids=uids)
-        #print(pbvs.camera_eye.reshape(-1, 1) - offset)
-        #draw_pose(offset , p.getQuaternionFromEuler(val.get_eef_pos("left")[3:6]))
-        #draw_sphere_marker(t, 0.07, (0.0, 0.0, 1.0, 1.0))
-        #draw_sphere_marker(offset, 0.07, (0.0, 1.0, 1.0, 1.0))
-        #print(t)
+        Rwa =np.matmul(Rca, Rwc)
+        #print(np.matmul(Rwa, Rwa.T))
         
         # source: https://stackoverflow.com/questions/59128880/getting-world-coordinates-from-opengl-depth-buffer
         projectionMatrix = np.asarray(pbvs.projectionMatrix).reshape([4,4],order='F')
@@ -87,10 +70,13 @@ while(True):
         pix = np.asarray([x, y, z, 1])
         pos = np.matmul(T, pix)
         pos /= pos[3]
-        print(pos)
+        #print(pos)
+        #print(Rwa)
+        if(uids is not None):
+            erase_pos(uids)
+        uids = draw_pose(pos[0:3], Rwa, mat=True)
 
-        draw_sphere_marker(pos[0:3], 0.03, (1.0, 0.0, 1.0, 1.0)) 
-        pass
+        #draw_sphere_marker(pos[0:3], 0.03, (1.0, 0.0, 1.0, 1.0)) 
         
     cv2.waitKey(10)
 

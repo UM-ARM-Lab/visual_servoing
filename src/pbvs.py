@@ -5,10 +5,10 @@ import numpy as np
 class PBVS:
 
     def __init__(self):
-        self.image_width = 2000
-        self.image_height = 2000
-
-        self.camera_eye = np.array([-0.9, 0.5, 0.5])
+        self.image_width = 1000
+        self.image_height = 1000
+    #-1.9
+        self.camera_eye = np.array([-0.3, 0.5, 0.5])
         self.target_pos = np.array([0, 0.5, 0])
         self.projectionMatrix = p.computeProjectionMatrixFOV(
             fov=45.0,
@@ -47,8 +47,10 @@ class PBVS:
         return proj_3x3
     
     def get_view(self):
-        view_4x4 = np.array(self.viewMatrix).reshape(4,4)
+        view_4x4 = np.array(self.viewMatrix).reshape(4,4).T
+        #print(view_4x4)
         view_3x3 = np.array(self.viewMatrix).reshape(4,4)[:3, :3]
+        #print(view_3x3)
         return view_3x3
 
     def detect_markers(self, frame):
@@ -97,14 +99,10 @@ class PBVS:
 
 
                 rvec, tvec, _ = cv2.aruco.estimatePoseSingleMarkers(marker_corner, 0.242, proj_3x3, 0)
-                cv2.aruco.drawAxis(frame, proj_3x3, 0, rvec[0], tvec[0], 0.4) #tvec[0]
+                cv2.aruco.drawAxis(frame, proj_3x3, 0, rvec[0], tvec[0], 0.8) #tvec[0]
 
-                # compute end effector distance with PnP vs depth map truth
-                #R, _ = cv2.Rodrigues(rvec[0])
-                #offset = np.dot(-R.T, tvec[0].T)   
-                #dist_pnp = np.linalg.norm(offset)
-                #print(f"[PnP] dist: {dist_pnp}, depth: {offset[2]}")
-                #print(tvec)
+                # compute end effector rotation from Rordigues 
+                R, _ = cv2.Rodrigues(rvec[0])
 
             # board stuff
             #board = cv2.aruco.GridBoard_create(2, 2, 0.01045, 0.00417, dict, firstMarker = 1)
