@@ -1,4 +1,5 @@
 # Control end effector position with keyboard
+from fileinput import filename
 from src.utils import draw_pose, erase_pos, get_true_depth
 from src.val import *
 from src.pbvs import *
@@ -23,11 +24,7 @@ p.setRealTimeSimulation(1)
 perturb = np.zeros((6)) 
 perturb[0:3] = 0.1
 target = val.get_eef_pos("left") + perturb
-#marker = draw_pose(target[0:3], p.getQuaternionFromEuler(target[3:6]))
 
-#draw_pose(val.get_eef_pos("left")[0:3], p.getQuaternionFromEuler(val.get_eef_pos("left")[3:6]))
-
-#draw_sphere_marker(pbvs.camera_eye, 0.07, (1.0, 0.0, 0.0, 1.0))
 Q = np.array([
     [0.0, -1.0, 0.0], 
     [1.0, 0.0, 0.0],
@@ -36,6 +33,10 @@ Q = np.array([
 draw_pose(pbvs.camera_eye, pbvs.get_view(), mat=True)
 #draw_pose(pbvs.camera_eye, Q, mat=True)
 
+# visual shape
+box_vis = p.createVisualShape(p.GEOM_MESH,fileName="AR Tag Static/box.obj")
+#box_col = p.createCollisionShape(p.GEOM_BOX)
+box_multi = p.createMultiBody(baseCollisionShapeIndex = 0, baseVisualShapeIndex=box_vis)
 uids = None
 
 while(True):
@@ -51,6 +52,9 @@ while(True):
     # Rotation from ar tag frame to camera 
     Rca, t, tag_center = pbvs.detect_markers(np.copy(rgb))
     if(tag_center[0] != -1):
+        print(Rca)
+        Rca[1, :] *= -1
+        Rca[2, :] *= -1
         print(Rca)
         # Rotation of ar tag in camera relative frame
         # note that viewMatrix of the camera is rotation of the world relative to the camera
@@ -74,7 +78,8 @@ while(True):
         #print(Rwa)
         if(uids is not None):
             erase_pos(uids)
-        uids = draw_pose(pos[0:3], Rwa, mat=True)
+        #uids = draw_pose(pos[0:3], Rwa, mat=True)
+        uids = draw_pose((0.0, 0.0, 0.5), Rca, mat=True)
 
         #draw_sphere_marker(pos[0:3], 0.03, (1.0, 0.0, 1.0, 1.0)) 
         
