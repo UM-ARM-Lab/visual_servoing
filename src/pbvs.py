@@ -7,14 +7,20 @@ class PBVS:
     def __init__(self):
         self.image_width = 1000
         self.image_height = 1000
-    #-1.9
+         #-1.9
         self.camera_eye = np.array([-0.3, 0.5, 0.5])
         self.target_pos = np.array([0, 0.5, 0])
+
+        self.camera_eye = np.array([0, 0.0, 0.0])
+        self.target_pos = np.array([0, 0.5, 0])
+
+
         self.projectionMatrix = p.computeProjectionMatrixFOV(
             fov=45.0,
             aspect=self.image_width/self.image_height,
             nearVal=0.1,
-            farVal=3.1)
+            farVal=3.1,
+            )
         self.viewMatrix = p.computeViewMatrix(
             cameraEyePosition=self.camera_eye,
             cameraTargetPosition=self.target_pos,
@@ -29,7 +35,9 @@ class PBVS:
             width= self.image_width,
             height= self.image_height,
             viewMatrix=self.viewMatrix,
-            projectionMatrix=self.projectionMatrix)
+            projectionMatrix=self.projectionMatrix,
+            lightDirection=[0,-1,0]
+            )
         rgb_img = np.array(rgbImg)[:, :, :3]
         depth_img = np.array(depthImg)
         return rgb_img, depth_img
