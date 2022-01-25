@@ -16,7 +16,7 @@ KEY_DOWN = 65298
 KEY_LEFT = 65295
 
 # Val robot and PVBS controller
-val = Val([-10, 0, 0])
+val = Val([-5.0, 0, 0])
 pbvs = PBVS()
 p.setRealTimeSimulation(1)
 
@@ -25,19 +25,21 @@ perturb = np.zeros((6))
 perturb[0:3] = 0.1
 target = val.get_eef_pos("left") + perturb
 
-Q = np.array([
-    [0.0, -1.0, 0.0], 
-    [1.0, 0.0, 0.0],
-    [0.0, 0.0, -1.0],
-])
-#draw_pose(pbvs.camera_eye, pbvs.get_view(), mat=True)
-draw_sphere_marker(pbvs.camera_eye, 0.07, (1.0, 0.0, 0.0, 1.0))
-#draw_pose(pbvs.camera_eye, Q, mat=True)
+#draw_pose(pbvs.camera_eye, pbvs.get_view(), mat=True, axis_len=0.1)
+
+'''
+draw_pose(pbvs.camera_eye, np.matmul(np.matmul(np.array([
+            [1.0, 0.0, 0.0],
+            [0.0, -1.0, 0.0],
+            [0.0, 0.0, -1.0]
+        ]), pbvs.get_view()), ), mat=True, axis_len=0.1)
+'''
 
 # visual shape
+box_pos = (0.0, 2.0, 0.0)
+box_orn = [np.pi/8,-np.pi/8, -np.pi/2 ]
 box_vis = p.createVisualShape(p.GEOM_MESH,fileName="AR Tag Static/box.obj", meshScale=[0.1,0.1, 0.1])
-#box_col = p.createCollisionShape(p.GEOM_BOX)
-box_multi = p.createMultiBody(baseCollisionShapeIndex = 0, baseVisualShapeIndex=box_vis, basePosition=(0.0, 2.0, 0.0), baseOrientation=p.getQuaternionFromEuler([0, 0, -np.pi/2]))
+box_multi = p.createMultiBody(baseCollisionShapeIndex = 0, baseVisualShapeIndex=box_vis, basePosition=box_pos, baseOrientation=p.getQuaternionFromEuler(box_orn))
 uids = None
 
 while(True):
@@ -51,19 +53,25 @@ while(True):
     #cv2.imshow("depth", depth)
 
     # Rotation from ar tag frame to camera 
-    Rca, t, tag_center = pbvs.detect_markers(np.copy(rgb))
+    Rc1a, t, tag_center = pbvs.detect_markers(np.copy(rgb))
     if(tag_center[0] != -1):
-        print(Rca)
-        Rca[1, :] *= -1
-        Rca[2, :] *= -1
-        print(Rca)
-        # Rotation of ar tag in camera relative frame
-        # note that viewMatrix of the camera is rotation of the world relative to the camera
-        Rwc = pbvs.get_view()
-        #Rwc = Rcw.T
+        Rc2c1 = np.array([
+            [1.0, 0.0, 0.0],
+            [0.0, -1.0, 0.0],
+            [0.0, 0.0, -1.0]
+        ])
+
+        Rwc2 = pbvs.get_view().T
+        
         # Rotation of ar tag in world relative frame by adding known camera rotation
-        Rwa =np.matmul(Rca, Rwc)
-        #print(np.matmul(Rwa, Rwa.T))
+        Rwa =  np.matmul(np.matmul(Rwc2, Rc2c1), Rc1a)#
+        Raw = np.matmul ( Rc1a.T,np.matmul(np.array([
+            [1.0, 0.0, 0.0],
+            [0.0, -1.0, 0.0],
+            [0.0, 0.0, -1.0]
+        ]), pbvs.get_view()))
+        #print(Rc1a)
+        print(pbvs.get_intrinsics())
         
         # source: https://stackoverflow.com/questions/59128880/getting-world-coordinates-from-opengl-depth-buffer
         projectionMatrix = np.asarray(pbvs.projectionMatrix).reshape([4,4],order='F')
@@ -75,12 +83,11 @@ while(True):
         pix = np.asarray([x, y, z, 1])
         pos = np.matmul(T, pix)
         pos /= pos[3]
-        #print(pos)
-        #print(Rwa)
+  
         if(uids is not None):
             erase_pos(uids)
-        #uids = draw_pose(pos[0:3], Rwa, mat=True)
-        #uids = draw_pose((0.0, 0.0, 0.5), Rca, mat=True)
+        uids = draw_pose(pos[0:3], Raw, mat=True)
+        #uids = draw_pose(pbvs.camera_eye, Raw, mat=True)
 
         #draw_sphere_marker(pos[0:3], 0.03, (1.0, 0.0, 1.0, 1.0)) 
         
@@ -91,16 +98,21 @@ while(True):
     events = p.getKeyboardEvents()
     if(KEY_LEFT in events):
         target += np.array([0.01, 0.0, 0.0, 0.0, 0.0, 0.0])
+        box_orn[0]+=0.1
     elif(KEY_RIGHT in events):
         target -= np.array([0.01, 0.0, 0.0, 0.0, 0.0, 0.0])
+        box_orn[0]-=0.1
 
     if(KEY_UP in events):
         target += np.array([0.00, 0.00, 0.01, 0.0, 0.0, 0.0])
+        box_orn[1]+=0.1
     elif(KEY_DOWN in events):
         target -= np.array([0.00, 0.00, 0.01, 0.0, 0.0, 0.0])
+        box_orn[1]-=0.1
 
     if(KEY_U in events):
         target += np.array([0.00, 0.00, 0.00, 0.01, 0.0, 0.0])
 
+    p.resetBasePositionAndOrientation(box_multi, posObj=box_pos, ornObj =p.getQuaternionFromEuler(box_orn) )
     # IK controller to target
     #val.psuedoinv_ik("left", target, val.get_eef_pos("left"))

@@ -5,14 +5,14 @@ import numpy as np
 class PBVS:
 
     def __init__(self):
-        self.image_width = 1000
-        self.image_height = 1000
+        self.image_width = 2000
+        self.image_height = 2000
          #-1.9
-        self.camera_eye = np.array([-0.3, 0.5, 0.5])
+        self.camera_eye = np.array([-1.0, 0.5, 0.5])
         self.target_pos = np.array([0, 0.5, 0])
 
-        self.camera_eye = np.array([0, 0.0, 0.0])
-        self.target_pos = np.array([0, 0.5, 0])
+        self.camera_eye = np.array([0.0, 0.0, 0.0])
+        self.target_pos = np.array([0, 3.0, 0])
 
 
         self.projectionMatrix = p.computeProjectionMatrixFOV(
@@ -55,7 +55,7 @@ class PBVS:
         return proj_3x3
     
     def get_view(self):
-        view_4x4 = np.array(self.viewMatrix).reshape(4,4).T
+        view_4x4 = np.array(self.viewMatrix).reshape(4,4)
         #print(view_4x4)
         view_3x3 = np.array(self.viewMatrix).reshape(4,4)[:3, :3]
         #print(view_3x3)
@@ -75,7 +75,7 @@ class PBVS:
         if(len(corners) > 0):
             # Flatten the ArUco IDs list
             ids = ids.flatten()
-            print(ids)
+            #print(ids)
             # Loop over the detected ArUco corners
             for (marker_corner, marker_id) in zip(corners, ids):
                 
