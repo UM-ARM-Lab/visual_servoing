@@ -108,16 +108,16 @@ class PBVS:
 
 
                 rvec, tvec, _ = cv2.aruco.estimatePoseSingleMarkers(marker_corner, 0.242, proj_3x3, 0)
-                #cv2.aruco.drawAxis(frame, proj_3x3, 0, rvec[0], tvec[0], 0.8) #tvec[0]
+                cv2.aruco.drawAxis(frame, proj_3x3, 0, rvec[0], tvec[0], 0.8) #tvec[0]
 
                 # compute end effector rotation from Rordigues 
                 Rot, _ = cv2.Rodrigues(rvec[0])
 
             # board stuff
-            board = cv2.aruco.GridBoard_create(2, 2, 0.01045, 0.00417, dict, firstMarker = 1)
-            _, rvec, tvec = cv2.aruco.estimatePoseBoard(corners_all, ids_all, board, self.get_intrinsics(), 0, None, None)
-            cv2.aruco.drawAxis(frame, self.get_intrinsics(), 0, rvec, tvec, 0.4)
-            Rot, _ = cv2.Rodrigues(rvec)
+            #board = cv2.aruco.GridBoard_create(2, 2, 0.01045, 0.00417, dict, firstMarker = 1)
+            #_, rvec, tvec = cv2.aruco.estimatePoseBoard(corners_all, ids_all, board, self.get_intrinsics(), 0, None, None)
+            #cv2.aruco.drawAxis(frame, self.get_intrinsics(), 0, rvec, tvec, 0.4)
+            #Rot, _ = cv2.Rodrigues(rvec)
 
         # Display the resulting frame with annotations
         cv2.imshow('frame',frame)
