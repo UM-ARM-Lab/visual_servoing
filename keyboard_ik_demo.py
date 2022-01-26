@@ -34,11 +34,15 @@ box_vis = p.createVisualShape(p.GEOM_MESH,fileName="AR Tag Static/box.obj", mesh
 #box_multi = p.createMultiBody(baseCollisionShapeIndex = 0, baseVisualShapeIndex=box_vis, basePosition=box_pos, baseOrientation=p.getQuaternionFromEuler(box_orn))
 
 # UIDS for ar tag pose marker 
-uids = None
+uids_eef_marker = None
+uids_target_marker = None
 
 while(True):
     # Move target marker based on updated target position
-    #marker_new = draw_pose(target[0:3], p.getQuaternionFromEuler(target[3:6]))
+     # Draw the pose estimate of the AR tag
+    if(uids_target_marker is not None):
+        erase_pos(uids_target_marker)
+    uids_target_marker = draw_pose(target[0:3], p.getQuaternionFromEuler(target[3:6]))
 
     # Get camera feed and detect markers
     rgb, depth = pbvs.get_static_camera_img()
@@ -95,9 +99,9 @@ while(True):
   
 
         # Draw the pose estimate of the AR tag
-        if(uids is not None):
-            erase_pos(uids)
-        uids = draw_pose(pos[0:3], Rwa, mat=True)
+        if(uids_eef_marker is not None):
+            erase_pos(uids_eef_marker)
+        uids_eef_marker = draw_pose(pos[0:3], Rwa, mat=True)
         
     cv2.waitKey(10)
 
@@ -125,4 +129,4 @@ while(True):
     #p.resetBasePositionAndOrientation(box_multi, posObj=box_pos, ornObj =p.getQuaternionFromEuler(box_orn) )
 
     # IK controller to EEF target
-    #val.psuedoinv_ik("left", target, val.get_eef_pos("left"))
+    val.psuedoinv_ik("left", target, val.get_eef_pos("left"))
