@@ -67,17 +67,18 @@ class PBVS:
         dict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_6X6_250)
         aruco_params = cv2.aruco.DetectorParameters_create()
 
-        (corners, ids, rejected) = cv2.aruco.detectMarkers(
+        (corners_all, ids_all, rejected) = cv2.aruco.detectMarkers(
         frame, dict, parameters=aruco_params)
+        
         Rot = np.zeros((3,3))
         tvec = np.zeros((3, 1))
 
-        if(len(corners) > 0):
+        if(len(corners_all) > 0):
             # Flatten the ArUco IDs list
-            ids = ids.flatten()
+            ids = ids_all.flatten()
             #print(ids)
             # Loop over the detected ArUco corners
-            for (marker_corner, marker_id) in zip(corners, ids):
+            for (marker_corner, marker_id) in zip(corners_all, ids):
                 
                 # Extract the marker corners
                 corners = marker_corner.reshape((4, 2))
@@ -107,18 +108,19 @@ class PBVS:
 
 
                 rvec, tvec, _ = cv2.aruco.estimatePoseSingleMarkers(marker_corner, 0.242, proj_3x3, 0)
-                cv2.aruco.drawAxis(frame, proj_3x3, 0, rvec[0], tvec[0], 0.8) #tvec[0]
+                #cv2.aruco.drawAxis(frame, proj_3x3, 0, rvec[0], tvec[0], 0.8) #tvec[0]
 
                 # compute end effector rotation from Rordigues 
                 Rot, _ = cv2.Rodrigues(rvec[0])
 
             # board stuff
-            #board = cv2.aruco.GridBoard_create(2, 2, 0.01045, 0.00417, dict, firstMarker = 1)
-            #_, rvec, tvec = cv2.aruco.estimatePoseBoard(corners, ids, board, self.get_intrinsics(), 0, None, None)
-            #cv2.aruco.drawAxis(frame, self.get_intrinsics(), 0, rvec, tvec, 0.4)
+            board = cv2.aruco.GridBoard_create(2, 2, 0.01045, 0.00417, dict, firstMarker = 1)
+            _, rvec, tvec = cv2.aruco.estimatePoseBoard(corners_all, ids_all, board, self.get_intrinsics(), 0, None, None)
+            cv2.aruco.drawAxis(frame, self.get_intrinsics(), 0, rvec, tvec, 0.4)
+            Rot, _ = cv2.Rodrigues(rvec)
 
         # Display the resulting frame with annotations
         cv2.imshow('frame',frame)
 
         # return the location of the tag and pose
-        return Rot, tvec[0].T, (center_x, center_y)
+        return Rot, tvec, (center_x, center_y)
