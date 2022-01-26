@@ -5,14 +5,14 @@ import numpy as np
 class PBVS:
 
     def __init__(self):
-        self.image_width = 2000
-        self.image_height = 2000
+        self.image_width = 1000
+        self.image_height = 1000
          #-1.9
         self.camera_eye = np.array([-1.0, 0.5, 0.5])
         self.target_pos = np.array([0, 0.5, 0])
 
-        self.camera_eye = np.array([0.0, 0.0, 0.0])
-        self.target_pos = np.array([0, 3.0, 0])
+        #self.camera_eye = np.array([0.0, 0.1, 0.3])
+        #self.target_pos = np.array([0, 3.0, 0])
 
 
         self.projectionMatrix = p.computeProjectionMatrixFOV(
@@ -69,7 +69,7 @@ class PBVS:
 
         (corners, ids, rejected) = cv2.aruco.detectMarkers(
         frame, dict, parameters=aruco_params)
-        R = np.zeros((3,3))
+        Rot = np.zeros((3,3))
         tvec = np.zeros((3, 1))
 
         if(len(corners) > 0):
@@ -110,7 +110,7 @@ class PBVS:
                 cv2.aruco.drawAxis(frame, proj_3x3, 0, rvec[0], tvec[0], 0.8) #tvec[0]
 
                 # compute end effector rotation from Rordigues 
-                R, _ = cv2.Rodrigues(rvec[0])
+                Rot, _ = cv2.Rodrigues(rvec[0])
 
             # board stuff
             #board = cv2.aruco.GridBoard_create(2, 2, 0.01045, 0.00417, dict, firstMarker = 1)
@@ -121,4 +121,4 @@ class PBVS:
         cv2.imshow('frame',frame)
 
         # return the location of the tag and pose
-        return R, tvec[0].T, (center_x, center_y)
+        return Rot, tvec[0].T, (center_x, center_y)

@@ -16,7 +16,7 @@ KEY_DOWN = 65298
 KEY_LEFT = 65295
 
 # Val robot and PVBS controller
-val = Val([-5.0, 0, 0])
+val = Val([0.0, 0, 0])
 pbvs = PBVS()
 p.setRealTimeSimulation(1)
 
@@ -37,9 +37,9 @@ draw_pose(pbvs.camera_eye, np.matmul(np.matmul(np.array([
 
 # visual shape
 box_pos = (0.0, 2.0, 0.0)
-box_orn = [np.pi/8,-np.pi/8, -np.pi/2 ]
+box_orn = [0,0, -np.pi/2 ]
 box_vis = p.createVisualShape(p.GEOM_MESH,fileName="AR Tag Static/box.obj", meshScale=[0.1,0.1, 0.1])
-box_multi = p.createMultiBody(baseCollisionShapeIndex = 0, baseVisualShapeIndex=box_vis, basePosition=box_pos, baseOrientation=p.getQuaternionFromEuler(box_orn))
+#box_multi = p.createMultiBody(baseCollisionShapeIndex = 0, baseVisualShapeIndex=box_vis, basePosition=box_pos, baseOrientation=p.getQuaternionFromEuler(box_orn))
 uids = None
 
 while(True):
@@ -65,11 +65,18 @@ while(True):
         
         # Rotation of ar tag in world relative frame by adding known camera rotation
         Rwa =  np.matmul(np.matmul(Rwc2, Rc2c1), Rc1a)#
-        Raw = np.matmul ( Rc1a.T,np.matmul(np.array([
+        #Raw = np.matmul (Rc1a.T ,np.matmul(np.array([ #Rc1a.T
+        #    [1.0, 0.0, 0.0],
+        #    [0.0, -1.0, 0.0],
+        #    [0.0, 0.0, -1.0]
+        #]), pbvs.get_view()))
+        Raw = np.matmul (np.matmul(pbvs.get_view(), np.array([ #Rc1a.T
             [1.0, 0.0, 0.0],
             [0.0, -1.0, 0.0],
             [0.0, 0.0, -1.0]
-        ]), pbvs.get_view()))
+        ]) ), Rc1a)
+        
+        
         #print(Rc1a)
         print(pbvs.get_intrinsics())
         
@@ -88,6 +95,11 @@ while(True):
             erase_pos(uids)
         uids = draw_pose(pos[0:3], Raw, mat=True)
         #uids = draw_pose(pbvs.camera_eye, Raw, mat=True)
+        #uids = draw_pose(pbvs.camera_eye, np.matmul(np.eye(3), np.array([ #Rc1a.T
+        #    [1.0, 0.0, 0.0],
+        #    [0.0, -1.0, 0.0],
+        #    [0.0, 0.0, 1.0]
+        #])), mat=True)
 
         #draw_sphere_marker(pos[0:3], 0.03, (1.0, 0.0, 1.0, 1.0)) 
         
@@ -113,6 +125,6 @@ while(True):
     if(KEY_U in events):
         target += np.array([0.00, 0.00, 0.00, 0.01, 0.0, 0.0])
 
-    p.resetBasePositionAndOrientation(box_multi, posObj=box_pos, ornObj =p.getQuaternionFromEuler(box_orn) )
+    #p.resetBasePositionAndOrientation(box_multi, posObj=box_pos, ornObj =p.getQuaternionFromEuler(box_orn) )
     # IK controller to target
     #val.psuedoinv_ik("left", target, val.get_eef_pos("left"))
