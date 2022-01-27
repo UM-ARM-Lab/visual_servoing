@@ -129,4 +129,4 @@ while(True):
     #p.resetBasePositionAndOrientation(box_multi, posObj=box_pos, ornObj =p.getQuaternionFromEuler(box_orn) )
 
     # IK controller to EEF target
-    val.psuedoinv_ik("left", target, val.get_eef_pos("left"))
+    #val.psuedoinv_ik("left", target, val.get_eef_pos("left"))
