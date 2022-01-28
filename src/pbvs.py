@@ -5,8 +5,8 @@ import numpy as np
 class PBVS:
 
     def __init__(self):
-        self.image_width = 1000
-        self.image_height = 1000
+        self.image_width = 1280
+        self.image_height = 800
          #-1.9
         self.camera_eye = np.array([-1.0, 0.5, 0.5])
         self.target_pos = np.array([0, 0.5, 0])

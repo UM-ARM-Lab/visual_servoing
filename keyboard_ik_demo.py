@@ -25,7 +25,7 @@ perturb[0:3] = 0.1
 target = val.get_eef_pos("left") + perturb
 
 # draw the PBVS camera pose
-draw_pose(pbvs.camera_eye, pbvs.get_view(), mat=True, axis_len=0.1)
+#draw_pose(pbvs.camera_eye, pbvs.get_view(), mat=True, axis_len=0.1)
 
 # AR tag on a box for debugging AR tag detection, commented out
 box_pos = (0.0, 2.0, 0.0)
@@ -40,9 +40,9 @@ uids_target_marker = None
 while(True):
     # Move target marker based on updated target position
      # Draw the pose estimate of the AR tag
-    if(uids_target_marker is not None):
-        erase_pos(uids_target_marker)
-    uids_target_marker = draw_pose(target[0:3], p.getQuaternionFromEuler(target[3:6]))
+    #if(uids_target_marker is not None):
+    #    erase_pos(uids_target_marker)
+    #uids_target_marker = draw_pose(target[0:3], p.getQuaternionFromEuler(target[3:6]))
 
     # Get camera feed and detect markers
     rgb, depth = pbvs.get_static_camera_img()
