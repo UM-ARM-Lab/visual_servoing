@@ -97,8 +97,12 @@ class PBVS:
                 cv2.line(frame, bottom_left, top_left, (0, 255, 0), 2)
                     
                 # Calculate and draw the center of the ArUco marker
-                center_x = int((top_left[0] + bottom_right[0]) / 2.0)
-                center_y = int((top_left[1] + bottom_right[1]) / 2.0)
+                c_x = int((top_left[0] + bottom_right[0]) / 2.0)
+                c_y = int((top_left[1] + bottom_right[1]) / 2.0)
+
+                if(marker_id == 1):
+                    center_x = c_x
+                    center_y = c_y
                 #cv2.circle(frame, (center_x, center_y), 4, (0, 0, 255), -1)
 
                 
@@ -114,28 +118,39 @@ class PBVS:
                 #Rot, _ = cv2.Rodrigues(rvec[0])
 
             # board stuff
-            tag1_w = 0.0283
-            tag1_tl = np.array([-tag1_w/2, tag1_w/2, 0.0], dtype=np.float32)
-            tag1_tr = np.array([tag1_w/2, tag1_w/2, 0.0], dtype=np.float32)
-            tag1_br = np.array([tag1_w/2, -tag1_w/2, 0.0], dtype=np.float32)
-            tag1_bl = np.array([-tag1_w/2, -tag1_w/2, 0.0], dtype=np.float32)
+            tag_len = 0.0305
+            gap_len = 0.0051
+            angle = np.pi/4
 
-            tag3_w = 0.02855
-            tag3_ty = tag1_w/2 + 0.00430+np.sin(np.pi/3) * (0.003423 + tag3_w)
-            tag3_by = tag1_w/2 + 0.00430+np.sin(np.pi/3) * (0.003423)
-            tag3_bz = -np.cos(np.pi/3) * 0.003423
-            tag3_tz = -np.cos(np.pi/3) * (0.003423+0.0286)
-            
-            tag3_tl = np.array([-tag3_w/2, tag3_ty, tag3_tz], dtype=np.float32)
-            tag3_tr = np.array([tag3_w/2, tag3_ty, tag3_tz], dtype=np.float32)
-            tag3_br = np.array([tag3_w/2, tag3_by, tag3_bz], dtype=np.float32)
-            tag3_bl = np.array([-tag3_w/2, tag3_by, tag3_bz], dtype=np.float32)
+            # center tag
+            tag0_tl = np.array([-tag_len/2, tag_len/2, 0.0], dtype=np.float32)
+            tag0_tr = np.array([tag_len/2, tag_len/2, 0.0], dtype=np.float32)
+            tag0_br = np.array([tag_len/2, -tag_len/2, 0.0], dtype=np.float32)
+            tag0_bl = np.array([-tag_len/2, -tag_len/2, 0.0], dtype=np.float32)
+
+            z1 = -np.cos(angle) * gap_len
+            z2 = -np.cos(angle) * (gap_len+tag_len)
+            y1 = tag_len/2 + gap_len + gap_len*np.sin(angle)
+            y2 = tag_len/2 + gap_len + (gap_len + tag_len)*np.sin(angle)
+
+            # lower tag
+            tag1_tl = np.array([-tag_len/2, -y1, z1], dtype=np.float32)
+            tag1_tr = np.array([tag_len/2,  -y1, z1], dtype=np.float32)
+            tag1_br = np.array([tag_len/2, -y2, z2], dtype=np.float32)
+            tag1_bl = np.array([-tag_len/2, -y2, z2], dtype=np.float32)
+
+            # upper tag
+            tag2_tl = np.array([-tag_len/2, y2, z2], dtype=np.float32)
+            tag2_tr = np.array([tag_len/2,  y2, z2], dtype=np.float32)
+            tag2_br = np.array([tag_len/2, y1, z1], dtype=np.float32)
+            tag2_bl = np.array([-tag_len/2, y1, z1], dtype=np.float32)
 
 
             board = cv2.aruco.Board_create([ 
-                 np.array([tag1_tl, tag1_tr, tag1_br, tag1_bl]), 
-                 np.array([tag3_tl, tag3_tr, tag3_br, tag3_bl])
-                ], dict, np.array([1, 2]))
+                 np.array([tag0_tl, tag0_tr, tag0_br, tag0_bl]), 
+                 np.array([tag1_tl, tag1_tr, tag1_br, tag1_bl]),
+                np.array([tag2_tl, tag2_tr, tag2_br, tag2_bl])
+                ], dict, np.array([1, 2, 3]))
             _, rvec, tvec = cv2.aruco.estimatePoseBoard(corners_all, ids_all, board, self.get_intrinsics(), 0, None, None)
             cv2.aruco.drawAxis(frame, self.get_intrinsics(), 0, rvec, tvec, 0.4)
             Rot, _ = cv2.Rodrigues(rvec)
