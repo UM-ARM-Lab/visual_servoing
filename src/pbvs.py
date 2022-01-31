@@ -135,7 +135,7 @@ class PBVS:
             board = cv2.aruco.Board_create([ 
                  np.array([tag1_tl, tag1_tr, tag1_br, tag1_bl]), 
                  np.array([tag3_tl, tag3_tr, tag3_br, tag3_bl])
-                ], dict, np.array([1, 3]))
+                ], dict, np.array([1, 2]))
             _, rvec, tvec = cv2.aruco.estimatePoseBoard(corners_all, ids_all, board, self.get_intrinsics(), 0, None, None)
             cv2.aruco.drawAxis(frame, self.get_intrinsics(), 0, rvec, tvec, 0.4)
             Rot, _ = cv2.Rodrigues(rvec)
