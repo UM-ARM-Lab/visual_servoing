@@ -36,7 +36,7 @@ class PBVS:
             height= self.image_height,
             viewMatrix=self.viewMatrix,
             projectionMatrix=self.projectionMatrix,
-            lightDirection=[0,-1,0]
+            lightDirection=-(self.target_pos-self.camera_eye)
             )
         rgb_img = np.array(rgbImg)[:, :, :3]
         depth_img = np.array(depthImg)
