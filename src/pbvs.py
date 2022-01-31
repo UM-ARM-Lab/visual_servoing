@@ -107,20 +107,42 @@ class PBVS:
                 #print(proj_3x3)
 
 
-                rvec, tvec, _ = cv2.aruco.estimatePoseSingleMarkers(marker_corner, 0.242, proj_3x3, 0)
-                cv2.aruco.drawAxis(frame, proj_3x3, 0, rvec[0], tvec[0], 0.8) #tvec[0]
+                #rvec, tvec, _ = cv2.aruco.estimatePoseSingleMarkers(marker_corner, 0.242, proj_3x3, 0)
+                #cv2.aruco.drawAxis(frame, proj_3x3, 0, rvec[0], tvec[0], 0.8) #tvec[0]
 
                 # compute end effector rotation from Rordigues 
-                Rot, _ = cv2.Rodrigues(rvec[0])
+                #Rot, _ = cv2.Rodrigues(rvec[0])
 
             # board stuff
-            #board = cv2.aruco.GridBoard_create(2, 2, 0.01045, 0.00417, dict, firstMarker = 1)
-            #_, rvec, tvec = cv2.aruco.estimatePoseBoard(corners_all, ids_all, board, self.get_intrinsics(), 0, None, None)
-            #cv2.aruco.drawAxis(frame, self.get_intrinsics(), 0, rvec, tvec, 0.4)
-            #Rot, _ = cv2.Rodrigues(rvec)
+            tag1_w = 0.0283
+            tag1_tl = np.array([-tag1_w/2, tag1_w/2, 0.0], dtype=np.float32)
+            tag1_tr = np.array([tag1_w/2, tag1_w/2, 0.0], dtype=np.float32)
+            tag1_br = np.array([tag1_w/2, -tag1_w/2, 0.0], dtype=np.float32)
+            tag1_bl = np.array([-tag1_w/2, -tag1_w/2, 0.0], dtype=np.float32)
+
+            tag3_w = 0.02855
+            tag3_ty = tag1_w/2 + 0.00430+np.sin(np.pi/3) * (0.003423 + tag3_w)
+            tag3_by = tag1_w/2 + 0.00430+np.sin(np.pi/3) * (0.003423)
+            tag3_bz = -np.cos(np.pi/3) * 0.003423
+            tag3_tz = -np.cos(np.pi/3) * (0.003423+0.0286)
+            
+            tag3_tl = np.array([-tag3_w/2, tag3_ty, tag3_tz], dtype=np.float32)
+            tag3_tr = np.array([tag3_w/2, tag3_ty, tag3_tz], dtype=np.float32)
+            tag3_br = np.array([tag3_w/2, tag3_by, tag3_bz], dtype=np.float32)
+            tag3_bl = np.array([-tag3_w/2, tag3_by, tag3_bz], dtype=np.float32)
+
+
+            board = cv2.aruco.Board_create([ 
+                 np.array([tag1_tl, tag1_tr, tag1_br, tag1_bl]), 
+                 np.array([tag3_tl, tag3_tr, tag3_br, tag3_bl])
+                ], dict, np.array([1, 3]))
+            _, rvec, tvec = cv2.aruco.estimatePoseBoard(corners_all, ids_all, board, self.get_intrinsics(), 0, None, None)
+            cv2.aruco.drawAxis(frame, self.get_intrinsics(), 0, rvec, tvec, 0.4)
+            Rot, _ = cv2.Rodrigues(rvec)
 
         # Display the resulting frame with annotations
         cv2.imshow('frame',frame)
-
+        #0.282
+#0.02813
         # return the location of the tag and pose
         return Rot, tvec, (center_x, center_y)
