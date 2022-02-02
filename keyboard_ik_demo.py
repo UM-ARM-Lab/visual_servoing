@@ -5,6 +5,7 @@
 from src.utils import draw_pose, erase_pos
 from src.val import *
 from src.pbvs import *
+import math
 
 # Key bindings
 KEY_U = 117
@@ -40,9 +41,9 @@ uids_target_marker = None
 while(True):
     # Move target marker based on updated target position
      # Draw the pose estimate of the AR tag
-    #if(uids_target_marker is not None):
-    #    erase_pos(uids_target_marker)
-    #uids_target_marker = draw_pose(target[0:3], p.getQuaternionFromEuler(target[3:6]))
+    if(uids_target_marker is not None):
+        erase_pos(uids_target_marker)
+    uids_target_marker = draw_pose(target[0:3], p.getQuaternionFromEuler(target[3:6]))
 
     # Get camera feed and detect markers
     rgb, depth = pbvs.get_static_camera_img()
@@ -128,5 +129,10 @@ while(True):
     # Set the orientation of our static AR tag object
     #p.resetBasePositionAndOrientation(box_multi, posObj=box_pos, ornObj =p.getQuaternionFromEuler(box_orn) )
 
-    # IK controller to EEF target
-    #val.psuedoinv_ik("left", target, val.get_eef_pos("left"))
+    # IK controller to EEF 
+    rotx = math.atan2(Rwa[2, 1], Rwa[2,2])
+    roty = math.atan2(-Rwa[2,0], (Rwa[2,1]**2 + Rwa[2,2]**2)**0.5)
+    rotz = math.atan2(Rwa[1,0], Rwa[0,0])
+    euler = np.array([rotx, roty, rotz])
+    cur_est = np.hstack((pos[0:3], euler))
+    val.psuedoinv_ik("left", target, cur_est)#val.get_eef_pos("left"))
