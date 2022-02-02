@@ -135,4 +135,5 @@ while(True):
     rotz = math.atan2(Rwa[1,0], Rwa[0,0])
     euler = np.array([rotx, roty, rotz])
     cur_est = np.hstack((pos[0:3], euler))
-    val.psuedoinv_ik("left", target, cur_est)#val.get_eef_pos("left"))
+    #val.psuedoinv_ik("left", target, cur_est)#val.get_eef_pos("left"))
+    val.psuedoinv_ik("left", target, val.get_eef_pos("left"))#val.get_eef_pos("left"))
