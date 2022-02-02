@@ -161,3 +161,15 @@ class PBVS:
 #0.02813
         # return the location of the tag and pose
         return Rot, tvec, (center_x, center_y)
+
+    # return (v, w) velocity control, 
+    # twa (translation of eef in world)
+    # Rwa (rotation of eef in world)
+    # twa_target (translation of eef in world target)
+    # Rwa_target (rotation of eef in world target)
+    def get_control(self, twa, Rwa, twa_target, Rwa_target):
+        lmbda = 0.1 
+
+        rod = cv2.Rodrigues(Rwa)
+        # to = 
+        v_c = -lmbda * ( twa_target - twa) + np.cross
