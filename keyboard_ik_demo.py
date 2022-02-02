@@ -24,6 +24,10 @@ p.setRealTimeSimulation(1)
 perturb = np.zeros((6)) 
 perturb[0:3] = 0.1
 target = val.get_eef_pos("left") + perturb
+target[3] = 0
+target[4] = -np.pi/2
+target[5] = 0
+
 
 # draw the PBVS camera pose
 #draw_pose(pbvs.camera_eye, pbvs.get_view(), mat=True, axis_len=0.1)
@@ -138,7 +142,7 @@ while(True):
     
     ctrl = pbvs.get_control(pos[0:3], Rwa, target[0:3], np.eye(3))
 
-    val.psuedoinv_ik("left", ctrl)
+    val.psuedoinv_ik("left", target, cur_est)
 
 
     #val.psuedoinv_ik("left", target, val.get_eef_pos("left"))#val.get_eef_pos("left"))

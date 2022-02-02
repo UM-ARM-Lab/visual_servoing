@@ -184,9 +184,10 @@ class PBVS:
         # Desired rotation of target (o) in desired end effector frame (d)
         Rdo = np.zeros(3)
 
-        v_c = -lmbda*(Tdo-Tao) + np.cross(np.squeeze(Tao), np.squeeze(Rao_rod))
-        omega_c = -lmbda * Rao_rod
+        v_a = -lmbda*(Tdo-Tao) + np.cross(np.squeeze(Tao), np.squeeze(Rao_rod))
+        omega_a = np.squeeze(-lmbda * Rao_rod)
         
-        print(v_c)
-        print(omega_c)
-        return np.hstack((v_c, np.squeeze(omega_c)))
+        
+        #print(v_c)
+        #print(omega_c)
+        #return np.hstack((v_c, np.squeeze(omega_c)))
