@@ -1,3 +1,4 @@
+from ast import Lambda
 import cv2
 import pybullet as p
 import numpy as np
@@ -162,14 +163,30 @@ class PBVS:
         # return the location of the tag and pose
         return Rot, tvec, (center_x, center_y)
 
-    # return (v, w) velocity control, 
-    # twa (translation of eef in world)
-    # Rwa (rotation of eef in world)
-    # twa_target (translation of eef in world target)
-    # Rwa_target (rotation of eef in world target)
-    def get_control(self, twa, Rwa, twa_target, Rwa_target):
+    # return (v, w) velocity in world frame at this timestep
+    # that will try to drive the EEF to have the target position 
+    # Twa - translation of eef (a) in world (w) 
+    # Rwa - rotation of eef (a) in world (w)
+    # Two - translation of target (o) in world (w)
+    # Rwo - rotation of target (o) in world (w)
+    def get_control(self, Twa, Rwa, Two, Rwo):
         lmbda = 0.1 
 
-        rod = cv2.Rodrigues(Rwa)
-        # to = 
-        v_c = -lmbda * ( twa_target - twa) + np.cross
+        # translation of target (o) in end effector frame (a)
+        Tao = Two - Twa
+        # translation of target (o) in desired end effector frame (d)
+        Tdo = np.zeros(3)
+
+        # Rotation of target (o) in current end effector frame
+        Rao = np.matmul(Rwa.T, Rwo) 
+        Rao_rod, _ = cv2.Rodrigues(Rao)
+
+        # Desired rotation of target (o) in desired end effector frame (d)
+        Rdo = np.zeros(3)
+
+        v_c = -lmbda*(Tdo-Tao) + np.cross(np.squeeze(Tao), np.squeeze(Rao_rod))
+        omega_c = -lmbda * Rao_rod
+        
+        print(v_c)
+        print(omega_c)
+        return np.hstack((v_c, np.squeeze(omega_c)))
