@@ -6,6 +6,7 @@ from src.utils import draw_pose, erase_pos
 from src.val import *
 from src.pbvs import *
 import math
+import time
 
 # Key bindings
 KEY_U = 117
@@ -14,6 +15,10 @@ KEY_UP = 65297
 KEY_RIGHT = 65296
 KEY_DOWN = 65298
 KEY_LEFT = 65295
+KEY_J = 106
+KEY_K = 107
+KEY_N = 110
+KEY_M = 109
 
 # Val robot and PVBS controller
 val = Val([0.0, 0, 0])
@@ -25,6 +30,7 @@ perturb = np.zeros((6))
 perturb[0] = -0.05
 perturb[1] = 0.0
 perturb[2] = 0.15
+initial_arm = val.get_eef_pos("left") 
 target = val.get_eef_pos("left") + perturb
 #target[3] = 0
 #target[4] = -np.pi/2
@@ -51,6 +57,7 @@ uids_eef_marker = None
 uids_target_marker = None
 
 while(True):
+    t0 = time.time()    
     # Move target marker based on updated target position
      # Draw the pose estimate of the AR tag
     if(uids_target_marker is not None):
@@ -60,6 +67,7 @@ while(True):
 
     # Get camera feed and detect markers
     rgb, depth = pbvs.get_static_camera_img()
+    print(f"image time {time.time()-t0}")
     
     # Detect markers and visualize estimated pose in 3D
 
@@ -117,44 +125,37 @@ while(True):
             erase_pos(uids_eef_marker)
         uids_eef_marker = draw_pose(pos[0:3], Rwa, mat=True)
         
-    cv2.waitKey(10)
+    cv2.waitKey(1)
 
 
     # Process keyboard to adjust target positions
     events = p.getKeyboardEvents()
+    print(events)
     if(KEY_LEFT in events):
         target += np.array([0.01, 0.0, 0.0, 0.0, 0.0, 0.0])
         box_orn[0]+=0.1
     elif(KEY_RIGHT in events):
         target -= np.array([0.01, 0.0, 0.0, 0.0, 0.0, 0.0])
         box_orn[0]-=0.1
-
     if(KEY_UP in events):
         target += np.array([0.00, 0.00, 0.01, 0.0, 0.0, 0.0])
         box_orn[1]+=0.1
     elif(KEY_DOWN in events):
         target -= np.array([0.00, 0.00, 0.01, 0.0, 0.0, 0.0])
         box_orn[1]-=0.1
-
     if(KEY_U in events):
-        target += np.array([0.00, 0.00, 0.00, 0.01, 0.0, 0.0])
+        #target += np.array([0.00, 0.01, 0.00, 0.01, 0.0, 0.0])
+        target = initial_arm + np.array([-0.1, -0.2, 0.1, 0.00, 0.0, 0.0])
+        Rwo = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((np.pi/7, np.pi/4, -np.pi/2)))).reshape(3,3)
+    if(KEY_I in events):
+        target -= np.array([0.00, 0.01, 0.00, 0.01, 0.0, 0.0])
+    
 
     # Set the orientation of our static AR tag object
     #p.resetBasePositionAndOrientation(box_multi, posObj=box_pos, ornObj =p.getQuaternionFromEuler(box_orn) )
-
-    # IK controller to EEF 
-    rotx = math.atan2(Rwa[2, 1], Rwa[2,2])
-    roty = math.atan2(-Rwa[2,0], (Rwa[2,1]**2 + Rwa[2,2]**2)**0.5)
-    rotz = math.atan2(Rwa[1,0], Rwa[0,0])
-    euler = np.array([rotx, roty, rotz])
-    cur_est = np.hstack((pos[0:3], euler))
     
-    #ctrl = pbvs.get_control(pos[0:3], Rwa, target[0:3], np.eye(3))
-    print(pos)
     ctrl = np.zeros(6)
     ctrl[0:3] = (target[0:3] - pos[0:3]) * 1.1
     ctrl[3:6] = np.squeeze(pbvs.get_omega(Rwa, Rwo))
     val.psuedoinv_ik("left", ctrl)
-
-
-    #val.psuedoinv_ik("left", target, val.get_eef_pos("left"))#val.get_eef_pos("left"))
+    print(time.time()-t0)
