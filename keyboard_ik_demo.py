@@ -30,6 +30,7 @@ target = val.get_eef_pos("left") + perturb
 Rwo = np.array([[0, 1, 0], 
                 [-1, 0, 0], 
                 [0, 0, 1]])
+Rwo = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((np.pi/4, 0, -np.pi/2)))).reshape(3,3)
 
 #np.eye(3)
 

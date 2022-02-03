@@ -196,4 +196,4 @@ class PBVS:
     def get_omega(self, Rwa, Rwo):
         Roa = np.matmul(Rwa, Rwo.T).T
         Roa_rod, _ = cv2.Rodrigues(Roa)
-        return Roa_rod
+        return Roa_rod * 1.5
