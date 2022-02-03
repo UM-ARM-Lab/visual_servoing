@@ -173,7 +173,7 @@ class PBVS:
         lmbda = 0.1 
 
         # translation of target (o) in end effector frame (a)
-        Tao = Two - Twa
+        Tao = np.matmul(Rwa.T, Two) - np.matmul(Rwa.T, Twa)
         # translation of target (o) in desired end effector frame (d)
         Tdo = np.zeros(3)
 
@@ -187,7 +187,13 @@ class PBVS:
         v_a = -lmbda*(Tdo-Tao) + np.cross(np.squeeze(Tao), np.squeeze(Rao_rod))
         omega_a = np.squeeze(-lmbda * Rao_rod)
         
-        
+        v_w = np.matmul(Rwa, v_a)
+        omega_w = np.matmul(Rwa, omega_a)
         #print(v_c)
         #print(omega_c)
-        #return np.hstack((v_c, np.squeeze(omega_c)))
+        return np.hstack((v_w, np.squeeze(omega_w)))
+
+    def get_omega(self, Rwa, Rwo):
+        Roa = np.matmul(Rwa, Rwo.T).T
+        Roa_rod, _ = cv2.Rodrigues(Roa)
+        return Roa_rod

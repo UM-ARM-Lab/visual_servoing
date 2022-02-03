@@ -22,11 +22,16 @@ p.setRealTimeSimulation(1)
 
 # create an initial target to do IK too based on the start position of the EEF
 perturb = np.zeros((6)) 
-perturb[0:3] = 0.1
+perturb[0:3] = 0.05
 target = val.get_eef_pos("left") + perturb
-target[3] = 0
-target[4] = -np.pi/2
-target[5] = 0
+#target[3] = 0
+#target[4] = -np.pi/2
+#target[5] = 0
+Rwo = np.array([[0, 1, 0], 
+                [-1, 0, 0], 
+                [0, 0, 1]])
+
+#np.eye(3)
 
 
 # draw the PBVS camera pose
@@ -47,7 +52,8 @@ while(True):
      # Draw the pose estimate of the AR tag
     if(uids_target_marker is not None):
         erase_pos(uids_target_marker)
-    uids_target_marker = draw_pose(target[0:3], p.getQuaternionFromEuler(target[3:6]))
+    #uids_target_marker = draw_pose(target[0:3], p.getQuaternionFromEuler(target[3:6]))
+    uids_target_marker = draw_pose(target[0:3], Rwo, mat=True)
 
     # Get camera feed and detect markers
     rgb, depth = pbvs.get_static_camera_img()
@@ -140,9 +146,12 @@ while(True):
     euler = np.array([rotx, roty, rotz])
     cur_est = np.hstack((pos[0:3], euler))
     
-    ctrl = pbvs.get_control(pos[0:3], Rwa, target[0:3], np.eye(3))
-
-    val.psuedoinv_ik("left", target, cur_est)
+    #ctrl = pbvs.get_control(pos[0:3], Rwa, target[0:3], np.eye(3))
+    #print(ctrl)
+    ctrl = np.zeros(6)
+    ctrl[0:3] = target[0:3] - pos[0:3]
+    ctrl[3:6] = np.squeeze(pbvs.get_omega(Rwa, Rwo))
+    val.psuedoinv_ik("left", ctrl)
 
 
     #val.psuedoinv_ik("left", target, val.get_eef_pos("left"))#val.get_eef_pos("left"))
