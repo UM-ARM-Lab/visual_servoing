@@ -130,7 +130,6 @@ while(True):
 
     # Process keyboard to adjust target positions
     events = p.getKeyboardEvents()
-    print(events)
     if(KEY_LEFT in events):
         target += np.array([0.01, 0.0, 0.0, 0.0, 0.0, 0.0])
         box_orn[0]+=0.1
@@ -148,7 +147,8 @@ while(True):
         target = initial_arm + np.array([-0.1, -0.2, 0.1, 0.00, 0.0, 0.0])
         Rwo = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((np.pi/7, np.pi/4, -np.pi/2)))).reshape(3,3)
     if(KEY_I in events):
-        target -= np.array([0.00, 0.01, 0.00, 0.01, 0.0, 0.0])
+        continue
+        #target -= np.array([0.00, 0.01, 0.00, 0.01, 0.0, 0.0])
     
 
     # Set the orientation of our static AR tag object
