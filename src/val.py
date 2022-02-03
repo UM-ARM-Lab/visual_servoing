@@ -109,8 +109,8 @@ class Val:
         J_pinv = np.dot(np.linalg.inv(np.dot(J.T, J)  + lmda * np.eye(7)), J.T)
         
         q_prime = np.dot(J_pinv, x_prime)
-        if(np.linalg.norm(q_prime) > 0.2):
-            q_prime = 0.2 * q_prime/np.linalg.norm(q_prime) #* np.linalg.norm(x_prime)
+        if(np.linalg.norm(q_prime) > 0.25):
+            q_prime = 0.25 * q_prime/np.linalg.norm(q_prime) #* np.linalg.norm(x_prime)
 
         # joint limits 
         

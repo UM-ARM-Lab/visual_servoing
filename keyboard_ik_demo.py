@@ -22,7 +22,9 @@ p.setRealTimeSimulation(1)
 
 # create an initial target to do IK too based on the start position of the EEF
 perturb = np.zeros((6)) 
-perturb[0:3] = 0.05
+perturb[0] = -0.05
+perturb[1] = 0.0
+perturb[2] = 0.15
 target = val.get_eef_pos("left") + perturb
 #target[3] = 0
 #target[4] = -np.pi/2
@@ -148,9 +150,9 @@ while(True):
     cur_est = np.hstack((pos[0:3], euler))
     
     #ctrl = pbvs.get_control(pos[0:3], Rwa, target[0:3], np.eye(3))
-    #print(ctrl)
+    print(pos)
     ctrl = np.zeros(6)
-    ctrl[0:3] = target[0:3] - pos[0:3]
+    ctrl[0:3] = (target[0:3] - pos[0:3]) * 1.1
     ctrl[3:6] = np.squeeze(pbvs.get_omega(Rwa, Rwo))
     val.psuedoinv_ik("left", ctrl)
 
