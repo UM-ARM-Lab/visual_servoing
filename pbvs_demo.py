@@ -37,12 +37,12 @@ Rwo = np.array([[0, 1, 0],
                 [-1, 0, 0], 
                 [0, 0, 1]])
 Rwo = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((np.pi/4, 0, -np.pi/2)))).reshape(3,3)
-
+#camera_eye=np.array([-1.0, 0.5, 0.5]), camera_look=np.array([0, 0.5, 0]), image_dim=(1280,800)
 #np.eye(3)
 
 
 # draw the PBVS camera pose
-#draw_pose(pbvs.camera_eye, pbvs.get_view(), mat=True, axis_len=0.1)
+draw_pose(pbvs.camera_eye, pbvs.get_view(), mat=True, axis_len=0.1)
 
 # AR tag on a box for debugging AR tag detection, commented out
 box_pos = (0.0, 2.0, 0.0)
