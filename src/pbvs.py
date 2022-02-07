@@ -1,20 +1,27 @@
-from ast import Lambda
+from re import U
 import cv2
 import pybullet as p
 import numpy as np
 
+class Marker:
+    def __init__(self, u, v, Rot):
+        self.u = u
+        self.v = v
+        self.R
+
 class PBVS:
 
-    def __init__(self):
-        self.image_width = 1280
-        self.image_height = 800
-         #-1.9
-        self.camera_eye = np.array([-1.0, 0.5, 0.5])
-        self.target_pos = np.array([0, 0.5, 0])
-
-        #self.camera_eye = np.array([0.5, 1.0, 0.5])
-        #self.target_pos = np.array([0.5, 0, 0.5])
-
+    # Initialize a PBVS controller with a camera position and target in your world space as well as the sensor resolution
+    def __init__(self, camera_eye=np.array([-1.0, 0.5, 0.5]), camera_look=np.array([0, 0.5, 0]), image_dim=(1280,800)):
+        # AR tag stuff
+        self.aruco_dict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_6X6_250)
+        self.aruco_params = cv2.aruco.DetectorParameters_create()
+        
+        # Simulated camera stuff
+        self.image_width = image_dim[0]
+        self.image_height = image_dim[1]
+        self.camera_eye = camera_eye
+        self.camera_look = camera_look
 
         self.projectionMatrix = p.computeProjectionMatrixFOV(
             fov=45.0,
@@ -24,52 +31,48 @@ class PBVS:
             )
         self.viewMatrix = p.computeViewMatrix(
             cameraEyePosition=self.camera_eye,
-            cameraTargetPosition=self.target_pos,
+            cameraTargetPosition=self.camera_look,
             cameraUpVector=[0, 0, 1])
-
         
-
-    def get_static_camera_img(self): 
-        # TODO replace magic numbers with class params
-        
+    # Retrieve an image from the simulation camera
+    def get_static_camera_img(self):         
         width, height, rgbImg, depthImg, segImg = p.getCameraImage(
             width= self.image_width,
             height= self.image_height,
             viewMatrix=self.viewMatrix,
             projectionMatrix=self.projectionMatrix,
-            lightDirection=-(self.target_pos-self.camera_eye)
-            )
+            lightDirection=-(self.camera_look-self.camera_eye)
+        )
         rgb_img = np.array(rgbImg)[:, :, :3]
         depth_img = np.array(depthImg)
         return rgb_img, depth_img
     
+    # Retrieve 3x3 OpenCV style intrinsic matrix for the camera
     def get_intrinsics(self):
         proj_4x4 = np.array(self.projectionMatrix).reshape(4,4)
         proj_3x3 = np.array(self.projectionMatrix).reshape(4,4)[:3, :3]
-        
         proj_3x3[0, 0] = proj_3x3[0, 0] * self.image_width/2
         proj_3x3[1, 1] = proj_3x3[1, 1] * self.image_height/2
         proj_3x3[0, 2] = self.image_width/2
         proj_3x3[1, 2] = self.image_height/2
         proj_3x3[2, 2] = 1
-        #print(proj_3x3)
         return proj_3x3
     
+    # Return 3x3 view matrix specifying camera rotation
     def get_view(self):
         view_4x4 = np.array(self.viewMatrix).reshape(4,4)
-        #print(view_4x4)
         view_3x3 = np.array(self.viewMatrix).reshape(4,4)[:3, :3]
-        #print(view_3x3)
         return view_3x3
 
+    # Detect ArUco tags in a given camera frame
+    # Returns list of detections (u, v, id, )
     def detect_markers(self, frame):
         center_x = -1
         center_y = -1
-        dict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_6X6_250)
-        aruco_params = cv2.aruco.DetectorParameters_create()
+        
 
         (corners_all, ids_all, rejected) = cv2.aruco.detectMarkers(
-        frame, dict, parameters=aruco_params)
+        frame, self.aruco_dict, parameters=self.aruco_params)
         
         Rot = np.zeros((3,3))
         tvec = np.zeros((3, 1))
@@ -151,7 +154,7 @@ class PBVS:
                  np.array([tag0_tl, tag0_tr, tag0_br, tag0_bl]), 
                  np.array([tag1_tl, tag1_tr, tag1_br, tag1_bl]),
                 np.array([tag2_tl, tag2_tr, tag2_br, tag2_bl])
-                ], dict, np.array([1, 2, 3]))
+                ], self.aruco_dict, np.array([1, 2, 3]))
             _, rvec, tvec = cv2.aruco.estimatePoseBoard(corners_all, ids_all, board, self.get_intrinsics(), 0, None, None)
             cv2.aruco.drawAxis(frame, self.get_intrinsics(), 0, rvec, tvec, 0.4)
             Rot, _ = cv2.Rodrigues(rvec)

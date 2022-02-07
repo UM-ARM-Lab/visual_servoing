@@ -32,9 +32,7 @@ perturb[1] = 0.0
 perturb[2] = 0.15
 initial_arm = val.get_eef_pos("left") 
 target = val.get_eef_pos("left") + perturb
-#target[3] = 0
-#target[4] = -np.pi/2
-#target[5] = 0
+
 Rwo = np.array([[0, 1, 0], 
                 [-1, 0, 0], 
                 [0, 0, 1]])
@@ -90,13 +88,13 @@ while(True):
             [0.0, -1.0, 0.0],
             [0.0, 0.0, -1.0]
         ])
-        Rc2w = pbvs.get_view()
+        Rwc2 = pbvs.get_view()
 
         # Note, we start with the transform from the world to the c2 (OpenGL) camera
         # and right multiply the remaining transforms to transform with respect to the
         # current axis each time and build up the rotations all the way to the AR tag
         # orientation
-        Rwa = np.matmul (np.matmul(Rc2w, Rc2c1), Rc1a)
+        Rwa = np.matmul (np.matmul(Rwc2, Rc2c1), Rc1a)
 
         # This code querys the depth buffer returned from the simulated camera and gets the <x,y,z> 
         # point of the AR tag in world space 
