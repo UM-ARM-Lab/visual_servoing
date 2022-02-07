@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<launch>
+   <param name="robot_description" command="$(find xacro)/xacro '$(find hdt_michigan_description)/urdf/hdt_michigan.xacro'" />
+   <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher">
+      <remap from="/joint_states" to="/hdt_michigan/joint_states"/>
+   </node>
+</launch>

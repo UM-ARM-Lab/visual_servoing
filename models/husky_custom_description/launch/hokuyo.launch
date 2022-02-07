@@ -1,0 +1,33 @@
+<!--
+A simple launch file for most Hokuyo LIDAR sensors.  The driver assumes the device will connect
+via USB and use the port "ttyACM0".  If you are using an Ethernet device, use the Hokuyo utility
+to change the device's IP address to the same subnet as the robot (192.168.1.X). Then, populate
+the "ip_address" value with the IP address of the LIDAR.
+-->
+
+<launch>
+  <node name="urg_node" pkg="urg_node" type="urg_node" ns="front" output="screen">
+    <param name="ip_address" value="192.168.132.21"/>
+    <param name="ip_port" value=""/>
+    <param name="serial_port" value=""/>
+    <param name="serial_baud" value="115200"/>
+    <param name="frame_id" value="front_laser"/>
+    <param name="calibrate_time" value="false"/>
+    <param name="publish_intensity" value="false"/>
+    <param name="angle_min" value="-1.5707963"/>
+    <param name="angle_max" value="1.5707963"/>
+  </node>
+
+  <node name="urg_node" pkg="urg_node" type="urg_node" ns="rear" output="screen">
+    <param name="ip_address" value="192.168.132.20"/>
+    <param name="ip_port" value=""/>
+    <param name="serial_port" value=""/>
+    <param name="serial_baud" value="115200"/>
+    <param name="frame_id" value="rear_laser"/>
+    <param name="calibrate_time" value="false"/>
+    <param name="publish_intensity" value="false"/>
+    <param name="angle_min" value="-1.5707963"/>
+    <param name="angle_max" value="1.5707963"/>
+  </node>
+
+</launch>

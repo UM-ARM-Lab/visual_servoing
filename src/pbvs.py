@@ -12,8 +12,8 @@ class PBVS:
         self.camera_eye = np.array([-1.0, 0.5, 0.5])
         self.target_pos = np.array([0, 0.5, 0])
 
-        #self.camera_eye = np.array([-0.5, 0.5, 0.5])
-        #self.target_pos = np.array([0, 3.0, 0])
+        #self.camera_eye = np.array([0.5, 1.0, 0.5])
+        #self.target_pos = np.array([0.5, 0, 0.5])
 
 
         self.projectionMatrix = p.computeProjectionMatrixFOV(

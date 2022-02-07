@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>hdt_michigan_description</name>
+  <version>0.0.0</version>
+  <description>The hdt_michigan_description package</description>
+
+  <maintainer email="rikki.irwin@hdtglobal.com">rikki</maintainer>
+  <maintainer email="pmitrano@umich.edu">peter</maintainer>
+
+  <license>MIT</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <exec_depend>gazebo_ros</exec_depend>
+
+  <!-- https://answers.gazebosim.org//question/6568/uri-paths-to-packages-in-the-sdf-model-file/
+       This version allows the use of file://hd_michigan_description/... inside of Gazebo SDF files -->
+  <export>
+    <gazebo_ros gazebo_media_path="${prefix}/.." />
+  </export>
+</package>

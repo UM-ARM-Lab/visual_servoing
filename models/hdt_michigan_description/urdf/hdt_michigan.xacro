@@ -1,0 +1,68 @@
+<?xml version="1.0"?>
+<robot name="hdt_michigan" xmlns:xacro="http://www.ros.org/wiki/xacro">
+    <xacro:macro name="collision_visual" params="name *origin *geometry *material">
+        <collision name="${name}_collision">
+            <xacro:insert_block name="origin"/>
+            <xacro:insert_block name="geometry"/>
+        </collision>
+        <visual name="${name}_visual">
+            <xacro:insert_block name="origin"/>
+            <xacro:insert_block name="geometry"/>
+            <xacro:insert_block name="material"/>
+        </visual>
+    </xacro:macro>
+
+    <!-- materials -->
+    <material name="black">
+        <color rgba="${0/255} ${0/255} ${0/255} 1.0"/>
+    </material>
+
+    <link name="robot_root"/>
+
+    <joint name="robot_root_joint" type="fixed">
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <parent link="hdt_michigan_root"/>
+        <child link="robot_root"/>
+    </joint>
+
+    <joint name="husky_joint" type="fixed">
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <parent link="hdt_michigan_root"/>
+        <child link="husky"/>
+    </joint>
+
+    <link name="husky">
+        <inertial>
+            <origin xyz="0 -0.32 -0.25" rpy="0 0 0"/>
+            <mass value="25"/>
+            <inertia ixx="2.338"
+                     ixy="0"
+                     ixz="0"
+                     iyy="2.338"
+                     iyz="0"
+                     izz="4.166"/>
+        </inertial>
+
+        <xacro:collision_visual name="husky_base">
+            <!-- NOTE: the order of the following elements matters! -->
+            <origin xyz="0 -0.32 -0.15" rpy="0 0 0"/>
+            <geometry>
+                <box size="1 1 0.37"/>
+            </geometry>
+            <material name="black"/>
+        </xacro:collision_visual>
+
+        <xacro:collision_visual name="battery">
+            <origin xyz="0 -0.50 0.10" rpy="0 0 0"/>
+            <geometry>
+                <box size="1 0.65 0.4"/>
+            </geometry>
+            <material name="maize"/>
+        </xacro:collision_visual>
+    </link>
+
+    <xacro:include filename="$(find hdt_michigan_description)/urdf/hdt_michigan_no_husky.xacro"/>
+
+    <xacro:add_gazebo_fixed_link base_link="${robot_name}_root"/>
+</robot>
+

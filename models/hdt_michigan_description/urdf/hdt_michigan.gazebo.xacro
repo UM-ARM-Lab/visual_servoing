@@ -1,0 +1,140 @@
+<?xml version="1.0"?>
+<robot>
+    <!-- mounting plate -->
+    <gazebo reference="hdt_michigan_root">
+        <selfCollide>true</selfCollide>
+        <kinematic>${kinematic_arms}</kinematic>
+    </gazebo>
+
+    <gazebo reference="drive57">
+        <material>Gazebo/FlatBlack</material>
+        <selfCollide>true</selfCollide>
+        <kinematic>${kinematic_arms}</kinematic>
+    </gazebo>
+
+    <gazebo reference="torso">
+        <material>Gazebo/FlatBlack</material>
+        <selfCollide>true</selfCollide>
+        <kinematic>${kinematic_arms}</kinematic>
+    </gazebo>
+
+    <gazebo reference="drive42">
+        <material>Gazebo/FlatBlack</material>
+        <selfCollide>true</selfCollide>
+        <kinematic>${kinematic_arms}</kinematic>
+    </gazebo>
+
+    <gazebo reference="leftshoulder">
+        <material>Gazebo/FlatBlack</material>
+        <selfCollide>true</selfCollide>
+        <kinematic>${kinematic_arms}</kinematic>
+    </gazebo>
+
+    <gazebo reference="lefttube">
+        <material>Gazebo/FlatBlack</material>
+        <selfCollide>true</selfCollide>
+        <kinematic>${kinematic_arms}</kinematic>
+    </gazebo>
+
+    <gazebo reference="leftforearm">
+        <material>Gazebo/FlatBlack</material>
+        <selfCollide>true</selfCollide>
+        <kinematic>${kinematic_arms}</kinematic>
+    </gazebo>
+
+    <gazebo reference="drive46">
+        <material>Gazebo/FlatBlack</material>
+        <selfCollide>true</selfCollide>
+        <kinematic>${kinematic_arms}</kinematic>
+    </gazebo>
+
+    <gazebo reference="leftwrist">
+        <material>Gazebo/FlatBlack</material>
+        <selfCollide>true</selfCollide>
+        <kinematic>${kinematic_arms}</kinematic>
+    </gazebo>
+
+    <gazebo reference="drive50">
+        <material>Gazebo/FlatBlack</material>
+        <selfCollide>true</selfCollide>
+        <kinematic>${kinematic_arms}</kinematic>
+    </gazebo>
+
+    <gazebo reference="leftgripper2_link">
+        <material>Gazebo/FlatBlack</material>
+        <selfCollide>true</selfCollide>
+        <kinematic>${kinematic_arms}</kinematic>
+        <maxContacts>1</maxContacts>
+    </gazebo>
+
+    <gazebo reference="leftgripper_link">
+        <material>Gazebo/FlatBlack</material>
+        <selfCollide>true</selfCollide>
+        <kinematic>${kinematic_arms}</kinematic>
+        <maxContacts>1</maxContacts>
+    </gazebo>
+
+    <gazebo reference="drive2">
+        <material>Gazebo/Grey</material>
+        <selfCollide>true</selfCollide>
+        <kinematic>${kinematic_arms}</kinematic>
+    </gazebo>
+
+    <gazebo reference="rightshoulder">
+        <material>Gazebo/FlatBlack</material>
+        <selfCollide>true</selfCollide>
+        <kinematic>${kinematic_arms}</kinematic>
+    </gazebo>
+
+    <gazebo reference="righttube">
+        <material>Gazebo/Grey</material>
+        <selfCollide>true</selfCollide>
+        <kinematic>${kinematic_arms}</kinematic>
+    </gazebo>
+
+    <gazebo reference="rightforearm">
+        <material>Gazebo/FlatBlack</material>
+        <selfCollide>true</selfCollide>
+        <kinematic>${kinematic_arms}</kinematic>
+    </gazebo>
+
+    <gazebo reference="drive6">
+        <material>Gazebo/Grey</material>
+        <selfCollide>true</selfCollide>
+        <kinematic>${kinematic_arms}</kinematic>
+    </gazebo>
+
+    <gazebo reference="rightwrist">
+        <material>Gazebo/FlatBlack</material>
+        <selfCollide>true</selfCollide>
+        <kinematic>${kinematic_arms}</kinematic>
+    </gazebo>
+
+    <gazebo reference="drive10">
+        <material>Gazebo/Grey</material>
+        <selfCollide>true</selfCollide>
+        <kinematic>${kinematic_arms}</kinematic>
+    </gazebo>
+
+    <gazebo reference="rightgripper2_link">
+        <material>Gazebo/Grey</material>
+        <selfCollide>true</selfCollide>
+        <kinematic>${kinematic_arms}</kinematic>
+        <maxContacts>1</maxContacts>
+    </gazebo>
+
+    <gazebo reference="rightgripper_link">
+        <material>Gazebo/Grey</material>
+        <selfCollide>true</selfCollide>
+        <kinematic>${kinematic_arms}</kinematic>
+        <maxContacts>1</maxContacts>
+    </gazebo>
+
+    <gazebo reference='right_tool_joint'>
+        <preserveFixedJoint>true</preserveFixedJoint>
+    </gazebo>
+    <gazebo reference='left_tool_joint'>
+        <preserveFixedJoint>true</preserveFixedJoint>
+    </gazebo>
+
+</robot>

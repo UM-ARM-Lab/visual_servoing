@@ -153,9 +153,9 @@ while(True):
 
     # Set the orientation of our static AR tag object
     #p.resetBasePositionAndOrientation(box_multi, posObj=box_pos, ornObj =p.getQuaternionFromEuler(box_orn) )
-    
-    ctrl = np.zeros(6)
-    ctrl[0:3] = (target[0:3] - pos[0:3]) * 1.1
-    ctrl[3:6] = np.squeeze(pbvs.get_omega(Rwa, Rwo))
-    val.psuedoinv_ik("left", ctrl)
-    print(time.time()-t0)
+    if(tag_center[0] != -1):
+        ctrl = np.zeros(6)
+        ctrl[0:3] = (target[0:3] - pos[0:3]) * 1.1
+        ctrl[3:6] = np.squeeze(pbvs.get_omega(Rwa, Rwo))
+        val.psuedoinv_ik("left", ctrl)
+        print(time.time()-t0)
