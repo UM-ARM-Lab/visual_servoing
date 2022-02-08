@@ -1,5 +1,7 @@
 import numpy as np
 import pybullet as p
+import rospy
+
 
 #############################################
 # Interface for OpenCV style pinhole camera #
@@ -112,4 +114,5 @@ class PyBulletCamera(Camera):
 ############################################
 class RealsenseCamera(Camera):
     def __init__(self, camera_eye,  camera_look, image_dim=(1280,800)):
+        rospy.init_node("pbvs")
         pass 

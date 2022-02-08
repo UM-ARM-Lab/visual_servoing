@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>visual_servoing</name>
+  <version>0.0.0</version>
+  <description>The visual_servoing package</description>
+
+  <maintainer email="todo@todo.todo">todo</maintainer>
+
+  <license>MIT</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <depend>rospy</depend>
+  <depend>sensor_msgs</depend>
+  <depend>std_msgs</depend>
+
+  <exec_depend>message_runtime</exec_depend>
+
+</package>
