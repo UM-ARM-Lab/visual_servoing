@@ -29,6 +29,10 @@ perturb[2] = 0.15
 initial_arm = val.get_eef_pos("left")[0:3]
 target = initial_arm + perturb
 Rwo = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((np.pi/4, 0, -np.pi/2)))).reshape(3,3)
+Two = np.zeros((4,4))
+Two[0:3, 0:3] = Rwo
+Two[0:3, 3] = target
+Two[3, 3] = 1
 
 # draw the PBVS camera pose
 Tc1c2 = np.array([
@@ -38,13 +42,13 @@ Tc1c2 = np.array([
         [0.0 ,0.0, 0.0, 1.0]
     ]) 
 
-#(camera.get_extrinsics()@Tc1c2)[0:3, 0:3]).T
-draw_pose(camera.camera_eye, (np.linalg.inv(camera.get_extrinsics())@Tc1c2 )[0:3, 0:3], mat=True, axis_len=0.1)
+# draw the camera
+#draw_pose(camera.camera_eye, (np.linalg.inv(camera.get_extrinsics())@Tc1c2 )[0:3, 0:3], mat=True, axis_len=0.1)
 
 # AR tag on a box for debugging AR tag detection, commented out
 box_pos = (0.0, 2.0, 0.0)
 box_orn = [0,0, -np.pi/2 ]
-box_vis = p.createVisualShape(p.GEOM_MESH,fileName="AR Tag Static/box.obj", meshScale=[0.1,0.1, 0.1])
+#box_vis = p.createVisualShape(p.GEOM_MESH,fileName="models/AR Tag Cuff 2/PINCER_HOUSING2_EDIT.obj", meshScale=[5.1,5.1, 5.1])
 #box_multi = p.createMultiBody(baseCollisionShapeIndex = 0, baseVisualShapeIndex=box_vis, basePosition=box_pos, baseOrientation=p.getQuaternionFromEuler(box_orn))
 
 
@@ -108,14 +112,18 @@ while(True):
     pos = None
     if(ref_marker is not None):
         Tcm =  ref_marker.Tcm 
-        Rwa = (np.linalg.inv(camera.get_extrinsics()) @ Tcm)[0:3, 0:3]
+        Twa = (np.linalg.inv(camera.get_extrinsics()) @ Tcm)
         pos_unstable = (np.linalg.inv(camera.get_extrinsics()) @ Tcm)[0:3, 3]
         pos = camera.get_xyz(ref_marker.c_x, ref_marker.c_y, depth)
+        Twa[0:3, 3] = pos[0:3]
+
+        rigid_rotation = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((np.pi/2, 0, 0)))).reshape(3,3)
+
         #print(np.linalg.norm(pos-pos_unstable))
         #draw_sphere_marker(pos_unstable, 0.01, (1.0, 0.0, 0.0, 1.0))
         if(uids_eef_marker is not None):
             erase_pos(uids_eef_marker)
-        uids_eef_marker = draw_pose(pos[0:3], Rwa[0:3, 0:3], mat=True)
+        uids_eef_marker = draw_pose(Twa[0:3, 3],  Twa[0:3, 0:3] , mat=True)
         pass
     
     cv2.waitKey(1)
@@ -126,12 +134,15 @@ while(True):
     if(KEY_U in events):
         target = initial_arm + np.array([-0.1, -0.2, 0.1])
         Rwo = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((np.pi/7, np.pi/4, -np.pi/2)))).reshape(3,3)
+        Two[0:3, 0:3] = Rwo
+        Two[0:3, 3] = target
     if(KEY_I in events):
         continue
     
     # Set the orientation of our static AR tag object
     #p.resetBasePositionAndOrientation(box_multi, posObj=box_pos, ornObj =p.getQuaternionFromEuler(box_orn) )
+
     if(pos is not None):
-        ctrl = pbvs.get_control(target, pos, Rwa, Rwo)
+        ctrl = pbvs.get_control(Twa, Two)
         val.psuedoinv_ik_controller("left", ctrl)
     print(time.time()-t0)

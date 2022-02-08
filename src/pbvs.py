@@ -107,6 +107,9 @@ class MarkerPBVS:
 
         return ref_marker
 
+    def generate_marker(self, output, id):
+        cv2.imwrite(output, cv2.aruco.drawMarker(self.aruco_dict, id, 600))
+
     ####################
     # PBVS control law #
     #################### 
@@ -119,8 +122,8 @@ class MarkerPBVS:
         Rao_rod, _ = cv2.Rodrigues(Rao)
         return Rao_rod * self.k_omega
 
-    def get_control(self, object_pos, eef_pos, Rwa, Rwo):
+    def get_control(self, Twe, Two):
         ctrl = np.zeros(6)
-        ctrl[0:3] = self.get_v(object_pos, eef_pos)
-        ctrl[3:6] = np.squeeze(self.get_omega(Rwa, Rwo))
+        ctrl[0:3] = self.get_v(Two[0:3, 3], Twe[0:3, 3])
+        ctrl[3:6] = np.squeeze(self.get_omega(Twe[0:3, 0:3], Two[0:3, 0:3]))
         return ctrl
