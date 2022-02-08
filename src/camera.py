@@ -89,8 +89,8 @@ class PyBulletCamera(Camera):
         # point of the AR tag in world space 
         # Source: https://stackoverflow.com/questions/59128880/getting-world-coordinates-from-opengl-depth-buffer
         # First we compose the projection and view matrix using OpenGL convention (note column major order)
-        projectionMatrix = np.asarray(self.projectionMatrix).reshape([4,4],order='F')
-        viewMatrix = np.asarray(self.viewMatrix).reshape([4,4],order='F')
+        projectionMatrix = np.asarray(self.ogl_projection_matrix).reshape([4,4],order='F')
+        viewMatrix = np.asarray(self.ogl_view_matrix).reshape([4,4],order='F')
         # We now invert the transform that was used to bring points into the normalized image coordinates
         # This maps us from normalized image coordinates back into world coordinates
         T = np.linalg.inv(np.matmul(projectionMatrix, viewMatrix))

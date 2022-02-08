@@ -21,7 +21,7 @@ class Marker:
     # Create homogenous transform from marker to camera
     def build_transform(self, rvec, tvec):
         Rcm, _ = cv2.Rodrigues(rvec)
-        self.Tcm = np.hstack((Rcm, tvec))
+        self.Tcm = np.vstack((np.hstack((Rcm, tvec)), np.array([0.0, 0, 0, 1])))
 
 
 class MarkerPBVS:

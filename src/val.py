@@ -99,7 +99,7 @@ class Val:
         else:
             return np.vstack((jac_t[:, 11:18], jac_r[:, 11:18]))
 
-    def psuedoinv_ik(self, side, target, current=None):
+    def psuedoinv_ik_controller(self, side, target, current=None):
         x_prime = target
         if(current is not None):
             x_prime = target - current

@@ -31,8 +31,15 @@ target = initial_arm + perturb
 Rwo = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((np.pi/4, 0, -np.pi/2)))).reshape(3,3)
 
 # draw the PBVS camera pose
-print((camera.get_extrinsics()[0:3, 0:3]).T)
-draw_pose(camera.camera_eye, (camera.get_extrinsics()[0:3, 0:3]).T, mat=True, axis_len=0.1)
+Tc1c2 = np.array([
+        [1.0, 0.0, 0.0, 0.0],
+        [0.0, -1.0, 0.0, 0.0],
+        [0.0, 0.0, -1.0, 0.0],
+        [0.0 ,0.0, 0.0, 1.0]
+    ]) 
+
+#(camera.get_extrinsics()@Tc1c2)[0:3, 0:3]).T
+draw_pose(camera.camera_eye, (np.linalg.inv(camera.get_extrinsics())@Tc1c2 )[0:3, 0:3], mat=True, axis_len=0.1)
 
 # AR tag on a box for debugging AR tag detection, commented out
 box_pos = (0.0, 2.0, 0.0)
@@ -93,13 +100,12 @@ while(True):
     rgb_edit = np.copy(rgb)
     print(f"image time {time.time()-t0}")
     
-    # Detect markers and visualize estimated pose in 3D
-
     # Use ArUco PNP result for orientation estimate
     markers = pbvs.detect_markers(rgb_edit)
     ref_marker = pbvs.get_board_pose(markers, pbvs.eef_board, rgb_edit)
     cv2.imshow("image", rgb_edit)
 
+    pos = None
     if(ref_marker is not None):
         # There are a couple of frames of interest:
         # a is the AR Tag frame, it's z axis is out of the plane of the tag, its y axis is up 
@@ -113,9 +119,15 @@ while(True):
 
 
         # Draw the pose estimate of the AR tag
-        #if(uids_eef_marker is not None):
-        #    erase_pos(uids_eef_marker)
-        #uids_eef_marker = draw_pose(pos[0:3], Rwa, mat=True)
+        #Tcw = camera.get_extrinsics()
+        Tcm =  ref_marker.Tcm[0:3, 0:3]
+        Twc =  np.array([camera.ogl_view_matrix]).reshape(4,4)[0:3, 0:3]
+        Rwa = Twc @ Tc1c2[0:3, 0:3] @ Tcm
+       
+        pos = camera.get_xyz(ref_marker.c_x, ref_marker.c_y, depth)
+        if(uids_eef_marker is not None):
+            erase_pos(uids_eef_marker)
+        uids_eef_marker = draw_pose(pos[0:3], Rwa[0:3, 0:3], mat=True)
         pass
     
     cv2.waitKey(1)
@@ -124,13 +136,14 @@ while(True):
     # Process keyboard to adjust target positions
     events = p.getKeyboardEvents()
     if(KEY_U in events):
-        target = initial_arm + np.array([-0.1, -0.2, 0.1, 0.00, 0.0, 0.0])
+        target = initial_arm + np.array([-0.1, -0.2, 0.1])
         Rwo = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((np.pi/7, np.pi/4, -np.pi/2)))).reshape(3,3)
     if(KEY_I in events):
         continue
     
     # Set the orientation of our static AR tag object
     #p.resetBasePositionAndOrientation(box_multi, posObj=box_pos, ornObj =p.getQuaternionFromEuler(box_orn) )
-    
-    #val.psuedoinv_ik("left", ctrl)
+    if(pos is not None):
+        ctrl = pbvs.get_control(target, pos, Rwa, Rwo)
+        val.psuedoinv_ik_controller("left", ctrl)
     print(time.time()-t0)
