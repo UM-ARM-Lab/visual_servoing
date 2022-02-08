@@ -107,22 +107,12 @@ while(True):
 
     pos = None
     if(ref_marker is not None):
-        # There are a couple of frames of interest:
-        # a is the AR Tag frame, it's z axis is out of the plane of the tag, its y axis is up 
-        # c1 is the OpenCV camera frame with +z in the look direction, +y down (google this for image)
-        # c2 is the OpenGL/PyBullet camera frame, with -z in the look direction, and +y up 
-
-        # The transformations below take us between these frames
-        # Rc2w aka the view matrix is the rotation of the c2 (OpenGL) camera in the world frame
-        # Rc2c1 is the rotation of c1 (OpenGL) camera frame in c2 (OpenCV) frame
-        # Rc1a from ArUco is the rotation of the AR tag in the c1 (OpenCV) camera frame        
-
-
-        # Draw the pose estimate of the AR tag
-        #Tcw = camera.get_extrinsics()
         Tcm =  ref_marker.Tcm 
         Rwa = (np.linalg.inv(camera.get_extrinsics()) @ Tcm)[0:3, 0:3]
+        pos_unstable = (np.linalg.inv(camera.get_extrinsics()) @ Tcm)[0:3, 3]
         pos = camera.get_xyz(ref_marker.c_x, ref_marker.c_y, depth)
+        #print(np.linalg.norm(pos-pos_unstable))
+        #draw_sphere_marker(pos_unstable, 0.01, (1.0, 0.0, 0.0, 1.0))
         if(uids_eef_marker is not None):
             erase_pos(uids_eef_marker)
         uids_eef_marker = draw_pose(pos[0:3], Rwa[0:3, 0:3], mat=True)
