@@ -20,19 +20,7 @@ KEY_M = 109
 # Val robot and PVBS controller
 val = Val([0.0, 0.0, 0.0])
 camera = PyBulletCamera(camera_eye=np.array([-1.0, 0.5, 0.5]), camera_look=np.array([0, 0.5, 0]))
-
-# create an initial target to do IK too based on the start position of the EEF
-perturb = np.zeros((3)) 
-perturb[0] = -0.05
-perturb[1] = 0.0
-perturb[2] = 0.15
-initial_arm = val.get_eef_pos("left")[0:3]
-target = initial_arm + perturb
-Rwo = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((np.pi/4, 0, -np.pi/2)))).reshape(3,3)
-Two = np.zeros((4,4))
-Two[0:3, 0:3] = Rwo
-Two[0:3, 3] = target
-Two[3, 3] = 1
+#camera = PyBulletCamera(camera_eye=np.array([0.7, 0.7, 0.2]), camera_look=np.array([0.7, 0.0, 0.2]))
 
 # draw the PBVS camera pose
 Tc1c2 = np.array([
@@ -85,6 +73,8 @@ ids = np.array([1,2,3])
 pbvs = MarkerPBVS(camera, 1.1, 1.1, ids, tag_geometry)
 p.setRealTimeSimulation(1)
 
+Two = None
+Twa = None
 
 # UIDS for ar tag pose marker 
 uids_eef_marker = None
@@ -102,23 +92,25 @@ while(True):
 
     # Get camera feed and detect markers
     rgb, depth = camera.get_image()
-    rgb_edit = np.copy(rgb)
+    rgb_edit = rgb[..., [2, 1, 0]].copy()
     
-    # Do PBVS
-    ctrl, Twa = pbvs.do_pbvs(rgb_edit,depth, Two, Tae)
+    # Do PBVS if there is a target 
+    ctrl = np.zeros(6)
+    if(Two is not None):
+        ctrl, Twe = pbvs.do_pbvs(rgb_edit,depth, Two, Tae)
 
+        # Visualize estimated end effector pose 
+        if(uids_eef_marker is not None):
+            erase_pos(uids_eef_marker)
+        uids_eef_marker = draw_pose(Twe[0:3, 3],  Twe[0:3, 0:3] , mat=True)
+
+        #  Visualize target pose 
+        if(uids_target_marker is not None):
+            erase_pos(uids_target_marker)
+        uids_target_marker = draw_pose(Two[0:3, 3], Two[0:3, 0:3], mat=True)
+    
     # Execute control on Val
     val.psuedoinv_ik_controller("left", ctrl)
-
-    # Visualize estimated end effector pose 
-    if(uids_eef_marker is not None):
-        erase_pos(uids_eef_marker)
-    uids_eef_marker = draw_pose(Twa[0:3, 3],  Twa[0:3, 0:3] , mat=True)
-
-    #  Visualize target pose 
-    if(uids_target_marker is not None):
-        erase_pos(uids_target_marker)
-    uids_target_marker = draw_pose(target[0:3], Rwo, mat=True)
         
     cv2.waitKey(1)
 
@@ -129,10 +121,23 @@ while(True):
         Rwo = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((np.pi/7, np.pi/4, -np.pi/2)))).reshape(3,3)
         Two[0:3, 0:3] = Rwo
         Two[0:3, 3] = target
+    if(KEY_J in events):
+        initial_arm = val.get_eef_pos("left")[0:3]
+        perturb = np.zeros((3)) 
+        perturb[0] = -0.05
+        perturb[1] = 0.0
+        perturb[2] = 0.15
+        target = initial_arm + perturb
+        #Rwo = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((np.pi/2, 0, np.pi)))).reshape(3,3)
+        Rwo = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((np.pi/4, 0, -np.pi/2)))).reshape(3,3)
+        Two = np.zeros((4,4))
+        Two[0:3, 0:3] = Rwo
+        Two[0:3, 3] = target
+        Two[3, 3] = 1    
     if(KEY_I in events):
         continue
     
     # Set the orientation of our static AR tag object
     #p.resetBasePositionAndOrientation(box_multi, posObj=box_pos, ornObj =p.getQuaternionFromEuler(box_orn) )
-
+    #p.stepSimulation()
     print(time.time()-t0)

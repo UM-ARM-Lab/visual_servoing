@@ -1,3 +1,4 @@
+from tracemalloc import start
 import pybullet as p
 import time
 import pybullet_data
@@ -36,7 +37,7 @@ class Val:
         # Load Val URDF
         #self.urdf =  p.loadURDF("models/husky_custom_description/urdf/mic09_description.urdf", start_pos, p.getQuaternionFromEuler(start_orientation))
         self.urdf =  p.loadURDF("models/hdt_michigan_description_orig/urdf/hdt_michigan_generated.urdf", start_pos, p.getQuaternionFromEuler(start_orientation))
-        #planeId = p.loadURDF("models/short_floor.urdf", useFixedBase=1)
+        #planeId = p.loadURDF("models/short_floor.urdf", [start_pos[0], start_pos[1], start_pos[2]-0.5], useFixedBase=1)
 
         # Organize joints into a dict from name->info
         self.joints_by_name = {}
