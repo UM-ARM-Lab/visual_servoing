@@ -1,6 +1,7 @@
-from src.camera import *
 import cv2
 import numpy as np
+
+from visual_servoing.camera import Camera
 
 
 class Marker:
@@ -14,7 +15,7 @@ class Marker:
         self.c_y = int((self.top_left[1] + self.bottom_right[1]) / 2.0)
 
         # Build homogenous transform if possible
-        if(rvec is not None):
+        if rvec is not None:
             self.build_transform(rvec, tvec)
 
     # Create homogenous transform from marker to camera
@@ -31,7 +32,7 @@ class MarkerPBVS:
     # eef_tag_geometry: (list of 4x3 numpy, each numpy mat is the 3d coordinates of
     # the 4 tag corners, tl, tr, br, bl in that order in the eef_tag 
     # coordinate system the list is length N for a board of N many tags)
-    def __init__(self, camera, k_v, k_omega, eef_tag_ids, eef_tag_geometry):
+    def __init__(self, camera: Camera, k_v, k_omega, eef_tag_ids, eef_tag_geometry):
         self.k_v = k_v
         self.k_omega = k_omega
         self.camera = camera
@@ -42,30 +43,30 @@ class MarkerPBVS:
 
         # EEF board
         self.eef_board = cv2.aruco.Board_create(eef_tag_geometry, self.aruco_dict, eef_tag_ids)
-       
+
     # Detect ArUco tags in a given RGB frame
     # Return a list of Marker objects
     def detect_markers(self, frame, draw_debug=True):
         out = []
         (corners_all, ids_all, rejected) = cv2.aruco.detectMarkers(frame, self.aruco_dict, parameters=self.aruco_params)
-        if(len(corners_all) == 0):
+        if len(corners_all) == 0:
             return out
         ids = ids_all.flatten()
-    
+
         # Loop over the detected ArUco corners
         for (marker_corner, marker_id) in zip(corners_all, ids):
             # Extract the marker corners
             marker_corner = marker_corner.reshape((4, 2))
             marker = Marker(marker_corner, marker_id)
-                
+
             # Convert the (x,y) coordinate pairs to integers
             top_right = (int(marker.top_right[0]), int(marker.top_right[1]))
             bottom_right = (int(marker.bottom_right[0]), int(marker.bottom_right[1]))
             bottom_left = (int(marker.bottom_left[0]), int(marker.bottom_left[1]))
             top_left = (int(marker.top_left[0]), int(marker.top_left[1]))
-                
+
             # Draw the bounding box of the ArUco detection
-            if(draw_debug):
+            if draw_debug:
                 cv2.line(frame, top_left, top_right, (0, 255, 0), 2)
                 cv2.line(frame, top_right, bottom_right, (0, 255, 0), 2)
                 cv2.line(frame, bottom_right, bottom_left, (0, 255, 0), 2)
@@ -78,21 +79,21 @@ class MarkerPBVS:
     # Estimate the pose of a predefined marker board given a set of candidate markers that may be in the board
     def get_board_pose(self, markers, board, frame=None):
         # Setup stuff we need for pose estimate
-        intrinsics = self.camera.get_intrinsics()    
+        intrinsics = self.camera.get_intrinsics()
         corners_all = []
         ids_all = []
-        if(len(markers) == 0):
+        if len(markers) == 0:
             return None
-        
+
         # Build up corner and id set for the board 
         ref_marker = None
         for marker in markers:
-            corners_all.append(marker.corners.reshape(-1))  
+            corners_all.append(marker.corners.reshape(-1))
             ids_all.append(marker.id)
-            if(marker.id == board.ids[0]):
+            if marker.id == board.ids[0]:
                 ref_marker = marker
 
-        if(ref_marker is None):
+        if ref_marker is None:
             return ref_marker
         # Marker pose estimation with PnP
         _, rvec, tvec = cv2.aruco.estimatePoseBoard(corners_all, np.array(ids_all), board, intrinsics, 0, None, None)
@@ -101,7 +102,7 @@ class MarkerPBVS:
         ref_marker.build_transform(rvec, tvec)
 
         # Draw debug pose visualization if a frame is passed in
-        if(frame is not None):
+        if frame is not None:
             cv2.aruco.drawAxis(frame, self.camera.get_intrinsics(), 0, rvec, tvec, 0.4)
 
         return ref_marker
@@ -118,12 +119,12 @@ class MarkerPBVS:
         # Find the EEF ar tag board
         markers = self.detect_markers(rgb)
         ref_marker = self.get_board_pose(markers, self.eef_board, rgb)
-        if(debug):
+        if debug:
             cv2.imshow("image", rgb)
 
-        if(ref_marker is not None):
+        if ref_marker is not None:
             # Get the transform from the world to the eef ar tag
-            Tcm =  ref_marker.Tcm 
+            Tcm = ref_marker.Tcm
             # world -> camera -> eef ar tag
             Twa = (np.linalg.inv(self.camera.get_extrinsics()) @ Tcm)
             pos_unstable = (np.linalg.inv(self.camera.get_extrinsics()) @ Tcm)[0:3, 3]
@@ -136,12 +137,12 @@ class MarkerPBVS:
             # compute twist command
             ctrl = self.get_control(Twe, Two)
             return ctrl, Twe
-        return np.zeros(6), np.zeros((4,4))
+        return np.zeros(6), np.zeros((4, 4))
 
     ####################
     # PBVS control law #
     #################### 
-    
+
     def get_v(self, object_pos, eef_pos):
         return (object_pos - eef_pos) * self.k_v
 
