@@ -111,7 +111,6 @@ while(True):
     
     # Execute control on Val
     val.psuedoinv_ik_controller("left", ctrl)
-        
     cv2.waitKey(1)
 
     # Process keyboard to change target position

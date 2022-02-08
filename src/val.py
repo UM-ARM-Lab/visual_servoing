@@ -46,7 +46,7 @@ class Val:
             info = p.getJointInfo(self.urdf, i)
             name = info[1].decode("ascii")
             self.joints_by_name[name] = info
-
+        
         # Get arm and end effector joint indicies
         self.left_tool = self.joints_by_name["left_tool_joint"]
         self.right_tool = self.joints_by_name["right_tool_joint"]
