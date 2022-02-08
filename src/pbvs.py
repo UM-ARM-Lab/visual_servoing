@@ -1,19 +1,40 @@
-from camera import Camera
+from src.camera import *
 import cv2
 import pybullet as p
 import numpy as np
 
 
 class Marker:
-    def __init__(self, u, v, Rot):
-        self.u = u
-        self.v = v
-        self.R
+    def __init__(self, corners, id, rvec=None, tvec=None):
+        self.corners = corners.reshape((4, 2))
+        self.id = id
+        (self.top_left, self.top_right, self.bottom_right, self.bottom_left) = corners
+
+        # Compute centers
+        self.c_x = int((self.top_left[0] + self.bottom_right[0]) / 2.0)
+        self.c_y = int((self.top_left[1] + self.bottom_right[1]) / 2.0)
+
+        # Build homogenous transform if possible
+        if(rvec is not None):
+            self.build_transform(rvec, tvec)
+
+    # Create homogenous transform from marker to camera
+    def build_transform(self, rvec, tvec):
+        Rcm, _ = cv2.Rodrigues(rvec)
+        print(Rcm.shape)
+        print(tvec.shape)
+        self.Tcm = np.hstack((Rcm, tvec))
 
 
-class ArUcoPBVS:
-
-    def __init__(self, camera, k_v, k_omega):
+class MarkerPBVS:
+    # camera: Instance of a camera following the Camera interface
+    # k_v: scaling constant for linear velocity control
+    # k_omega: scaling constant for angular velocity control 
+    # eef_tag_ids: IDs of tags on a board, length of N for a board of N many tags
+    # eef_tag_geometry: list of 4x3 numpy, each numpy mat is the 3d coordinates of
+    #                   the 4 tag corners, tl, tr, br, bl in that order in the eef_tag 
+    #                   coordinate system the list is length N for a board of N many tags
+    def __init__(self, camera, k_v, k_omega, eef_tag_ids, eef_tag_geometry):
         self.k_v = k_v
         self.k_omega = k_omega
         self.camera = camera
@@ -21,161 +42,87 @@ class ArUcoPBVS:
         # AR Tag detection parameters
         self.aruco_dict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_6X6_250)
         self.aruco_params = cv2.aruco.DetectorParameters_create()
-    
-        # Specify the 3D geometry of the end effector marker board 
-        tag_len = 0.0305
-        gap_len = 0.0051
-        angle = np.pi/4
-        # center tag
-        tag0_tl = np.array([-tag_len/2, tag_len/2, 0.0], dtype=np.float32)
-        tag0_tr = np.array([tag_len/2, tag_len/2, 0.0], dtype=np.float32)
-        tag0_br = np.array([tag_len/2, -tag_len/2, 0.0], dtype=np.float32)
-        tag0_bl = np.array([-tag_len/2, -tag_len/2, 0.0], dtype=np.float32)
-        z1 = -np.cos(angle) * gap_len
-        z2 = -np.cos(angle) * (gap_len+tag_len)
-        y1 = tag_len/2 + gap_len + gap_len*np.sin(angle)
-        y2 = tag_len/2 + gap_len + (gap_len + tag_len)*np.sin(angle)
-        # lower tag
-        tag1_tl = np.array([-tag_len/2, -y1, z1], dtype=np.float32)
-        tag1_tr = np.array([tag_len/2,  -y1, z1], dtype=np.float32)
-        tag1_br = np.array([tag_len/2, -y2, z2], dtype=np.float32)
-        tag1_bl = np.array([-tag_len/2, -y2, z2], dtype=np.float32)
-        # upper tag
-        tag2_tl = np.array([-tag_len/2, y2, z2], dtype=np.float32)
-        tag2_tr = np.array([tag_len/2,  y2, z2], dtype=np.float32)
-        tag2_br = np.array([tag_len/2, y1, z1], dtype=np.float32)
-        tag2_bl = np.array([-tag_len/2, y1, z1], dtype=np.float32)
-        self.board = cv2.aruco.Board_create([ 
-                np.array([tag0_tl, tag0_tr, tag0_br, tag0_bl]), 
-                np.array([tag1_tl, tag1_tr, tag1_br, tag1_bl]),
-            np.array([tag2_tl, tag2_tr, tag2_br, tag2_bl])
-            ], self.aruco_dict, np.array([1, 2, 3]))
+
+        # EEF board
+        self.eef_board = cv2.aruco.Board_create(eef_tag_geometry, self.aruco_dict, eef_tag_ids)
        
-        
-    # Retrieve an image from the simulation camera
-    def get_static_camera_img(self):         
-       
+    # Detect ArUco tags in a given RGB frame
+    # Return a list of Marker objects
+    def detect_markers(self, frame, draw_debug=True):
+        out = []
+        (corners_all, ids_all, rejected) = cv2.aruco.detectMarkers(frame, self.aruco_dict, parameters=self.aruco_params)
+        if(len(corners_all) == 0):
+            return out
+        ids = ids_all.flatten()
     
-    # Retrieve 3x3 OpenCV style intrinsic matrix for the camera
-    def get_intrinsics(self):
-        proj_4x4 = np.array(self.projectionMatrix).reshape(4,4)
-        proj_3x3 = np.array(self.projectionMatrix).reshape(4,4)[:3, :3]
-        proj_3x3[0, 0] = proj_3x3[0, 0] * self.image_width/2
-        proj_3x3[1, 1] = proj_3x3[1, 1] * self.image_height/2
-        proj_3x3[0, 2] = self.image_width/2
-        proj_3x3[1, 2] = self.image_height/2
-        proj_3x3[2, 2] = 1
-        return proj_3x3
-    
-    # Return 3x3 view matrix specifying camera rotation
-    def get_view(self):
-        view_4x4 = np.array(self.viewMatrix).reshape(4,4)
-        view_3x3 = np.array(self.viewMatrix).reshape(4,4)[:3, :3]
-        return view_3x3
-
-    # Detect ArUco tags in a given camera frame
-    # Returns list of detections (u, v, id, )
-    def detect_markers(self, frame):
-        #print(self.viewMatrix)
-        #print(self.get_view())
-        center_x = -1
-        center_y = -1
-        
-
-        (corners_all, ids_all, rejected) = cv2.aruco.detectMarkers(
-        frame, self.aruco_dict, parameters=self.aruco_params)
-        
-        Rot = np.zeros((3,3))
-        tvec = np.zeros((3, 1))
-
-        if(len(corners_all) > 0):
-            # Flatten the ArUco IDs list
-            ids = ids_all.flatten()
-            #print(ids)
-            # Loop over the detected ArUco corners
-            for (marker_corner, marker_id) in zip(corners_all, ids):
+        # Loop over the detected ArUco corners
+        for (marker_corner, marker_id) in zip(corners_all, ids):
+            # Extract the marker corners
+            marker_corner = marker_corner.reshape((4, 2))
+            marker = Marker(marker_corner, marker_id)
                 
-                # Extract the marker corners
-                corners = marker_corner.reshape((4, 2))
-                (top_left, top_right, bottom_right, bottom_left) = corners
-                    
-                # Convert the (x,y) coordinate pairs to integers
-                top_right = (int(top_right[0]), int(top_right[1]))
-                bottom_right = (int(bottom_right[0]), int(bottom_right[1]))
-                bottom_left = (int(bottom_left[0]), int(bottom_left[1]))
-                top_left = (int(top_left[0]), int(top_left[1]))
-                    
-                # Draw the bounding box of the ArUco detection
+            # Convert the (x,y) coordinate pairs to integers
+            top_right = (int(marker.top_right[0]), int(marker.top_right[1]))
+            bottom_right = (int(marker.bottom_right[0]), int(marker.bottom_right[1]))
+            bottom_left = (int(marker.bottom_left[0]), int(marker.bottom_left[1]))
+            top_left = (int(marker.top_left[0]), int(marker.top_left[1]))
+                
+            # Draw the bounding box of the ArUco detection
+            if(draw_debug):
                 cv2.line(frame, top_left, top_right, (0, 255, 0), 2)
                 cv2.line(frame, top_right, bottom_right, (0, 255, 0), 2)
                 cv2.line(frame, bottom_right, bottom_left, (0, 255, 0), 2)
                 cv2.line(frame, bottom_left, top_left, (0, 255, 0), 2)
-                    
-                # Calculate and draw the center of the ArUco marker
-                c_x = int((top_left[0] + bottom_right[0]) / 2.0)
-                c_y = int((top_left[1] + bottom_right[1]) / 2.0)
 
-                if(marker_id == 1):
-                    center_x = c_x
-                    center_y = c_y
-                #cv2.circle(frame, (center_x, center_y), 4, (0, 0, 255), -1)
+            out.append(marker)
 
-                
-                # Marker pose estimation with PnP (no depth)
-                proj_3x3 = self.get_intrinsics()
-                #print(proj_3x3)
+        return out
 
-
-                #rvec, tvec, _ = cv2.aruco.estimatePoseSingleMarkers(marker_corner, 0.242, proj_3x3, 0)
-                #cv2.aruco.drawAxis(frame, proj_3x3, 0, rvec[0], tvec[0], 0.8) #tvec[0]
-
-                # compute end effector rotation from Rordigues 
-                #Rot, _ = cv2.Rodrigues(rvec[0])
-
-            
-            _, rvec, tvec = cv2.aruco.estimatePoseBoard(corners_all, ids_all, board, self.get_intrinsics(), 0, None, None)
-            cv2.aruco.drawAxis(frame, self.get_intrinsics(), 0, rvec, tvec, 0.4)
-            Rot, _ = cv2.Rodrigues(rvec)
-
-        # Display the resulting frame with annotations
-        cv2.imshow('frame',frame)
-        #0.282
-#0.02813
-        # return the location of the tag and pose
-        return Rot, tvec, (center_x, center_y)
-
-    # return (v, w) velocity in world frame at this timestep
-    # that will try to drive the EEF to have the target position 
-    # Twa - translation of eef (a) in world (w) 
-    # Rwa - rotation of eef (a) in world (w)
-    # Two - translation of target (o) in world (w)
-    # Rwo - rotation of target (o) in world (w)
-    def get_control(self, Twa, Rwa, Two, Rwo):
-        lmbda = 0.1 
-
-        # translation of target (o) in end effector frame (a)
-        Tao = np.matmul(Rwa.T, Two) - np.matmul(Rwa.T, Twa)
-        # translation of target (o) in desired end effector frame (d)
-        Tdo = np.zeros(3)
-
-        # Rotation of target (o) in current end effector frame
-        Rao = np.matmul(Rwa.T, Rwo) 
-        Rao_rod, _ = cv2.Rodrigues(Rao)
-
-        # Desired rotation of target (o) in desired end effector frame (d)
-        Rdo = np.zeros(3)
-
-        v_a = -lmbda*(Tdo-Tao) + np.cross(np.squeeze(Tao), np.squeeze(Rao_rod))
-        omega_a = np.squeeze(-lmbda * Rao_rod)
+    # Estimate the pose of a predefined marker board given a set of candidate markers that may be in the board
+    def get_board_pose(self, markers, board, frame=None):
+        # Setup stuff we need for pose estimate
+        intrinsics = self.camera.get_intrinsics()    
+        corners_all = []
+        ids_all = []
+        if(len(markers) == 0):
+            return None
         
-        v_w = np.matmul(Rwa, v_a)
-        omega_w = np.matmul(Rwa, omega_a)
-        #print(v_c)
-        #print(omega_c)
-        return np.hstack((v_w, np.squeeze(omega_w)))
+        # Build up corner and id set for the board 
+        ref_marker = None
+        for marker in markers:
+            corners_all.append(marker.corners.reshape(-1))  
+            ids_all.append(marker.id)
+            if(marker.id == board.ids[0]):
+                ref_marker = marker
 
-    # get angular
+        if(ref_marker is None):
+            return ref_marker
+        # Marker pose estimation with PnP
+        _, rvec, tvec = cv2.aruco.estimatePoseBoard(corners_all, np.array(ids_all), board, intrinsics, 0, None, None)
+
+        # The first marker of the board is considered the reference marker and will contain the transform
+        ref_marker.build_transform(rvec, tvec)
+
+        # Draw debug pose visualization if a frame is passed in
+        if(frame is not None):
+            cv2.aruco.drawAxis(frame, self.camera.get_intrinsics(), 0, rvec, tvec, 0.4)
+
+        return ref_marker
+
+    ####################
+    # PBVS control law #
+    #################### 
+    
+    def get_v(self, object_pos, eef_pos):
+        return (object_pos - eef_pos) * self.k_v
+
     def get_omega(self, Rwa, Rwo):
-        Roa = np.matmul(Rwa, Rwo.T).T
-        Roa_rod, _ = cv2.Rodrigues(Roa)
-        return Roa_rod * 1.1
+        Rao = np.matmul(Rwa, Rwo.T).T
+        Rao_rod, _ = cv2.Rodrigues(Rao)
+        return Rao_rod * self.k_omega
+
+    def get_control(self, object_pos, eef_pos, Rwa, Rwo):
+        ctrl = np.zeros(6)
+        ctrl[0:3] = self.get_v(object_pos, eef_pos)
+        ctrl[3:6] = np.squeeze(self.get_omega(Rwa, Rwo))
+        return ctrl
