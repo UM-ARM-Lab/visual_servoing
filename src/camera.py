@@ -68,7 +68,7 @@ class PyBulletCamera(Camera):
             [0.0, 0.0, -1.0, 0.0],
             [0.0 ,0.0, 0.0, 1.0]
         ]) 
-        Tcw = Tc2w @ Tc1c2
+        Tcw = Tc1c2 @ Tc2w 
         return Tcw
 
     def get_image(self):

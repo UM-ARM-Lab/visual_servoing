@@ -120,10 +120,8 @@ while(True):
 
         # Draw the pose estimate of the AR tag
         #Tcw = camera.get_extrinsics()
-        Tcm =  ref_marker.Tcm[0:3, 0:3]
-        Twc =  np.array([camera.ogl_view_matrix]).reshape(4,4)[0:3, 0:3]
-        Rwa = Twc @ Tc1c2[0:3, 0:3] @ Tcm
-       
+        Tcm =  ref_marker.Tcm 
+        Rwa = (np.linalg.inv(camera.get_extrinsics()) @ Tcm)[0:3, 0:3]
         pos = camera.get_xyz(ref_marker.c_x, ref_marker.c_y, depth)
         if(uids_eef_marker is not None):
             erase_pos(uids_eef_marker)
