@@ -1,6 +1,5 @@
 from src.camera import *
 import cv2
-import pybullet as p
 import numpy as np
 
 
@@ -25,13 +24,13 @@ class Marker:
 
 
 class MarkerPBVS:
-    # camera: Instance of a camera following the Camera interface
-    # k_v: scaling constant for linear velocity control
-    # k_omega: scaling constant for angular velocity control 
-    # eef_tag_ids: IDs of tags on a board, length of N for a board of N many tags
-    # eef_tag_geometry: list of 4x3 numpy, each numpy mat is the 3d coordinates of
-    #                   the 4 tag corners, tl, tr, br, bl in that order in the eef_tag 
-    #                   coordinate system the list is length N for a board of N many tags
+    # camera: (Instance of a camera following the Camera interface)
+    # k_v: (Scaling constant for linear velocity control)
+    # k_omega: (Scaling constant for angular velocity control) 
+    # eef_tag_ids: (IDs of tags on a board, length of N for a board of N many tags)
+    # eef_tag_geometry: (list of 4x3 numpy, each numpy mat is the 3d coordinates of
+    # the 4 tag corners, tl, tr, br, bl in that order in the eef_tag 
+    # coordinate system the list is length N for a board of N many tags)
     def __init__(self, camera, k_v, k_omega, eef_tag_ids, eef_tag_geometry):
         self.k_v = k_v
         self.k_omega = k_omega
@@ -107,8 +106,37 @@ class MarkerPBVS:
 
         return ref_marker
 
+    # Generate a particular marker ID from the dictionary
     def generate_marker(self, output, id):
         cv2.imwrite(output, cv2.aruco.drawMarker(self.aruco_dict, id, 600))
+
+    # Executes an iteration of PBVS control and returns a twist command
+    # Two: (Pose of target object w.r.t world)
+    # Tae: (Pose of end effector w.r.t. ar tag coordinates)
+    # Returns the twist command [v, omega] and pose of end effector in world
+    def do_pbvs(self, rgb, depth, Two, Tae, debug=True):
+        # Find the EEF ar tag board
+        markers = self.detect_markers(rgb)
+        ref_marker = self.get_board_pose(markers, self.eef_board, rgb)
+        if(debug):
+            cv2.imshow("image", rgb)
+
+        if(ref_marker is not None):
+            # Get the transform from the world to the eef ar tag
+            Tcm =  ref_marker.Tcm 
+            # world -> camera -> eef ar tag
+            Twa = (np.linalg.inv(self.camera.get_extrinsics()) @ Tcm)
+            pos_unstable = (np.linalg.inv(self.camera.get_extrinsics()) @ Tcm)[0:3, 3]
+            # query point cloud at center of tag for the position of the tag in the world frame
+            pos = self.camera.get_xyz(ref_marker.c_x, ref_marker.c_y, depth)
+            Twa[0:3, 3] = pos[0:3]
+            # compute transform from world to end effector by including rigid transform from
+            # eef ar tag to end effector frame
+            Twe = Twa @ Tae
+            # compute twist command
+            ctrl = self.get_control(Twe, Two)
+            return ctrl, Twe
+        return np.zeros(6), np.zeros((4,4))
 
     ####################
     # PBVS control law #

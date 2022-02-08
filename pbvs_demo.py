@@ -90,51 +90,39 @@ p.setRealTimeSimulation(1)
 uids_eef_marker = None
 uids_target_marker = None
 
+# Transform from AR tag EEF frame to EEF frame
+rigid_rotation = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((0, 0, 0)))).reshape(3,3)
+Tae = np.zeros((4,4))
+Tae[0:3, 0:3] = rigid_rotation
+Tae[0:3, 3] = np.array([-0.1, 0.0, 0.0])
+Tae[3,3] = 1
+
 while(True):
     t0 = time.time()    
-
-    # Move target marker based on updated target position
-    # Draw the pose estimate of the AR tag
-    if(uids_target_marker is not None):
-        erase_pos(uids_target_marker)
-    uids_target_marker = draw_pose(target[0:3], Rwo, mat=True)
 
     # Get camera feed and detect markers
     rgb, depth = camera.get_image()
     rgb_edit = np.copy(rgb)
-    print(f"image time {time.time()-t0}")
     
-    # Use ArUco PNP result for orientation estimate
-    markers = pbvs.detect_markers(rgb_edit)
-    ref_marker = pbvs.get_board_pose(markers, pbvs.eef_board, rgb_edit)
-    cv2.imshow("image", rgb_edit)
+    # Do PBVS
+    ctrl, Twa = pbvs.do_pbvs(rgb_edit,depth, Two, Tae)
 
-    pos = None
-    if(ref_marker is not None):
-        Tcm =  ref_marker.Tcm 
-        Twa = (np.linalg.inv(camera.get_extrinsics()) @ Tcm)
-        pos_unstable = (np.linalg.inv(camera.get_extrinsics()) @ Tcm)[0:3, 3]
-        pos = camera.get_xyz(ref_marker.c_x, ref_marker.c_y, depth)
-        Twa[0:3, 3] = pos[0:3]
+    # Execute control on Val
+    val.psuedoinv_ik_controller("left", ctrl)
 
-        rigid_rotation = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((0, 0, 0)))).reshape(3,3)
-        T = np.zeros((4,4))
-        T[0:3, 0:3] = rigid_rotation
-        T[0:3, 3] = np.array([-0.1, 0.0, 0.0])
-        T[3,3] = 1
-        Twa = Twa @ T
+    # Visualize estimated end effector pose 
+    if(uids_eef_marker is not None):
+        erase_pos(uids_eef_marker)
+    uids_eef_marker = draw_pose(Twa[0:3, 3],  Twa[0:3, 0:3] , mat=True)
 
-        #print(np.linalg.norm(pos-pos_unstable))
-        #draw_sphere_marker(pos_unstable, 0.01, (1.0, 0.0, 0.0, 1.0))
-        if(uids_eef_marker is not None):
-            erase_pos(uids_eef_marker)
-        uids_eef_marker = draw_pose(Twa[0:3, 3],  Twa[0:3, 0:3] , mat=True)
-        pass
-    
+    #  Visualize target pose 
+    if(uids_target_marker is not None):
+        erase_pos(uids_target_marker)
+    uids_target_marker = draw_pose(target[0:3], Rwo, mat=True)
+        
     cv2.waitKey(1)
 
-
-    # Process keyboard to adjust target positions
+    # Process keyboard to change target position
     events = p.getKeyboardEvents()
     if(KEY_U in events):
         target = initial_arm + np.array([-0.1, -0.2, 0.1])
@@ -147,7 +135,4 @@ while(True):
     # Set the orientation of our static AR tag object
     #p.resetBasePositionAndOrientation(box_multi, posObj=box_pos, ornObj =p.getQuaternionFromEuler(box_orn) )
 
-    if(pos is not None):
-        ctrl = pbvs.get_control(Twa, Two)
-        val.psuedoinv_ik_controller("left", ctrl)
     print(time.time()-t0)
