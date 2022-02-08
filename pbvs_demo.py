@@ -117,7 +117,12 @@ while(True):
         pos = camera.get_xyz(ref_marker.c_x, ref_marker.c_y, depth)
         Twa[0:3, 3] = pos[0:3]
 
-        rigid_rotation = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((np.pi/2, 0, 0)))).reshape(3,3)
+        rigid_rotation = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((0, 0, 0)))).reshape(3,3)
+        T = np.zeros((4,4))
+        T[0:3, 0:3] = rigid_rotation
+        T[0:3, 3] = np.array([-0.1, 0.0, 0.0])
+        T[3,3] = 1
+        Twa = Twa @ T
 
         #print(np.linalg.norm(pos-pos_unstable))
         #draw_sphere_marker(pos_unstable, 0.01, (1.0, 0.0, 0.0, 1.0))
