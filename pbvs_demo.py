@@ -31,6 +31,7 @@ target = initial_arm + perturb
 Rwo = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((np.pi/4, 0, -np.pi/2)))).reshape(3,3)
 
 # draw the PBVS camera pose
+print((camera.get_extrinsics()[0:3, 0:3]).T)
 draw_pose(camera.camera_eye, (camera.get_extrinsics()[0:3, 0:3]).T, mat=True, axis_len=0.1)
 
 # AR tag on a box for debugging AR tag detection, commented out
