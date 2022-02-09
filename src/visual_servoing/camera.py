@@ -9,6 +9,7 @@ import rospy
 #############################################
 from arc_utilities.listener import Listener
 from sensor_msgs.msg import Image
+from sensor_msgs.msg import CameraInfo
 
 
 class Camera:
@@ -124,14 +125,19 @@ class RealsenseCamera(Camera):
         super().__init__(camera_eye, camera_look, image_dim)
         self.depth = Listener("/camera/depth/image_rect_raw", Image)
         self.color = Listener("/camera/color/image_raw", Image)
+        self.params = Listener("/camera/color/camera_info", CameraInfo)
+        info = self.params.get()
+        self.intrisnics = np.array(info.K).reshape(3,3)
+
+        print(self.intrisnics)
 
     def get_intrinsics(self):
         """Return OpenCV style intrinsics 3x3"""
-        pass
+        return self.intrisnics
 
     def get_extrinsics(self):
         """Get homogenous extrisnic transform from world to camera Tcw 4x4"""
-        pass
+        return np.eye(4)
 
     def get_image(self):
         """Return RGB image and depth image"""
@@ -140,8 +146,9 @@ class RealsenseCamera(Camera):
 
         color_np = ros_numpy.numpify(color_img)
         depth_np = ros_numpy.numpify(depth_img)
-        return color_np
+        return color_np, depth_np
 
     def get_xyz(self, u, v, depth):
         """ Retrieve pointcloud point from depth and image pt """
+        
         pass

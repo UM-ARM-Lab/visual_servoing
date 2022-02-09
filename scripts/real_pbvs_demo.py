@@ -18,40 +18,7 @@ from visual_servoing.val import Val
 
 @ros_init.with_ros("real_pbvs_servoing")
 def main():
-    KEY_U = 117
-    KEY_I = 105
-    KEY_J = 106
-    KEY_K = 107
-    KEY_N = 110
-    KEY_M = 109
-
-    camera_real = RealsenseCamera(camera_eye=np.array([0.0, 0.0, 0.0]), camera_look=np.array([1.0, 0.0, 0.0]))
-    img = camera_real.get_image()
-    cv2.imshow("real", img)
-    cv2.waitKey(0)
-
-    # Val robot and PVBS controller
-    val = Val([0.0, 0.0, 0.0])
-    # camera = PyBulletCamera(camera_eye=np.array([-1.0, 0.5, 0.5]), camera_look=np.array([0, 0.5, 0]))
-    # camera = PyBulletCamera(camera_eye=np.array([0.7, 0.7, 0.2]), camera_look=np.array([0.7, 0.0, 0.2]))
-
-
-    # draw the PBVS camera pose
-    Tc1c2 = np.array([
-        [1.0, 0.0, 0.0, 0.0],
-        [0.0, -1.0, 0.0, 0.0],
-        [0.0, 0.0, -1.0, 0.0],
-        [0.0, 0.0, 0.0, 1.0]
-    ])
-
-    # draw the camera
-    # draw_pose(camera.camera_eye, (np.linalg.inv(camera.get_extrinsics())@Tc1c2 )[0:3, 0:3], mat=True, axis_len=0.1)
-
-    # AR tag on a box for debugging AR tag detection, commented out
-    box_pos = (0.0, 2.0, 0.0)
-    box_orn = [0, 0, -np.pi / 2]
-    # box_vis = p.createVisualShape(p.GEOM_MESH,fileName="models/AR Tag Cuff 2/PINCER_HOUSING2_EDIT.obj", meshScale=[5.1,5.1, 5.1])
-    # box_multi = p.createMultiBody(baseCollisionShapeIndex = 0, baseVisualShapeIndex=box_vis, basePosition=box_pos, baseOrientation=p.getQuaternionFromEuler(box_orn))
+    camera = RealsenseCamera(camera_eye=np.array([0.0, 0.0, 0.0]), camera_look=np.array([1.0, 0.0, 0.0]))
 
     # Specify the 3D geometry of the end effector marker board
     tag_len = 0.0305
@@ -84,14 +51,9 @@ def main():
     ids = np.array([1, 2, 3])
 
     pbvs = MarkerPBVS(camera, 1.1, 1.1, ids, tag_geometry)
-    p.setRealTimeSimulation(1)
 
     Two = None
     Twa = None
-
-    # UIDS for ar tag pose marker
-    uids_eef_marker = None
-    uids_target_marker = None
 
     # Transform from AR tag EEF frame to EEF frame
     rigid_rotation = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((0, 0, 0)))).reshape(3, 3)
@@ -101,8 +63,10 @@ def main():
     Tae[3, 3] = 1
     initial_arm = None
 
+    Two = np.eye(4)
     while True:
         t0 = time.time()
+        #time.sleep(5)
 
         # Get camera feed and detect markers
         rgb, depth = camera.get_image()
@@ -124,41 +88,10 @@ def main():
             uids_target_marker = draw_pose(Two[0:3, 3], Two[0:3, 0:3], mat=True)
 
         # Execute control on Val
-        val.psuedoinv_ik_controller("left", ctrl)
-        cv2.waitKey(1)
+        cv2.imshow("real", rgb)
+        cv2.waitKey(3)
 
-        # Process keyboard to change target position
-        events = p.getKeyboardEvents()
-        if KEY_U in events:
-            target = initial_arm + np.array([-0.1, -0.2, 0.1])
-            Rwo = np.array(
-                p.getMatrixFromQuaternion(p.getQuaternionFromEuler((np.pi / 7, np.pi / 4, -np.pi / 2)))).reshape(
-                3, 3)
-            Two[0:3, 0:3] = Rwo
-            Two[0:3, 3] = target
-        if (KEY_J in events):
-            initial_arm = val.get_eef_pos("left")[0:3]
-            perturb = np.zeros((3))
-            perturb[0] = -0.05
-            perturb[1] = 0.0
-            perturb[2] = 0.15
-            target = initial_arm + perturb
-            # Rwo = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((np.pi/2, 0, np.pi)))).reshape(3,3)
-            Rwo = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((np.pi / 4, 0, -np.pi / 2)))).reshape(3,
-                                                                                                                    3)
-            Two = np.zeros((4, 4))
-            Two[0:3, 0:3] = Rwo
-            Two[0:3, 3] = target
-            Two[3, 3] = 1
-        if (KEY_I in events):
-            continue
-
-        # Set the orientation of our static AR tag object
-        # p.resetBasePositionAndOrientation(box_multi, posObj=box_pos, ornObj =p.getQuaternionFromEuler(box_orn) )
-        # p.stepSimulation()
-
-
-        print(time.time() - t0)
+        #print(time.time() - t0)
 
 
 if __name__ == '__main__':
