@@ -22,6 +22,9 @@ class Camera:
         """Return OpenCV style intrinsics 3x3"""
         pass
 
+    def get_distortion(self):
+        pass
+
     def get_extrinsics(self):
         """Get homogenous extrisnic transform from world to camera Tcw 4x4"""
         pass
@@ -150,5 +153,5 @@ class RealsenseCamera(Camera):
 
     def get_xyz(self, u, v, depth):
         """ Retrieve pointcloud point from depth and image pt """
-        
-        pass
+
+        return np.array([0,0,0])

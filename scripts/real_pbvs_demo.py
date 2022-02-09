@@ -77,16 +77,6 @@ def main():
         if (Two is not None):
             ctrl, Twe = pbvs.do_pbvs(rgb_edit, depth, Two, Tae)
 
-            # Visualize estimated end effector pose
-            if (uids_eef_marker is not None):
-                erase_pos(uids_eef_marker)
-            uids_eef_marker = draw_pose(Twe[0:3, 3], Twe[0:3, 0:3], mat=True)
-
-            #  Visualize target pose
-            if (uids_target_marker is not None):
-                erase_pos(uids_target_marker)
-            uids_target_marker = draw_pose(Two[0:3, 3], Two[0:3, 0:3], mat=True)
-
         # Execute control on Val
         cv2.imshow("real", rgb)
         cv2.waitKey(3)
