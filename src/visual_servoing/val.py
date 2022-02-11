@@ -36,10 +36,10 @@ class Val:
         p.setGravity(0, 0, -10)
 
         # Load Val URDF
-        # self.urdf =  p.loadURDF("models/husky_custom_description/urdf/mic09_description.urdf", start_pos, p.getQuaternionFromEuler(start_orientation))
+        #self.urdf =  p.loadURDF("models/husky_custom_description/urdf/mic09_description.urdf", start_pos, p.getQuaternionFromEuler(start_orientation))
         self.urdf = p.loadURDF("models/hdt_michigan_description_orig/urdf/hdt_michigan_generated.urdf", start_pos,
                                p.getQuaternionFromEuler(start_orientation))
-        # planeId = p.loadURDF("models/short_floor.urdf", [start_pos[0], start_pos[1], start_pos[2]-0.5], useFixedBase=1)
+        #planeId = p.loadURDF("models/short_floor.urdf", [start_pos[0], start_pos[1], start_pos[2]-0.5], useFixedBase=1)
 
         # Organize joints into a dict from name->info
         self.joints_by_name = {}
@@ -48,6 +48,7 @@ class Val:
             info = p.getJointInfo(self.urdf, i)
             name = info[1].decode("ascii")
             self.joints_by_name[name] = info
+            print(f"idx: {i}-{info[0]}, joint: {name} ")
 
         # Get arm and end effector joint indicies
         self.left_tool = self.joints_by_name["left_tool_joint"]
@@ -56,8 +57,10 @@ class Val:
         self.left_arm_joints = []
         self.right_arm_joints = []
         for i in range(1, 8):
+            #print(self.joints_by_name["joint4" + str(i)][0])
             self.left_arm_joints.append(self.joints_by_name["joint4" + str(i)][0])
             self.right_arm_joints.append(self.joints_by_name["joint" + str(i)][0])
+        print(self.left_arm_joints)
 
     def get_eef_pos(self, side):
         """
@@ -96,7 +99,9 @@ class Val:
         jac_t = np.array(jac_t)
         jac_r = np.array(jac_r)
 
-        if side == "left":
+
+        if side == "left": 
+
             return np.vstack((jac_t[:, 2:9], jac_r[:, 2:9]))  # Jacobian is 6 (end effector dof) x 7 (joints)
         else:
             return np.vstack((jac_t[:, 11:18], jac_r[:, 11:18]))
@@ -121,3 +126,8 @@ class Val:
         joint_list = self.left_arm_joints if (side == "left") else right_arm_joints
 
         p.setJointMotorControlArray(self.urdf, joint_list, p.VELOCITY_CONTROL, targetVelocities=q_prime)
+
+    def set_velo(self, targetVelo):
+        joint_list = self.left_arm_joints
+        p.setJointMotorControlArray(self.urdf, joint_list, p.VELOCITY_CONTROL, targetVelocities=targetVelo)
+    

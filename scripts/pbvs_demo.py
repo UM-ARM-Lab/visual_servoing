@@ -3,11 +3,12 @@
 # does PBVS to various predetermined points in the world #
 ##########################################################
 
-from visual_servoing.utils import draw_pose, erase_pos
+from visual_servoing.utils import draw_pose, draw_sphere_marker, erase_pos
 from visual_servoing.val import *
 from visual_servoing.pbvs import *
 from visual_servoing.camera import *
 import time
+import matplotlib.pyplot as plt
 
 # Key bindings
 KEY_U = 117
@@ -19,8 +20,8 @@ KEY_M = 109
 
 # Val robot and PVBS controller
 val = Val([0.0, 0.0, 0.0])
-camera = PyBulletCamera(camera_eye=np.array([-1.0, 0.5, 0.5]), camera_look=np.array([0, 0.5, 0]))
-# camera = PyBulletCamera(camera_eye=np.array([0.7, 0.7, 0.2]), camera_look=np.array([0.7, 0.0, 0.2]))
+camera = PyBulletCamera(camera_eye=np.array([-0.7, 0.5, 0.5]), camera_look=np.array([0, 0.5, 0.2]))
+#camera = PyBulletCamera(camera_eye=np.array([0.7, 1.3, 0.2]), camera_look=np.array([0.7, 0.0, 0.2]))
 
 # draw the PBVS camera pose
 Tc1c2 = np.array([
@@ -34,10 +35,10 @@ Tc1c2 = np.array([
 # draw_pose(camera.camera_eye, (np.linalg.inv(camera.get_extrinsics())@Tc1c2 )[0:3, 0:3], mat=True, axis_len=0.1)
 
 # AR tag on a box for debugging AR tag detection, commented out
-box_pos = (0.0, 2.0, 0.0)
-box_orn = [0, 0, -np.pi / 2]
-# box_vis = p.createVisualShape(p.GEOM_MESH,fileName="models/AR Tag Cuff 2/PINCER_HOUSING2_EDIT.obj", meshScale=[5.1,5.1, 5.1])
-# box_multi = p.createMultiBody(baseCollisionShapeIndex = 0, baseVisualShapeIndex=box_vis, basePosition=box_pos, baseOrientation=p.getQuaternionFromEuler(box_orn))
+box_pos = (0.0, 0.6, 0.3)
+box_orn = [0, 0, np.pi/8]
+box_vis = p.createVisualShape(p.GEOM_MESH,fileName="models/AR Tag Cuff 2/PINCER_HOUSING2_EDIT.obj", meshScale=[1.0,1.0, 1.0])
+#box_multi = p.createMultiBody(baseCollisionShapeIndex = 0, baseVisualShapeIndex=box_vis, basePosition=box_pos, baseOrientation=p.getQuaternionFromEuler(box_orn))
 
 
 # Specify the 3D geometry of the end effector marker board 
@@ -87,7 +88,20 @@ Tae[0:3, 0:3] = rigid_rotation
 Tae[0:3, 3] = np.array([-0.1, 0.0, 0.0])
 Tae[3, 3] = 1
 
-initial_arm = None
+
+initial_arm = val.get_eef_pos("left")[0:3]
+
+
+#delete me
+test_target = np.zeros((3))
+test_target[0] = -0.05
+test_target[1] = 0.0
+test_target[2] = -0.05
+test_target = test_target + initial_arm
+
+position_error = []
+rotation_error = []
+
 while True:
     t0 = time.time()
 
@@ -97,6 +111,7 @@ while True:
 
     # Do PBVS if there is a target 
     ctrl = np.zeros(6)
+    cv2.imshow("image", rgb_edit)
     if Two is not None:
         ctrl, Twe = pbvs.do_pbvs(rgb_edit, depth, Two, Tae)
 
@@ -110,8 +125,21 @@ while True:
             erase_pos(uids_target_marker)
         uids_target_marker = draw_pose(Two[0:3, 3], Two[0:3, 0:3], mat=True)
 
+        position_error.append( np.linalg.norm(Twe[0:3, 3] - Two[0:3, 3]))
+        r, _ = cv2.Rodrigues( (Twe[0:3, 0:3] @ Two[0:3, 0:3].T ).T)
+        rotation_error.append(np.linalg.norm(r))
     # Execute control on Val
     val.psuedoinv_ik_controller("left", ctrl)
+    #ctrl = np.zeros(6)
+    
+    #ctrl[0:3] = test_target - val.get_eef_pos("left")[0:3]
+    #draw_sphere_marker(val.get_eef_pos("left")[0:3], 0.01, (0.0, 1.0, 0.0, 1.0))
+    #draw_sphere_marker(test_target, 0.01, (1.0, 0.0, 0.0, 1.0))
+
+    #val.psuedoinv_ik_controller("left", ctrl)
+    #p.setJointMotorControlArray(self.urdf, joint_list, p.VELOCITY_CONTROL, targetVelocities=q_prime)
+    #val.set_velo([5.0, 0.0, 0.0, 0.0,0.0, 0.0, 0.0])
+    #val.get_arm_jacobian("left")
     cv2.waitKey(1)
 
     # Process keyboard to change target position
@@ -122,6 +150,14 @@ while True:
             3, 3)
         Two[0:3, 0:3] = Rwo
         Two[0:3, 3] = target
+
+    if KEY_K in events:
+        target = initial_arm + np.array([0.2, -0.1, 0.1])
+        Rwo = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((np.pi / 4, np.pi / 4, -np.pi / 2)))).reshape(
+            3, 3)
+        Two[0:3, 0:3] = Rwo
+        Two[0:3, 3] = target
+
     if KEY_J in events:
         initial_arm = val.get_eef_pos("left")[0:3]
         perturb = np.zeros((3))
@@ -136,7 +172,16 @@ while True:
         Two[0:3, 3] = target
         Two[3, 3] = 1
     if (KEY_I in events):
-        continue
+        plt.plot(position_error)
+        plt.xlabel("iteration")
+        plt.ylabel("meters")
+        plt.title("EEF Position error (m)")
+        plt.figure()
+        plt.xlabel("iteration")
+        plt.ylabel("Rodrigues norm")
+        plt.title("EEF Rotation error")
+        plt.plot(rotation_error)
+        plt.show()
 
     # Set the orientation of our static AR tag object
     # p.resetBasePositionAndOrientation(box_multi, posObj=box_pos, ornObj =p.getQuaternionFromEuler(box_orn) )

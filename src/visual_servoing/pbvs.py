@@ -71,6 +71,7 @@ class MarkerPBVS:
                 cv2.line(frame, top_right, bottom_right, (0, 255, 0), 2)
                 cv2.line(frame, bottom_right, bottom_left, (0, 255, 0), 2)
                 cv2.line(frame, bottom_left, top_left, (0, 255, 0), 2)
+                cv2.circle(frame, (marker.c_x, marker.c_y), 5, (255, 0, 0), -1)
 
             out.append(marker)
 
