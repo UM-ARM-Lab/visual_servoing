@@ -36,9 +36,11 @@ Tc1c2 = np.array([
 
 # AR tag on a box for debugging AR tag detection, commented out
 box_pos = (0.0, 0.6, 0.3)
-box_orn = [0, 0, np.pi/8]
+#box_orn = [0, 0, np.pi/8]
+box_orn = [0, np.pi/8, np.pi/4]
+
 box_vis = p.createVisualShape(p.GEOM_MESH,fileName="models/AR Tag Cuff 2/PINCER_HOUSING2_EDIT.obj", meshScale=[1.0,1.0, 1.0])
-#box_multi = p.createMultiBody(baseCollisionShapeIndex = 0, baseVisualShapeIndex=box_vis, basePosition=box_pos, baseOrientation=p.getQuaternionFromEuler(box_orn))
+box_multi = p.createMultiBody(baseCollisionShapeIndex = 0, baseVisualShapeIndex=box_vis, basePosition=box_pos, baseOrientation=p.getQuaternionFromEuler(box_orn))
 
 
 # Specify the 3D geometry of the end effector marker board 
@@ -103,6 +105,8 @@ test_target = test_target + initial_arm
 position_error = []
 rotation_error = []
 
+armed = False
+
 while True:
     t0 = time.time()
 
@@ -113,7 +117,7 @@ while True:
     # Do PBVS if there is a target 
     ctrl = np.zeros(6)
     cv2.imshow("image", rgb_edit)
-    if Two is not None:
+    if armed and Two is not None:
         ctrl, Twe = pbvs.do_pbvs(rgb_edit, depth, Two, Tae)
 
         # Visualize estimated end effector pose 
@@ -133,8 +137,12 @@ while True:
     val.psuedoinv_ik_controller("left", ctrl)
     #ctrl = np.zeros(6)
 
-    pbvs.get_target_pose(rgb_edit, depth)
-
+    if(not armed):
+        Two = pbvs.get_target_pose(rgb_edit, depth)
+        if Two is not None:
+            if (uids_target_marker is not None):
+                erase_pos(uids_target_marker)
+            uids_target_marker = draw_pose(Two[0:3, 3], Two[0:3, 0:3], mat=True)
     
     #ctrl[0:3] = test_target - val.get_eef_pos("left")[0:3]
     #draw_sphere_marker(val.get_eef_pos("left")[0:3], 0.01, (0.0, 1.0, 0.0, 1.0))
@@ -161,6 +169,9 @@ while True:
             3, 3)
         Two[0:3, 0:3] = Rwo
         Two[0:3, 3] = target
+
+    if KEY_N in events:
+        armed = True
 
     if KEY_J in events:
         initial_arm = val.get_eef_pos("left")[0:3]

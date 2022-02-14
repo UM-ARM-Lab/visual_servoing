@@ -150,10 +150,14 @@ class MarkerPBVS:
         markers = self.detect_markers(rgb)
         ref_marker = self.get_board_pose(markers, self.target_board, rgb)
         if debug:
+            cv2.circle(rgb, (ref_marker.c_x, ref_marker.c_y), 5, (0, 0, 255), -1)
             cv2.imshow("image", rgb)
-        #if ref_marker is not None:
-            # Get transform from the world to the target marker
 
+        if ref_marker is not None:
+            Twa = self.compute_board_to_world(ref_marker, depth)
+            return Twa 
+        else:
+            return None
 
     ####################
     # PBVS control law #
