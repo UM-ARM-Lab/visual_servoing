@@ -32,7 +32,7 @@ class MarkerPBVS:
     # eef_tag_geometry: (list of 4x3 numpy, each numpy mat is the 3d coordinates of
     # the 4 tag corners, tl, tr, br, bl in that order in the eef_tag 
     # coordinate system the list is length N for a board of N many tags)
-    def __init__(self, camera: Camera, k_v, k_omega, eef_tag_ids, eef_tag_geometry):
+    def __init__(self, camera: Camera, k_v, k_omega, eef_tag_ids, eef_tag_geometry, target_tag_ids, target_tag_geometry):
         self.k_v = k_v
         self.k_omega = k_omega
         self.camera = camera
@@ -43,6 +43,7 @@ class MarkerPBVS:
 
         # EEF board
         self.eef_board = cv2.aruco.Board_create(eef_tag_geometry, self.aruco_dict, eef_tag_ids)
+        self.target_board = cv2.aruco.Board_create(target_tag_geometry, self.aruco_dict, target_tag_ids)
 
     # Detect ArUco tags in a given RGB frame
     # Return a list of Marker objects
@@ -112,6 +113,17 @@ class MarkerPBVS:
     def generate_marker(self, output, id):
         cv2.imwrite(output, cv2.aruco.drawMarker(self.aruco_dict, id, 600))
 
+    # Get the transform from the world to the ar tag
+    def compute_board_to_world(self, ref_marker, depth):
+        Tcm = ref_marker.Tcm
+        # world -> camera -> ar tag
+        Twm = (np.linalg.inv(self.camera.get_extrinsics()) @ Tcm)
+        pos_unstable = (np.linalg.inv(self.camera.get_extrinsics()) @ Tcm)[0:3, 3]
+        # query point cloud at center of tag for the position of the tag in the world frame
+        pos = self.camera.get_xyz(ref_marker.c_x, ref_marker.c_y, depth)
+        Twm[0:3, 3] = pos[0:3]
+        return Twm
+
     # Executes an iteration of PBVS control and returns a twist command
     # Two: (Pose of target object w.r.t world)
     # Tae: (Pose of end effector w.r.t. ar tag coordinates)
@@ -124,14 +136,7 @@ class MarkerPBVS:
             cv2.imshow("image", rgb)
 
         if ref_marker is not None:
-            # Get the transform from the world to the eef ar tag
-            Tcm = ref_marker.Tcm
-            # world -> camera -> eef ar tag
-            Twa = (np.linalg.inv(self.camera.get_extrinsics()) @ Tcm)
-            pos_unstable = (np.linalg.inv(self.camera.get_extrinsics()) @ Tcm)[0:3, 3]
-            # query point cloud at center of tag for the position of the tag in the world frame
-            pos = self.camera.get_xyz(ref_marker.c_x, ref_marker.c_y, depth)
-            Twa[0:3, 3] = pos[0:3]
+            Twa = self.compute_board_to_world(ref_marker, depth)
             # compute transform from world to end effector by including rigid transform from
             # eef ar tag to end effector frame
             Twe = Twa @ Tae
@@ -139,6 +144,16 @@ class MarkerPBVS:
             ctrl = self.get_control(Twe, Two)
             return ctrl, Twe
         return np.zeros(6), np.zeros((4, 4))
+    
+    # Find pose of target board
+    def get_target_pose(self, rgb, depth, debug=True):
+        markers = self.detect_markers(rgb)
+        ref_marker = self.get_board_pose(markers, self.target_board, rgb)
+        if debug:
+            cv2.imshow("image", rgb)
+        #if ref_marker is not None:
+            # Get transform from the world to the target marker
+
 
     ####################
     # PBVS control law #

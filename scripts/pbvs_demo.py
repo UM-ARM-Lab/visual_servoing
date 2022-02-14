@@ -70,8 +70,9 @@ tag1 = np.array([tag1_tl, tag1_tr, tag1_br, tag1_bl])
 tag2 = np.array([tag2_tl, tag2_tr, tag2_br, tag2_bl])
 tag_geometry = [tag0, tag1, tag2]
 ids = np.array([1, 2, 3])
+ids2 = np.array([4,5,6])
 
-pbvs = MarkerPBVS(camera, 1.1, 1.1, ids, tag_geometry)
+pbvs = MarkerPBVS(camera, 1.1, 1.1, ids, tag_geometry, ids2, tag_geometry)
 p.setRealTimeSimulation(1)
 
 Two = None
@@ -131,6 +132,9 @@ while True:
     # Execute control on Val
     val.psuedoinv_ik_controller("left", ctrl)
     #ctrl = np.zeros(6)
+
+    pbvs.get_target_pose(rgb_edit, depth)
+
     
     #ctrl[0:3] = test_target - val.get_eef_pos("left")[0:3]
     #draw_sphere_marker(val.get_eef_pos("left")[0:3], 0.01, (0.0, 1.0, 0.0, 1.0))
