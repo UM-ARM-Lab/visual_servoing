@@ -91,6 +91,11 @@ Tae[0:3, 0:3] = rigid_rotation
 Tae[0:3, 3] = np.array([-0.1, 0.0, 0.0])
 Tae[3, 3] = 1
 
+# Transform from AR tag to target frame
+Tao = np.zeros((4, 4))
+Tao[0:3, 0:3] = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((0, 0, 0)))).reshape(3, 3)
+Tao[0:3, 3] = np.array([0.0, 0.0, 0.1])
+Tao[3, 3] = 1
 
 initial_arm = val.get_eef_pos("left")[0:3]
 
@@ -138,7 +143,7 @@ while True:
     #ctrl = np.zeros(6)
 
     if(not armed):
-        Two = pbvs.get_target_pose(rgb_edit, depth)
+        Two = pbvs.get_target_pose(rgb_edit, depth, Tao)
         if Two is not None:
             if (uids_target_marker is not None):
                 erase_pos(uids_target_marker)

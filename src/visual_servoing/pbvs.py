@@ -146,16 +146,15 @@ class MarkerPBVS:
         return np.zeros(6), np.zeros((4, 4))
     
     # Find pose of target board
-    def get_target_pose(self, rgb, depth, debug=True):
+    def get_target_pose(self, rgb, depth, Tao, debug=True):
         markers = self.detect_markers(rgb)
         ref_marker = self.get_board_pose(markers, self.target_board, rgb)
         if debug:
-            cv2.circle(rgb, (ref_marker.c_x, ref_marker.c_y), 5, (0, 0, 255), -1)
             cv2.imshow("image", rgb)
 
         if ref_marker is not None:
-            Twa = self.compute_board_to_world(ref_marker, depth)
-            return Twa 
+            Twa = self.compute_board_to_world(ref_marker, depth) 
+            return Twa @ Tao
         else:
             return None
 
