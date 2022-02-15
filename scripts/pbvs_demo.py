@@ -20,8 +20,8 @@ KEY_M = 109
 
 # Val robot and PVBS controller
 val = Val([0.0, 0.0, 0.0])
-camera = PyBulletCamera(camera_eye=np.array([-0.7, 0.5, 0.5]), camera_look=np.array([0, 0.5, 0.2]))
-#camera = PyBulletCamera(camera_eye=np.array([0.7, 1.3, 0.2]), camera_look=np.array([0.7, 0.0, 0.2]))
+#camera = PyBulletCamera(camera_eye=np.array([-0.7, 0.5, 0.5]), camera_look=np.array([0, 0.5, 0.2]))
+camera = PyBulletCamera(camera_eye=np.array([0.7, 1.3, 0.2]), camera_look=np.array([0.7, 0.0, 0.2]))
 
 # draw the PBVS camera pose
 Tc1c2 = np.array([
@@ -121,7 +121,7 @@ while True:
 
     # Do PBVS if there is a target 
     ctrl = np.zeros(6)
-    cv2.imshow("image", rgb_edit)
+    #cv2.imshow("image", rgb_edit)
     if armed and Two is not None:
         ctrl, Twe = pbvs.do_pbvs(rgb_edit, depth, Two, Tae)
 
@@ -142,7 +142,7 @@ while True:
     val.psuedoinv_ik_controller("left", ctrl)
     #ctrl = np.zeros(6)
 
-    if(not armed):
+    if(False and not armed):
         Two = pbvs.get_target_pose(rgb_edit, depth, Tao)
         if Two is not None:
             if (uids_target_marker is not None):
@@ -179,14 +179,15 @@ while True:
         armed = True
 
     if KEY_J in events:
+        armed = True
         initial_arm = val.get_eef_pos("left")[0:3]
         perturb = np.zeros((3))
         perturb[0] = -0.05
         perturb[1] = 0.0
         perturb[2] = 0.15
         target = initial_arm + perturb
-        # Rwo = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((np.pi/2, 0, np.pi)))).reshape(3,3)
-        Rwo = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((np.pi / 4, 0, -np.pi / 2)))).reshape(3, 3)
+        Rwo = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((np.pi/2, np.pi/4, np.pi)))).reshape(3,3)
+        #Rwo = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((np.pi / 4, 0, -np.pi / 2)))).reshape(3, 3)
         Two = np.zeros((4, 4))
         Two[0:3, 0:3] = Rwo
         Two[0:3, 3] = target

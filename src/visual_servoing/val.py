@@ -36,10 +36,10 @@ class Val:
         p.setGravity(0, 0, -10)
 
         # Load Val URDF
-        #self.urdf =  p.loadURDF("models/husky_custom_description/urdf/mic09_description.urdf", start_pos, p.getQuaternionFromEuler(start_orientation))
-        self.urdf = p.loadURDF("models/hdt_michigan_description_orig/urdf/hdt_michigan_generated.urdf", start_pos,
-                               p.getQuaternionFromEuler(start_orientation))
-        #planeId = p.loadURDF("models/short_floor.urdf", [start_pos[0], start_pos[1], start_pos[2]-0.5], useFixedBase=1)
+        self.urdf =  p.loadURDF("models/husky_custom_description/urdf/mic09_description.urdf", start_pos, p.getQuaternionFromEuler(start_orientation))
+        #self.urdf = p.loadURDF("models/hdt_michigan_description_orig/urdf/hdt_michigan_generated.urdf", start_pos,
+        #                       p.getQuaternionFromEuler(start_orientation))
+        planeId = p.loadURDF("models/short_floor.urdf", [start_pos[0], start_pos[1], start_pos[2]-0.5], useFixedBase=1)
 
         # Organize joints into a dict from name->info
         self.joints_by_name = {}
@@ -48,7 +48,7 @@ class Val:
             info = p.getJointInfo(self.urdf, i)
             name = info[1].decode("ascii")
             self.joints_by_name[name] = info
-            print(f"idx: {i}-{info[0]}, joint: {name} ")
+            print(f"idx: {info[0]}, joint: {name}, type:{info[2]} ")
 
         # Get arm and end effector joint indicies
         self.left_tool = self.joints_by_name["left_tool_joint"]
@@ -98,11 +98,12 @@ class Val:
         jac_t, jac_r = p.calculateJacobian(self.urdf, tool, loc_pos, joint_positions, zero_vec, zero_vec)
         jac_t = np.array(jac_t)
         jac_r = np.array(jac_r)
-
+        
+        print(jac_t)
 
         if side == "left": 
 
-            return np.vstack((jac_t[:, 2:9], jac_r[:, 2:9]))  # Jacobian is 6 (end effector dof) x 7 (joints)
+            return np.vstack((jac_t[:, 6+6:13+6], jac_r[:, 6+6:13+6]))  # Jacobian is 6 (end effector dof) x 7 (joints)
         else:
             return np.vstack((jac_t[:, 11:18], jac_r[:, 11:18]))
 
