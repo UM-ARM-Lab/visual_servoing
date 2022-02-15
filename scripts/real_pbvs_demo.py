@@ -9,6 +9,7 @@ import numpy as np
 import pybullet as p
 
 from arc_utilities import ros_init
+from arc_utilities.reliable_tf import ReliableTF
 from visual_servoing.camera import PyBulletCamera, RealsenseCamera
 from visual_servoing.pbvs import MarkerPBVS
 from visual_servoing.utils import draw_pose, erase_pos
@@ -19,6 +20,7 @@ from visual_servoing.val import Val
 @ros_init.with_ros("real_pbvs_servoing")
 def main():
     camera = RealsenseCamera(camera_eye=np.array([0.0, 0.0, 0.0]), camera_look=np.array([1.0, 0.0, 0.0]))
+    tf_obj = ReliableTF()
 
     # Specify the 3D geometry of the end effector marker board
     tag_len = 0.0305
@@ -49,8 +51,9 @@ def main():
     tag2 = np.array([tag2_tl, tag2_tr, tag2_br, tag2_bl])
     tag_geometry = [tag0, tag1, tag2]
     ids = np.array([1, 2, 3])
+    ids2 = np.array([4,5,6])
 
-    pbvs = MarkerPBVS(camera, 1.1, 1.1, ids, tag_geometry)
+    pbvs = MarkerPBVS(camera, 1.1, 1.1, ids, tag_geometry, ids2, tag_geometry)
 
     Two = None
     Twa = None
@@ -64,6 +67,7 @@ def main():
     initial_arm = None
 
     Two = np.eye(4)
+    armed = True
     while True:
         t0 = time.time()
         #time.sleep(5)
@@ -74,12 +78,17 @@ def main():
 
         # Do PBVS if there is a target
         ctrl = np.zeros(6)
-        if (Two is not None):
-            ctrl, Twe = pbvs.do_pbvs(rgb_edit, depth, Two, Tae)
+        if (armed):
+            ctrl, Twe = pbvs.do_pbvs(rgb_edit, depth, Two, Tae, debug=False)
+            tf_obj.start_send_transform_matrix(Twe, "camera_color_optical_frame", "eef_ar_tag")
 
+        if (not armed):
+            Two = pbvs.get_target_pose(rgb_edit, depth, np.eye(4))
+
+        print("hi")
         # Execute control on Val
-        cv2.imshow("real", rgb)
-        cv2.waitKey(3)
+        #cv2.imshow("real", rgb)
+        #cv2.waitKey(3)
 
         #print(time.time() - t0)
 
