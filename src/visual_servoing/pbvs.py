@@ -121,7 +121,7 @@ class MarkerPBVS:
         pos_unstable = (np.linalg.inv(self.camera.get_extrinsics()) @ Tcm)[0:3, 3]
         # query point cloud at center of tag for the position of the tag in the world frame
         pos = self.camera.get_xyz(ref_marker.c_x, ref_marker.c_y, depth)
-        Twm[0:3, 3] = pos[0:3]
+        Twm[0:3, 3] = pos_unstable#pos[0:3]
         return Twm
 
     # Executes an iteration of PBVS control and returns a twist command
