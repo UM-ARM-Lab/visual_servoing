@@ -35,9 +35,9 @@ Tc1c2 = np.array([
 # draw_pose(camera.camera_eye, (np.linalg.inv(camera.get_extrinsics())@Tc1c2 )[0:3, 0:3], mat=True, axis_len=0.1)
 
 # AR tag on a box for debugging AR tag detection, commented out
-box_pos = (0.0, 0.6, 0.3)
+box_pos = (0.8, 0.0, 0.5)
 #box_orn = [0, 0, np.pi/8]
-box_orn = [0, np.pi/8, np.pi/4]
+box_orn = [-np.pi/4, -np.pi/8, 3*np.pi/2]
 
 box_vis = p.createVisualShape(p.GEOM_MESH,fileName="models/AR Tag Cuff 2/PINCER_HOUSING2_EDIT.obj", meshScale=[1.0,1.0, 1.0])
 box_multi = p.createMultiBody(baseCollisionShapeIndex = 0, baseVisualShapeIndex=box_vis, basePosition=box_pos, baseOrientation=p.getQuaternionFromEuler(box_orn))
@@ -142,7 +142,7 @@ while True:
     val.psuedoinv_ik_controller("left", ctrl)
     #ctrl = np.zeros(6)
 
-    if(False and not armed):
+    if(not armed):
         Two = pbvs.get_target_pose(rgb_edit, depth, Tao)
         if Two is not None:
             if (uids_target_marker is not None):
