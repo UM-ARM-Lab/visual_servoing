@@ -43,7 +43,7 @@ class Camera:
 #####################################
 class PyBulletCamera(Camera):
 
-    def __init__(self, camera_eye, camera_look, image_dim=(1280, 800)):
+    def __init__(self, camera_eye, camera_look, image_dim=(1280, 800), camera_up=[0, 0, 1]):
         super().__init__(camera_eye, camera_look, image_dim)
 
         # This is a column major order of the projection
@@ -58,7 +58,7 @@ class PyBulletCamera(Camera):
         self.ogl_view_matrix = p.computeViewMatrix(
             cameraEyePosition=self.camera_eye,
             cameraTargetPosition=self.camera_look,
-            cameraUpVector=[0, 0, 1])
+            cameraUpVector=camera_up)
 
     def get_intrinsics(self):
         proj_4x4 = np.array(self.ogl_projection_matrix).reshape(4, 4)
@@ -132,7 +132,7 @@ class RealsenseCamera(Camera):
         info = self.params.get()
         self.intrisnics = np.array(info.K).reshape(3,3)
 
-        print(self.intrisnics)
+        #print(self.intrisnics)
 
     def get_intrinsics(self):
         """Return OpenCV style intrinsics 3x3"""

@@ -48,7 +48,7 @@ class Val:
             info = p.getJointInfo(self.urdf, i)
             name = info[1].decode("ascii")
             self.joints_by_name[name] = info
-            print(f"idx: {info[0]}, joint: {name}, type:{info[2]} ")
+            #print(f"idx: {info[0]}, joint: {name}, type:{info[2]} ")
 
         # Get arm and end effector joint indicies
         self.left_tool = self.joints_by_name["left_tool_joint"]
@@ -60,7 +60,6 @@ class Val:
             #print(self.joints_by_name["joint4" + str(i)][0])
             self.left_arm_joints.append(self.joints_by_name["joint4" + str(i)][0])
             self.right_arm_joints.append(self.joints_by_name["joint" + str(i)][0])
-        print(self.left_arm_joints)
 
     def get_eef_pos(self, side):
         """
@@ -99,8 +98,6 @@ class Val:
         jac_t = np.array(jac_t)
         jac_r = np.array(jac_r)
         
-        print(jac_t)
-
         if side == "left": 
 
             return np.vstack((jac_t[:, 6+6:13+6], jac_r[:, 6+6:13+6]))  # Jacobian is 6 (end effector dof) x 7 (joints)

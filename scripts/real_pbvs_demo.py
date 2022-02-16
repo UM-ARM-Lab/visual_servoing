@@ -14,11 +14,16 @@ from visual_servoing.camera import PyBulletCamera, RealsenseCamera
 from visual_servoing.pbvs import MarkerPBVS
 from visual_servoing.utils import draw_pose, erase_pos
 # Key bindings
-from visual_servoing.val import Val
+from arm_robots.hdt_michigan import Val
 
 
 @ros_init.with_ros("real_pbvs_servoing")
 def main():
+    # Create a Val
+    val = Val(raise_on_failure=True)
+    val.connect()
+
+    # Create a camera 
     camera = RealsenseCamera(camera_eye=np.array([0.0, 0.0, 0.0]), camera_look=np.array([1.0, 0.0, 0.0]))
     tf_obj = ReliableTF()
 
@@ -59,18 +64,17 @@ def main():
     Twa = None
 
     # Transform from AR tag EEF frame to EEF frame
-    rigid_rotation = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((0, 0, 0)))).reshape(3, 3)
-    Tae = np.zeros((4, 4))
-    Tae[0:3, 0:3] = rigid_rotation
-    Tae[0:3, 3] = np.array([-0.1, 0.0, 0.0])
-    Tae[3, 3] = 1
-    initial_arm = None
+    #rigid_rotation = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((0, 0, 0)))).reshape(3, 3)
+    #Tae = np.zeros((4, 4))
+    #Tae[0:3, 0:3] = rigid_rotation
+    #Tae[0:3, 3] = np.array([-0.1, 0.0, 0.0])
+    #Tae[3, 3] = 1
+    Tae = np.eye(4)
 
     Two = np.eye(4)
     armed = True
     while True:
         t0 = time.time()
-        #time.sleep(5)
 
         # Get camera feed and detect markers
         rgb, depth = camera.get_image()
@@ -83,14 +87,14 @@ def main():
             tf_obj.start_send_transform_matrix(Twe, "camera_color_optical_frame", "eef_ar_tag")
 
         if (not armed):
-            Two = pbvs.get_target_pose(rgb_edit, depth, np.eye(4))
+            Two = pbvs.get_target_pose(rgb_edit, depth, np.eye(4), debug=False)
 
-        print("hi")
         # Execute control on Val
-        #cv2.imshow("real", rgb)
-        #cv2.waitKey(3)
 
-        #print(time.time() - t0)
+        # Visualization with OCV
+        cv2.imshow("real", rgb)
+        cv2.waitKey(3)
+        print(time.time() - t0)
 
 
 if __name__ == '__main__':
