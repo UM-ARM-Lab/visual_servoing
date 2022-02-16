@@ -15,6 +15,8 @@ from visual_servoing.pbvs import MarkerPBVS
 from visual_servoing.utils import draw_pose, erase_pos
 # Key bindings
 from arm_robots.hdt_michigan import Val
+import rospy
+from sensor_msgs.msg import JointState
 
 
 @ros_init.with_ros("real_pbvs_servoing")
@@ -26,6 +28,10 @@ def main():
     # Create a camera 
     camera = RealsenseCamera(camera_eye=np.array([0.0, 0.0, 0.0]), camera_look=np.array([1.0, 0.0, 0.0]))
     tf_obj = ReliableTF()
+    
+    # Create a publisher to Val's joints
+    command_pub = rospy.Publisher("/hdt_adroit_coms/joint_cmd", JointState, queue_size=10)
+    latest_cmd = JointState()
 
     # Specify the 3D geometry of the end effector marker board
     tag_len = 0.0305
@@ -72,7 +78,7 @@ def main():
     Tae = np.eye(4)
 
     Two = np.eye(4)
-    armed = True
+    armed = False
     while True:
         t0 = time.time()
 
@@ -83,8 +89,25 @@ def main():
         # Do PBVS if there is a target
         ctrl = np.zeros(6)
         if (armed):
-            ctrl, Twe = pbvs.do_pbvs(rgb_edit, depth, Two, Tae, debug=False)
-            tf_obj.start_send_transform_matrix(Twe, "camera_color_optical_frame", "eef_ar_tag")
+            # Compute the control to the end effector in camera space as well as the position
+            ctrl, Tce = pbvs.do_pbvs(rgb_edit, depth, Two, Tae, debug=False)
+            # Send this transform to TF
+            tf_obj.start_send_transform_matrix(Tce, "camera_color_optical_frame", "eef_ar_tag")
+
+            # From forward kinematics, get position of eef to robot base
+            Teb = tf_obj.get_transform("left_hand", "base_link")
+            # We now can get matrix that lets us take eef velocities in camera frame to robot frame
+            # Estimate transform from camera to robot base link since we go camera->eef->base 
+            Tcb = Teb @ Tce 
+
+            #  Compute eef target
+            v = Tcb @ ctrl[0:3] 
+            omega = Tcb @ ctrl[3:6]
+            # Compute a jacobian 
+
+
+            # Create jacobian 
+            command_pub.publish(latest_cmd)
 
         if (not armed):
             Two = pbvs.get_target_pose(rgb_edit, depth, np.eye(4), debug=False)
