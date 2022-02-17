@@ -8,11 +8,12 @@ import cv2
 import numpy as np
 import pybullet as p
 
+import tf.transformations
 from arc_utilities import ros_init
 from arc_utilities.reliable_tf import ReliableTF
 from visual_servoing.camera import PyBulletCamera, RealsenseCamera
 from visual_servoing.pbvs import MarkerPBVS
-from visual_servoing.utils import draw_pose, erase_pos
+from visual_servoing.utils import draw_pose, erase_pos, draw_sphere_marker
 # Key bindings
 from arm_robots.hdt_michigan import Val
 import rospy
@@ -23,8 +24,8 @@ KEY_U = 117
 @ros_init.with_ros("real_pbvs_servoing")
 def main():
     # Create a Val
-    #val = Val(raise_on_failure=True)
-    #val.connect()
+    val = Val(raise_on_failure=True)
+    val.connect()
 
     # Create a camera 
     camera = RealsenseCamera(camera_eye=np.array([0.0, 0.0, 0.0]), camera_look=np.array([1.0, 0.0, 0.0]))
@@ -76,8 +77,15 @@ def main():
     #Tae[0:3, 0:3] = rigid_rotation
     #Tae[0:3, 3] = np.array([-0.1, 0.0, 0.0])
     #Tae[3, 3] = 1
-    Tae = np.eye(4)
 
+    # Transform from AR tag to target frame
+    Tao = np.zeros((4, 4))
+    Tao[0:3, 0:3] = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((0, 0, 0)))).reshape(3, 3)
+    Tao[0:3, 3] = np.array([0.0, 0.0, 0.1])
+    Tao[3, 3] = 1
+
+
+    Tae = np.eye(4)
     Two = np.eye(4)
     Tce = None
     armed = False
@@ -85,7 +93,11 @@ def main():
     # Visualization stuff
     client = p.connect(p.GUI)
     uids_target_marker = None
+    #uids_target_adjusted = None
     uids_eef_marker = None
+
+    q_prime = np.zeros(val.get_num_joints("right_arm"))
+
     while True:
         t0 = time.time()
 
@@ -94,12 +106,12 @@ def main():
         rgb_edit = rgb[..., [2, 1, 0]].copy()
 
         if (not armed):
-            Two = pbvs.get_target_pose(rgb_edit, depth, np.eye(4))
-
+            Two = pbvs.get_target_pose(rgb_edit, depth, Tao)
         # Visualization stuff with PyBullet
         if (uids_target_marker is not None):
             erase_pos(uids_target_marker)
         if(Two is not None):
+            #draw_sphere_marker( (Two @ Tao )[0:3, 3] , 0.01, (1.0, 0.0, 0.0, 1.0))
             uids_target_marker = draw_pose(Two[0:3, 3], Two[0:3, 0:3], mat=True)
 
         if (uids_eef_marker is not None):
@@ -117,22 +129,42 @@ def main():
         if (armed and Two is not None):
             # Compute the control to the end effector in camera space as well as the position
             ctrl, Tce = pbvs.do_pbvs(rgb_edit, depth, Two, Tae, debug=True)
-            # Send this transform to TF
-            # tf_obj.start_send_transform_matrix(Tce, "camera_color_optical_frame", "eef_ar_tag")
+            if np.linalg.norm(Tce) != 0:
+                # Camera -> EEF ->  Base link (FK)
+                # From forward kinematics, get position of eef to robot base
+                Tet = np.array([
+                    [0, 0, -1, -0.13],
+                    [0, 1, 0, 0],
+                    [0, 0, 0, 1],
+                    [0, 0, 0, 1],
+                ])
+                # Ttb = tf_obj.get_transform("right_tool", "torso")
+                # Teb = Tet @ Ttb
+                #
+                # # We now can get matrix that lets us take eef velocities in camera frame to robot frame
+                # #Estimate transform from camera to robot base link since we go camera->eef->base
+                # Tcb =  Tce @ Teb
+                # Tbc = tf.transformations.inverse_matrix(Tcb)
+                #
+                # #  Compute eef target
+                # def homo(x):
+                #     return np.concatenate((x, [1]), -1)
+                # v_base = Tbc @ homo(ctrl[0:3])
 
-            # From forward kinematics, get position of eef to robot base
-            # Teb = tf_obj.get_transform("left_hand", "base_link")
-            # We now can get matrix that lets us take eef velocities in camera frame to robot frame
-            # Estimate transform from camera to robot base link since we go camera->eef->base
-            # Tcb = Teb @ Tce
+                ctrl_base = np.zeros(6)
+                ctrl_base[0:3] = np.array([0.0, 0.1, 0.0])#v_base[0:3]
+                #omega = Tbc @ ctrl[3:6]
 
-            #  Compute eef target
-            # v = Tcb @ ctrl[0:3]
-            # omega = Tcb @ ctrl[3:6]
-            # Compute a jacobian
+                # Compute a jacobian
+                J, _ = val.get_current_right_tool_jacobian()
+                # publish joint cmd from jacobian
 
-            # Create jacobian
-            # command_pub.publish(latest_cmd)
+                lmda = 0.0000001
+                J_pinv = np.dot(np.linalg.inv(np.dot(J.T, J) + lmda * np.eye(7)), J.T)
+                q_prime = np.dot(J_pinv, ctrl_base)
+                if np.linalg.norm(q_prime) > 0.55:
+                    q_prime = 0.55 * q_prime / np.linalg.norm(q_prime)
+            val.send_velocity_joint_command(val.get_joint_names("right_arm"), q_prime)
 
         # Visualization with OCV
         #cv2.imshow("real", rgb_edit)
