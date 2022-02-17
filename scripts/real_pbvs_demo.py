@@ -132,12 +132,6 @@ def main():
             if np.linalg.norm(Tcm) != 0:
                 # Camera -> EEF ->  Base link (FK)
                 # From forward kinematics, get position of eef to robot base
-                # Tmt = np.array([
-                #     [0, 0, -1, -0.13],
-                #     [0, 1, 0, 0],
-                #     [1, 0, 0, 0],
-                #     [0, 0, 0, 1],
-                # ])
                 Tmt = np.array([
                     [0, 0, 1, 0.13],
                     [0, -1, 0, 0],
@@ -145,12 +139,15 @@ def main():
                     [0, 0, 0, 1],
                 ])
 
+                Ttb = tf_obj.get_transform("right_tool", "torso")
+
+                Tcb = Tcm @ Tmt @ Ttb
+
                 if (uids_eef_gripper is not None):
                     erase_pos(uids_eef_gripper)
-                uids_eef_gripper = draw_pose( ( Tcm @ Tmt )[0:3, 3], (Tcm @ Tmt )[0:3, 0:3], mat=True)
-
-                #Ttb = tf_obj.get_transform("right_tool", "torso")
-                # Tmb = Tem @ Ttb
+                uids_eef_gripper = draw_pose( ( Tcb)[0:3, 3], (Tcb )[0:3, 0:3], mat=True)
+                
+                #Tmb = Tem @ Ttb
                 #
                 # # We now can get matrix that lets us take eef velocities in camera frame to robot frame
                 # #Estimate transform from camera to robot base link since we go camera->eef->base
