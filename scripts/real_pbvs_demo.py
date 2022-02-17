@@ -146,19 +146,14 @@ def main():
                 if (uids_eef_gripper is not None):
                     erase_pos(uids_eef_gripper)
                 uids_eef_gripper = draw_pose( ( Tcb)[0:3, 3], (Tcb )[0:3, 0:3], mat=True)
-                
-                #Tmb = Tem @ Ttb
-                #
+
                 # # We now can get matrix that lets us take eef velocities in camera frame to robot frame
                 # #Estimate transform from camera to robot base link since we go camera->eef->base
-                # Tcb =  Tcm @ Tmb
-                # Tbc = tf.transformations.inverse_matrix(Tcb)
-                #
-                # #  Compute eef target
-                # def homo(x):
-                #     return np.concatenate((x, [1]), -1)
-                # v_base = Tbc @ homo(ctrl[0:3])
+                Tbc = tf.transformations.inverse_matrix(Tcb)
 
+                #  Compute eef target
+                v_base = Tbc[0:3, 0:3] @  ctrl[0:3]
+                print(v_base)
                 # ctrl_base = np.zeros(6)
                 # ctrl_base[0:3] = v_base[0:3]
                 # #omega = Tbc @ ctrl[3:6]
