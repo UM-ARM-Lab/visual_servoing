@@ -152,8 +152,10 @@ def main():
                 Tbc = tf.transformations.inverse_matrix(Tcb)
 
                 #  Compute eef target
-                v_base = Tbc[0:3, 0:3] @  ctrl[0:3]
-                print(v_base)
+                def homo(x):
+                    return np.concatenate((x, [1]), -1)
+                v_base = Tbc @ homo(ctrl[0:3])
+
                 # ctrl_base = np.zeros(6)
                 # ctrl_base[0:3] = v_base[0:3]
                 # #omega = Tbc @ ctrl[3:6]
