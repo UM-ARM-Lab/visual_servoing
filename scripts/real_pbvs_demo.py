@@ -87,13 +87,13 @@ def main():
 
     Tae = np.eye(4)
     Two = np.eye(4)
-    Tce = None
+    Tcm = None
     armed = False
 
     # Visualization stuff
     client = p.connect(p.GUI)
     uids_target_marker = None
-    #uids_target_adjusted = None
+    uids_eef_gripper = None
     uids_eef_marker = None
 
     q_prime = np.zeros(val.get_num_joints("right_arm"))
@@ -116,8 +116,8 @@ def main():
 
         if (uids_eef_marker is not None):
             erase_pos(uids_eef_marker)
-        if(Tce is not None):
-            uids_eef_marker = draw_pose(Tce[0:3, 3], Tce[0:3, 0:3], mat=True)
+        if(Tcm is not None):
+            uids_eef_marker = draw_pose(Tcm[0:3, 3], Tcm[0:3, 0:3], mat=True)
 
         events = p.getKeyboardEvents()
         if KEY_U in events:
@@ -128,22 +128,33 @@ def main():
         ctrl = np.zeros(6)
         if (armed and Two is not None):
             # Compute the control to the end effector in camera space as well as the position
-            ctrl, Tce = pbvs.do_pbvs(rgb_edit, depth, Two, Tae, debug=True)
-            if np.linalg.norm(Tce) != 0:
+            ctrl, Tcm = pbvs.do_pbvs(rgb_edit, depth, Two, Tae, debug=True)
+            if np.linalg.norm(Tcm) != 0:
                 # Camera -> EEF ->  Base link (FK)
                 # From forward kinematics, get position of eef to robot base
-                Tet = np.array([
-                    [0, 0, -1, -0.13],
-                    [0, 1, 0, 0],
-                    [0, 0, 0, 1],
+                # Tmt = np.array([
+                #     [0, 0, -1, -0.13],
+                #     [0, 1, 0, 0],
+                #     [1, 0, 0, 0],
+                #     [0, 0, 0, 1],
+                # ])
+                Tmt = np.array([
+                    [0, 0, 1, 0.13],
+                    [0, -1, 0, 0],
+                    [1, 0, 0, 0],
                     [0, 0, 0, 1],
                 ])
-                # Ttb = tf_obj.get_transform("right_tool", "torso")
-                # Teb = Tet @ Ttb
+
+                if (uids_eef_gripper is not None):
+                    erase_pos(uids_eef_gripper)
+                uids_eef_gripper = draw_pose( ( Tcm @ Tmt )[0:3, 3], (Tcm @ Tmt )[0:3, 0:3], mat=True)
+
+                #Ttb = tf_obj.get_transform("right_tool", "torso")
+                # Tmb = Tem @ Ttb
                 #
                 # # We now can get matrix that lets us take eef velocities in camera frame to robot frame
                 # #Estimate transform from camera to robot base link since we go camera->eef->base
-                # Tcb =  Tce @ Teb
+                # Tcb =  Tcm @ Tmb
                 # Tbc = tf.transformations.inverse_matrix(Tcb)
                 #
                 # #  Compute eef target
@@ -151,19 +162,19 @@ def main():
                 #     return np.concatenate((x, [1]), -1)
                 # v_base = Tbc @ homo(ctrl[0:3])
 
-                ctrl_base = np.zeros(6)
-                ctrl_base[0:3] = np.array([0.0, 0.1, 0.0])#v_base[0:3]
-                #omega = Tbc @ ctrl[3:6]
-
-                # Compute a jacobian
-                J, _ = val.get_current_right_tool_jacobian()
-                # publish joint cmd from jacobian
-
-                lmda = 0.0000001
-                J_pinv = np.dot(np.linalg.inv(np.dot(J.T, J) + lmda * np.eye(7)), J.T)
-                q_prime = np.dot(J_pinv, ctrl_base)
-                if np.linalg.norm(q_prime) > 0.55:
-                    q_prime = 0.55 * q_prime / np.linalg.norm(q_prime)
+                # ctrl_base = np.zeros(6)
+                # ctrl_base[0:3] = v_base[0:3]
+                # #omega = Tbc @ ctrl[3:6]
+                #
+                # # Compute a jacobian
+                # J, _ = val.get_current_right_tool_jacobian()
+                # # publish joint cmd from jacobian
+                #
+                # lmda = 0.0000001
+                # J_pinv = np.dot(np.linalg.inv(np.dot(J.T, J) + lmda * np.eye(7)), J.T)
+                # q_prime = np.dot(J_pinv, ctrl_base)
+                # if np.linalg.norm(q_prime) > 0.55:
+                #     q_prime = 0.55 * q_prime / np.linalg.norm(q_prime)
             val.send_velocity_joint_command(val.get_joint_names("right_arm"), q_prime)
 
         # Visualization with OCV
