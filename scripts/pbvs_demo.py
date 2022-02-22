@@ -21,7 +21,7 @@ KEY_M = 109
 # Val robot and PVBS controller
 val = Val([0.0, 0.0, 0.0])
 #camera = PyBulletCamera(camera_eye=np.array([-0.7, 0.5, 0.5]), camera_look=np.array([0, 0.5, 0.2]))
-camera = PyBulletCamera(camera_eye=np.array([0.7, 1.3, 0.2]), camera_look=np.array([0.7, 0.0, 0.2]))
+camera = PyBulletCamera(camera_eye=np.array([0.7, -1.3, 0.2]), camera_look=np.array([0.7, 0.0, 0.2]))
 
 # draw the PBVS camera pose
 Tc1c2 = np.array([
@@ -35,7 +35,7 @@ Tc1c2 = np.array([
 # draw_pose(camera.camera_eye, (np.linalg.inv(camera.get_extrinsics())@Tc1c2 )[0:3, 0:3], mat=True, axis_len=0.1)
 
 # AR tag on a box for debugging AR tag detection, commented out
-box_pos = (0.8, 0.0, 0.5)
+box_pos = (0.8, -0.3, 0.5)
 #box_orn = [0, 0, np.pi/8]
 box_orn = [-np.pi/4, -np.pi/8, 3*np.pi/2]
 
