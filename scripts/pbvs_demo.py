@@ -20,9 +20,10 @@ KEY_M = 109
 
 # Val robot and PVBS controller
 val = Val([0.0, 0.0, 0.0])
-#camera = PyBulletCamera(camera_eye=np.array([-0.7, 0.5, 0.5]), camera_look=np.array([0, 0.5, 0.2]))
-camera = PyBulletCamera(camera_eye=np.array([0.7, -1.3, 0.2]), camera_look=np.array([0.7, 0.0, 0.2]))
+# y = -1.3
+camera = PyBulletCamera(camera_eye=np.array([0.7, -1.3, 0.5]), camera_look=np.array([0.7, 0.0, 0.2]))
 
+#camera = PyBulletCamera(camera_eye=np.array([0.7, -0.3, 0.5]), camera_look=np.array([0.7, 0.0, 0.2]))
 # draw the PBVS camera pose
 Tc1c2 = np.array([
     [1.0, 0.0, 0.0, 0.0],
@@ -40,7 +41,7 @@ box_pos = (0.8, -0.3, 0.5)
 box_orn = [-np.pi/4, -np.pi/8, 3*np.pi/2]
 
 box_vis = p.createVisualShape(p.GEOM_MESH,fileName="models/AR Tag Cuff 2/PINCER_HOUSING2_EDIT.obj", meshScale=[1.0,1.0, 1.0])
-box_multi = p.createMultiBody(baseCollisionShapeIndex = 0, baseVisualShapeIndex=box_vis, basePosition=box_pos, baseOrientation=p.getQuaternionFromEuler(box_orn))
+#box_multi = p.createMultiBody(baseCollisionShapeIndex = 0, baseVisualShapeIndex=box_vis, basePosition=box_pos, baseOrientation=p.getQuaternionFromEuler(box_orn))
 
 
 # Specify the 3D geometry of the end effector marker board 
@@ -83,13 +84,14 @@ Twa = None
 # UIDS for ar tag pose marker 
 uids_eef_marker = None
 uids_target_marker = None
-
+uids_eef_gt = None
 # Transform from AR tag EEF frame to EEF frame
-rigid_rotation = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((0, 0, 0)))).reshape(3, 3)
+rigid_rotation = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((0, 3*np.pi/2, np.pi)))).reshape(3, 3)
 Tae = np.zeros((4, 4))
 Tae[0:3, 0:3] = rigid_rotation
-Tae[0:3, 3] = np.array([-0.1, 0.0, 0.0])
+Tae[0:3, 3] = np.array([0.14265 - 0.002, 0.03797 -0.0288 - 0.012, -0.008620875 -0.0376])
 Tae[3, 3] = 1
+#Tae = np.eye(4)
 
 # Transform from AR tag to target frame
 Tao = np.zeros((4, 4))
@@ -101,11 +103,9 @@ initial_arm = val.get_eef_pos("left")[0:3]
 
 
 #delete me
-test_target = np.zeros((3))
-test_target[0] = -0.05
-test_target[1] = 0.0
-test_target[2] = -0.05
-test_target = test_target + initial_arm
+Two = np.eye(4) 
+Two[0:3, 3] = np.array([0.8, 0.5, 0.5])
+Two[0:3, 0:3] = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((np.pi/4, np.pi/4, 0)))).reshape(3, 3)
 
 position_error = []
 rotation_error = []
@@ -114,6 +114,12 @@ armed = False
 
 while True:
     t0 = time.time()
+
+    #  Visualize eef gripper ground truth 
+    if (uids_eef_gt is not None):
+        erase_pos(uids_eef_gt)
+    gt_t, gt_o = val.get_eef_pos("left") 
+    uids_eef_gt = draw_pose(gt_t, gt_o)
 
     # Get camera feed and detect markers
     rgb, depth = camera.get_image()
@@ -134,6 +140,7 @@ while True:
         if (uids_target_marker is not None):
             erase_pos(uids_target_marker)
         uids_target_marker = draw_pose(Two[0:3, 3], Two[0:3, 0:3], mat=True)
+        #print(gt_t - Twe[0:3, 3])
 
         position_error.append( np.linalg.norm(Twe[0:3, 3] - Two[0:3, 3]))
         r, _ = cv2.Rodrigues( (Twe[0:3, 0:3] @ Two[0:3, 0:3].T ).T)
@@ -143,7 +150,7 @@ while True:
     #ctrl = np.zeros(6)
 
     if(not armed):
-        Two = pbvs.get_target_pose(rgb_edit, depth, Tao)
+#        Two = pbvs.get_target_pose(rgb_edit, depth, Tao)
         if Two is not None:
             if (uids_target_marker is not None):
                 erase_pos(uids_target_marker)

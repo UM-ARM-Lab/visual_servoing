@@ -48,7 +48,7 @@ class Val:
             info = p.getJointInfo(self.urdf, i)
             name = info[1].decode("ascii")
             self.joints_by_name[name] = info
-            #print(f"idx: {info[0]}, joint: {name}, type:{info[2]} ")
+            print(f"idx: {info[0]}, joint: {name}, type:{info[2]} ")
 
         # Get arm and end effector joint indicies
         self.left_tool = self.joints_by_name["left_tool_joint"]
@@ -72,7 +72,7 @@ class Val:
                                 computeForwardKinematics=1)
 
         link_trn, link_rot, com_trn, com_rot, frame_pos, frame_rot, link_vt, link_vr = result
-        return np.array(link_trn + p.getEulerFromQuaternion(link_rot))
+        return link_trn, link_rot 
 
     def get_arm_jacobian(self, side):
         """
