@@ -790,7 +790,7 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSI
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://hdt_michigan_description/meshes/PINCER_HOUSING2_EDIT.obj" scale="1.0 1.0 1.0"/>
+        <mesh filename="package://hdt_michigan_description/meshes/PINCER_HOUSING2.STL" scale="1.0 1.0 1.0"/>
       </geometry>
     </collision>
     <collision>
@@ -802,7 +802,7 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSI
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://hdt_michigan_description/meshes/PINCER_HOUSING2_EDIT.obj"/>
+        <mesh filename="package://hdt_michigan_description/meshes/PINCER_HOUSING2.STL"/>
       </geometry>
     </visual>
     <inertial>
@@ -811,6 +811,38 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSI
       <inertia ixx="0.00009278" ixy="0.0" ixz="0.00000608" iyy="0.00010001" iyz="0.0" izz="0.00007523"/>
     </inertial>
   </link>
+
+  <link name="ar_link">
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+        <mesh filename="package://hdt_michigan_description/meshes/AR_TAG.obj" scale="1.0 1.0 1.0"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin rpy="0 0 0" xyz="0.0625 0 0.045"/>
+      <geometry>
+        <box size="0.03 0.10 0.10"/>
+      </geometry>
+    </collision>
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+        <mesh filename="package://hdt_michigan_description/meshes/AR_TAG.obj"/>
+      </geometry>
+    </visual>
+    <inertial>
+      <origin rpy="-1.5707963267948966 0 0" xyz="-0.02828166 0.00000247 -0.01722827"/>
+      <mass value="0.27265869"/>
+      <inertia ixx="0.00009278" ixy="0.0" ixz="0.00000608" iyy="0.00010001" iyz="0.0" izz="0.00007523"/>
+    </inertial>
+  </link>
+  <joint name="ar_joint" type="fixed">
+    <origin rpy="0 0 0" xyz="0 0 0"/>
+    <parent link="end_effector_left"/>
+    <child link="ar_link"/>
+  </joint>
+
   <!-- Left Pincers -->
   <joint name="leftgripper" type="revolute">
     <hdt id="50a" inertia="0.075" kmax="150" kmin="75"/>
