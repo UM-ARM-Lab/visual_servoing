@@ -21,7 +21,7 @@ KEY_M = 109
 # Val robot and PVBS controller
 val = Val([0.0, 0.0, 0.0])
 # y = -1.3
-camera = PyBulletCamera(camera_eye=np.array([0.7, -1.3, 0.5]), camera_look=np.array([0.7, 0.0, 0.2]))
+camera = PyBulletCamera(camera_eye=np.array([0.7, -0.8, 0.5]), camera_look=np.array([0.7, 0.0, 0.2]))
 
 #camera = PyBulletCamera(camera_eye=np.array([0.7, -0.3, 0.5]), camera_look=np.array([0.7, 0.0, 0.2]))
 # draw the PBVS camera pose
