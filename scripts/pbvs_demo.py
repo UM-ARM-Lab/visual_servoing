@@ -110,19 +110,22 @@ Two[0:3, 0:3] = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((np.
 position_error = []
 rotation_error = []
 
+marker_pos_error = []
+marker_rot_error = []
+
 armed = False
 
 while True:
     t0 = time.time()
 
     # Visualization ground truth AR link [delete me]
-#    tool_idx = val.left_tag[0]
-#    result = p.getLinkState(val.urdf,
-#                            tool_idx,
-#                            computeLinkVelocity=1,
-#                            computeForwardKinematics=1)
-#
-#    link_trn, link_rot, com_trn, com_rot, frame_pos, frame_rot, link_vt, link_vr = result
+    tool_idx = val.left_tag[0]
+    result = p.getLinkState(val.urdf,
+                            tool_idx,
+                            computeLinkVelocity=1,
+                            computeForwardKinematics=1)
+
+    link_trn, link_rot, com_trn, com_rot, frame_pos, frame_rot, link_vt, link_vr = result
 #    draw_pose(link_trn, link_rot)
     #  Visualize eef gripper ground truth 
     #    if (uids_eef_gt is not None):
@@ -154,6 +157,11 @@ while True:
         position_error.append( np.linalg.norm(Twe[0:3, 3] - Two[0:3, 3]))
         r, _ = cv2.Rodrigues( (Twe[0:3, 0:3] @ Two[0:3, 0:3].T ).T)
         rotation_error.append(np.linalg.norm(r))
+
+        marker_pos_error.append(np.linalg.norm(Twe[0:3, 3] - link_trn))
+        link_rod, _ = cv2.Rodrigues(np.array(p.getMatrixFromQuaternion(link_rot)).reshape(3,3) @ Twe[0:3, 0:3].T)
+        marker_rot_error.append(np.linalg.norm(link_rod))
+
     # Execute control on Val
     val.psuedoinv_ik_controller("left", ctrl)
     #ctrl = np.zeros(6)
