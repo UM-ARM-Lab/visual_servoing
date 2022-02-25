@@ -91,7 +91,7 @@ Tae = np.zeros((4, 4))
 Tae[0:3, 0:3] = rigid_rotation
 Tae[0:3, 3] = np.array([0.14265 - 0.002, 0.03797 -0.0288 - 0.012, -0.008620875 -0.0376])
 Tae[3, 3] = 1
-#Tae = np.eye(4)
+Tae = np.eye(4)
 
 # Transform from AR tag to target frame
 Tao = np.zeros((4, 4))
@@ -116,14 +116,14 @@ while True:
     t0 = time.time()
 
     # Visualization ground truth AR link [delete me]
-    tool_idx = val.left_tag[0]
-    result = p.getLinkState(val.urdf,
-                            tool_idx,
-                            computeLinkVelocity=1,
-                            computeForwardKinematics=1)
-
-    link_trn, link_rot, com_trn, com_rot, frame_pos, frame_rot, link_vt, link_vr = result
-    draw_pose(link_trn, link_rot)
+#    tool_idx = val.left_tag[0]
+#    result = p.getLinkState(val.urdf,
+#                            tool_idx,
+#                            computeLinkVelocity=1,
+#                            computeForwardKinematics=1)
+#
+#    link_trn, link_rot, com_trn, com_rot, frame_pos, frame_rot, link_vt, link_vr = result
+#    draw_pose(link_trn, link_rot)
     #  Visualize eef gripper ground truth 
     #    if (uids_eef_gt is not None):
     #        erase_pos(uids_eef_gt)
