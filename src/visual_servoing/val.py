@@ -54,6 +54,8 @@ class Val:
         self.left_tool = self.joints_by_name["left_tool_joint"]
         self.right_tool = self.joints_by_name["right_tool_joint"]
 
+        self.left_tag = self.joints_by_name["ar_joint"]
+
         self.left_arm_joints = []
         self.right_arm_joints = []
         for i in range(1, 8):

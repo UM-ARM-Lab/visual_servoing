@@ -115,12 +115,21 @@ armed = False
 while True:
     t0 = time.time()
 
-    #  Visualize eef gripper ground truth 
-    if (uids_eef_gt is not None):
-        erase_pos(uids_eef_gt)
-    gt_t, gt_o = val.get_eef_pos("left") 
-    uids_eef_gt = draw_pose(gt_t, gt_o)
+    # Visualization ground truth AR link [delete me]
+    tool_idx = val.left_tag[0]
+    result = p.getLinkState(val.urdf,
+                            tool_idx,
+                            computeLinkVelocity=1,
+                            computeForwardKinematics=1)
 
+    link_trn, link_rot, com_trn, com_rot, frame_pos, frame_rot, link_vt, link_vr = result
+    draw_pose(link_trn, link_rot)
+    #  Visualize eef gripper ground truth 
+    #    if (uids_eef_gt is not None):
+    #        erase_pos(uids_eef_gt)
+    #    gt_t, gt_o = val.get_eef_pos("left") 
+    #    uids_eef_gt = draw_pose(gt_t, gt_o)
+    #
     # Get camera feed and detect markers
     rgb, depth = camera.get_image()
     rgb_edit = rgb[..., [2, 1, 0]].copy()

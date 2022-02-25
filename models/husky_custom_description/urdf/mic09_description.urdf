@@ -826,13 +826,13 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSI
       </geometry>
     </collision>
     <visual>
-      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <origin rpy="0 0 0" xyz="0 0 0.2"/>
       <geometry>
         <mesh filename="package://hdt_michigan_description/meshes/AR_TAG.obj"/>
       </geometry>
     </visual>
     <inertial>
-      <origin rpy="-1.5707963267948966 0 0" xyz="-0.02828166 0.00000247 -0.01722827"/>
+      <origin rpy="-1.5707963267948966 0 0" xyz="0.0 0.0 0.0"/>
       <mass value="0.27265869"/>
       <inertia ixx="0.00009278" ixy="0.0" ixz="0.00000608" iyy="0.00010001" iyz="0.0" izz="0.00007523"/>
     </inertial>
