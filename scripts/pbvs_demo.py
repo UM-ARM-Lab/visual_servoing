@@ -36,12 +36,12 @@ Tc1c2 = np.array([
 # draw_pose(camera.camera_eye, (np.linalg.inv(camera.get_extrinsics())@Tc1c2 )[0:3, 0:3], mat=True, axis_len=0.1)
 
 # AR tag on a box for debugging AR tag detection, commented out
-box_pos = (0.8, -0.3, 0.5)
+box_pos = (0.8, 0.3, 0.4)
 #box_orn = [0, 0, np.pi/8]
-box_orn = [-np.pi/4, -np.pi/8, 3*np.pi/2]
+box_orn = [np.pi/2, np.pi, 3*np.pi/2]
 
 box_vis = p.createVisualShape(p.GEOM_MESH,fileName="models/AR Tag Cuff 2/PINCER_HOUSING2_EDIT.obj", meshScale=[1.0,1.0, 1.0])
-#box_multi = p.createMultiBody(baseCollisionShapeIndex = 0, baseVisualShapeIndex=box_vis, basePosition=box_pos, baseOrientation=p.getQuaternionFromEuler(box_orn))
+box_multi = p.createMultiBody(baseCollisionShapeIndex = 0, baseVisualShapeIndex=box_vis, basePosition=box_pos, baseOrientation=p.getQuaternionFromEuler(box_orn))
 
 
 # Specify the 3D geometry of the end effector marker board 
@@ -167,7 +167,7 @@ while True:
     #ctrl = np.zeros(6)
 
     if(not armed):
-#        Two = pbvs.get_target_pose(rgb_edit, depth, Tao)
+        Two = pbvs.get_target_pose(rgb_edit, depth, Tao)
         if Two is not None:
             if (uids_target_marker is not None):
                 erase_pos(uids_target_marker)
