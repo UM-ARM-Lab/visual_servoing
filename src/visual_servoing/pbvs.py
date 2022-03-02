@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 
 from visual_servoing.camera import Camera
-
+from visual_servoing.pf import ParticleFilter
 
 class Marker:
     def __init__(self, corners, id, rvec=None, tvec=None):
@@ -32,7 +32,7 @@ class MarkerPBVS:
     # eef_tag_geometry: (list of 4x3 numpy, each numpy mat is the 3d coordinates of
     # the 4 tag corners, tl, tr, br, bl in that order in the eef_tag 
     # coordinate system the list is length N for a board of N many tags)
-    def __init__(self, camera: Camera, k_v, k_omega, eef_tag_ids, eef_tag_geometry, target_tag_ids, target_tag_geometry):
+    def __init__(self, camera: Camera, k_v, k_omega, eef_tag_ids, eef_tag_geometry, target_tag_ids, target_tag_geometry, use_pf=False):
         self.k_v = k_v
         self.k_omega = k_omega
         self.camera = camera
@@ -44,6 +44,11 @@ class MarkerPBVS:
         # EEF board
         self.eef_board = cv2.aruco.Board_create(eef_tag_geometry, self.aruco_dict, eef_tag_ids)
         self.target_board = cv2.aruco.Board_create(target_tag_geometry, self.aruco_dict, target_tag_ids)
+
+        # PF
+        self.use_pf = use_pf
+        self.prev_twist = np.zeros(6)
+        self.pf = ParticleFilter()
 
     # Detect ArUco tags in a given RGB frame
     # Return a list of Marker objects
@@ -135,15 +140,21 @@ class MarkerPBVS:
         if debug:
             cv2.imshow("image", rgb)
 
+        ctrl = np.zeros(6)
+        Twe = np.zeros((4,4))
         if ref_marker is not None:
-            Twa = self.compute_board_to_world(ref_marker, depth)
+            Twa_sensor = self.compute_board_to_world(ref_marker, depth)
             # compute transform from world to end effector by including rigid transform from
             # eef ar tag to end effector frame
-            Twe = Twa @ Tae
+            Twe_sensor = Twa_sensor @ Tae
+            if(not self.use_pf):
+                return self.get_control(Twe_sensor, Two), Twe_sensor 
+        if(self.use_pf):        
+            #eef_pose_world = pf.get_next_state() 
             # compute twist command
-            ctrl = self.get_control(Twe, Two)
-            return ctrl, Twe
-        return np.zeros(6), np.zeros((4, 4))
+            #ctrl = self.get_control(Twe, Two)
+            pass
+        return ctrl, Twe
     
     # Find pose of target board
     def get_target_pose(self, rgb, depth, Tao, debug=True):
