@@ -150,7 +150,8 @@ class MarkerPBVS:
             Twe_sensor = Twa_sensor @ Tae
             if(not self.pf.is_setup):
                 rvec, _ = cv2.Rodrigues(Twe_sensor[0:3, 0:3])
-                pose_se3 = np.hstack((Twe_sensor[0:3, 0], rvec))
+                print(rvec.shape)
+                pose_se3 = np.hstack((Twe_sensor[0:3, 0], rvec.squeeze()))
                 self.pf.setup(pose_se3)
             if(not self.use_pf):
                 return self.get_control(Twe_sensor, Two), Twe_sensor 
