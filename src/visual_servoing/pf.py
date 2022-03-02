@@ -17,10 +17,12 @@ class ParticleFilter():
         self.resampling_noise = 0.001
         self.sensor_pos_variance = 0.1
         self.sensor_rot_variance = 0.1 
+        self.is_setup = False
 
     def setup(mu_start):
         # particles are N x 6 where each 6 vec represents SE3 pose via <xyz, rod>
         self.particles = np.vstack([mu_start for _ in range(self.num_samples)])
+        self.is_setup = True
 
     # sample the sensor reading from a distribution centered at position to get its probability
     def particle_weight(self, particle_pose, sensor_pose):

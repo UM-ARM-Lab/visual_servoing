@@ -148,10 +148,14 @@ class MarkerPBVS:
             # compute transform from world to end effector by including rigid transform from
             # eef ar tag to end effector frame
             Twe_sensor = Twa_sensor @ Tae
+            if(not self.pf.is_setup):
+                rvec, _ = cv2.Rodrigues(Twe_sensor[0:3, 0:3])
+                pose_se3 = np.hstack((Twe_sensor[0:3, 0], rvec))
+                self.pf.setup(pose_se3)
             if(not self.use_pf):
                 return self.get_control(Twe_sensor, Two), Twe_sensor 
-        if(self.use_pf):        
-            eef_pose_world = pf.get_next_state(self.prev_twist, Twe_sensor) 
+        if(self.pf.is_setup and self.use_pf):        
+            eef_pose_world = self.pf.get_next_state(self.prev_twist, Twe_sensor) 
             # compute twist command
             ctrl = self.get_control(Twe, Two)
             self.prev_twist = ctrl
