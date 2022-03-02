@@ -77,4 +77,4 @@ class ParticleFilter():
             [new_particles[i] for i in idx]) + noises
 
         self.particles = new_particles
-        return best_estimate
+        return SE3(best_estimate)

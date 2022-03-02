@@ -156,7 +156,7 @@ class MarkerPBVS:
             if(not self.use_pf):
                 return self.get_control(Twe_sensor, Two), Twe_sensor 
         if(self.pf.is_setup and self.use_pf):        
-            eef_pose_world = self.pf.get_next_state(self.prev_twist, Twe_sensor) 
+            Twe = self.pf.get_next_state(self.prev_twist, Twe_sensor) 
             # compute twist command
             ctrl = self.get_control(Twe, Two)
             self.prev_twist = ctrl
