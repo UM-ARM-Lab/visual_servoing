@@ -142,6 +142,7 @@ class MarkerPBVS:
 
         ctrl = np.zeros(6)
         Twe = np.zeros((4,4))
+        Twe_sensor = None
         if ref_marker is not None:
             Twa_sensor = self.compute_board_to_world(ref_marker, depth)
             # compute transform from world to end effector by including rigid transform from
@@ -150,10 +151,10 @@ class MarkerPBVS:
             if(not self.use_pf):
                 return self.get_control(Twe_sensor, Two), Twe_sensor 
         if(self.use_pf):        
-            #eef_pose_world = pf.get_next_state() 
+            eef_pose_world = pf.get_next_state(self.prev_twist, Twe_sensor) 
             # compute twist command
-            #ctrl = self.get_control(Twe, Two)
-            pass
+            ctrl = self.get_control(Twe, Two)
+            self.prev_twist = ctrl
         return ctrl, Twe
     
     # Find pose of target board

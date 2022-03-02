@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import matplotlib
 
 # Note, this filter is modified from some particle filter code that I jointly
-# developed with rlybrdgs@umich.edu for a class project
+# developed with rlybrdgs@umich.edu
 class ParticleFilter():
     def __init__(self):
         self.num_samples = 1000
@@ -23,13 +23,8 @@ class ParticleFilter():
         self.particles = np.vstack([mu_start for _ in range(self.num_samples)])
 
     # sample the sensor reading from a distribution centered at position to get its probability
-    def particle_weight(self, particle_pose, sensor_pose_reading):
-        # Seperate poses into positions and rotations (quaternion)
-        particle_pos = particle_pose[0:3, 3] 
-        sensor_pos = sensor_pose[0:3, 3]
-        particle_rot, _ = cv2.Rodrigues(particle_pose[0:3, 0:3])
-        sensor_rot, _ = cv2.Rodrigues(sensor_pose[0:3, 0:3])
-        w_pos = scipy.stats.multivariate_normal.pdf(sensor_pos, mean=particle_pos, cov=sensor_pos_variance * np.eye(3))
+    def particle_weight(self, particle_pose, sensor_pose):
+        w_pos = scipy.stats.multivariate_normal.pdf(sensor_pose, mean=particle_pos, cov=sensor_pos_variance * np.eye(6))
         return w_pos
 
     # take action (Rod) and sensor_pose (Rod)
@@ -58,7 +53,7 @@ class ParticleFilter():
             weights.shape[0], new_particles.shape[0], list(weights))
 
         # add a small amount of gaussian noise to sampled particles to avoid duplicates
-        noises = np.random.multivariate_normal(mean=np.zeros(self.particle_dim), cov=np.eye(self.particle_dim)*self.resampling_noise, size=(new_particles.shape[1]))
+        noises = np.random.multivariate_normal(mean=np.zeros(self.particle_dim), cov=np.eye(6)*self.resampling_noise, size=(new_particles.shape[1]))
         resampled_particles = np.vstack(
             [new_particles[i] for i in idx]) + noises
 
