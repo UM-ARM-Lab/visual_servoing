@@ -3,6 +3,7 @@ import numpy as np
 
 from visual_servoing.camera import Camera
 from visual_servoing.pf import ParticleFilter
+import time
 
 class Marker:
     def __init__(self, corners, id, rvec=None, tvec=None):
@@ -48,6 +49,7 @@ class MarkerPBVS:
         # PF
         self.use_pf = use_pf
         self.prev_twist = np.zeros(6)
+        self.prev_time = time.time()
         self.pf = ParticleFilter()
 
     # Detect ArUco tags in a given RGB frame
@@ -150,10 +152,14 @@ class MarkerPBVS:
             Twe_sensor = Twa_sensor @ Tae
             if(not self.pf.is_setup):
                 self.pf.setup(Twe_sensor)
+                self.prev_time = time.time()
             if(not self.use_pf):
                 return self.get_control(Twe_sensor, Two), Twe_sensor 
         if(self.pf.is_setup and self.use_pf):        
-            Twe = self.pf.get_next_state(self.prev_twist, Twe_sensor) 
+            curTime = time.time()
+            dt = curTime - self.prev_time
+            self.prev_time = curTime
+            Twe = self.pf.get_next_state(self.prev_twist, dt, Twe_sensor) 
             # compute twist command
             ctrl = self.get_control(Twe, Two)
             self.prev_twist = ctrl

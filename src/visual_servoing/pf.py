@@ -30,9 +30,9 @@ def SE3(se3):
 class ParticleFilter():
     def __init__(self):
         self.num_samples = 1000
-        self.resampling_noise = 0.0004
+        self.resampling_noise = 0.0008
         self.sensor_pos_variance = 0.005
-        self.sensor_rot_variance = 5 
+        self.sensor_rot_variance = 0.01 
         self.is_setup = False
         self.sensor_cov = np.array([
                 [self.sensor_pos_variance, 0, 0, 0, 0, 0 ], 
@@ -56,10 +56,10 @@ class ParticleFilter():
 
 
     # take action (Rod) and sensor_pose (Rod)
-    def get_next_state(self, action, sensor_pose=None):
-
+    def get_next_state(self, action, dt, sensor_pose=None):
+        #print(dt)
         # make action into matrix via Exp  
-        action_mat = SE3(action)
+        action_mat = SE3(action * dt)
         # convert particles into matrix and apply action, then convert back to Rod
         new_particles = np.array([SE3(action_mat @ SE3(particle) ) for particle in self.particles])# self.particles 
 
