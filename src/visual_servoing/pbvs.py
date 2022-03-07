@@ -149,10 +149,7 @@ class MarkerPBVS:
             # eef ar tag to end effector frame
             Twe_sensor = Twa_sensor @ Tae
             if(not self.pf.is_setup):
-                rvec, _ = cv2.Rodrigues(Twe_sensor[0:3, 0:3])
-                print(rvec.shape)
-                pose_se3 = np.hstack((Twe_sensor[0:3, 0], rvec.squeeze()))
-                self.pf.setup(pose_se3)
+                self.pf.setup(Twe_sensor)
             if(not self.use_pf):
                 return self.get_control(Twe_sensor, Two), Twe_sensor 
         if(self.pf.is_setup and self.use_pf):        

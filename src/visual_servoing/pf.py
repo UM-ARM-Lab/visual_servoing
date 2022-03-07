@@ -4,7 +4,7 @@ import matplotlib
 import numpy as np
 import scipy.stats
 import scipy.cluster
-from visual_servoing.utils import draw_sphere_marker
+from visual_servoing.utils import draw_sphere_marker, draw_pose
 import pybullet as p
 import matplotlib.pyplot as plt
 import matplotlib
@@ -29,14 +29,15 @@ def SE3(se3):
 # developed with rlybrdgs@umich.edu
 class ParticleFilter():
     def __init__(self):
-        self.num_samples = 1000
-        self.resampling_noise = 0.01
+        self.num_samples = 10
+        self.resampling_noise = 0.05
         self.sensor_pos_variance = 0.1
         self.sensor_rot_variance = 0.1 
         self.is_setup = False
 
     def setup(self, mu_start):
         # particles are N x 6 where each 6 vec represents SE3 pose via <xyz, rod>
+        mu_start = SE3(mu_start)
         self.particles = np.vstack([mu_start for _ in range(self.num_samples)])
         self.is_setup = True
 
@@ -52,7 +53,7 @@ class ParticleFilter():
         # make action into matrix via Exp  
         action_mat = SE3(action)
         # convert particles into matrix and apply action, then convert back to Rod
-        new_particles = np.array([SE3(SE3(particle) @ action_mat) for particle in self.particles]) 
+        new_particles = np.array([SE3(SE3(particle) @ action_mat) for particle in self.particles])# self.particles 
 
         # find weight of each particle by seeing how well it matches the sensor reading
         weights = np.ones(new_particles.shape[0])
@@ -72,9 +73,17 @@ class ParticleFilter():
             weights.shape[0], new_particles.shape[0], list(weights))
 
         # add a small amount of gaussian noise to sampled particles to avoid duplicates
-        noises = np.random.multivariate_normal(mean=np.zeros(6), cov=np.eye(6)*self.resampling_noise, size=(self.num_samples))
+        noises = np.zeros((self.num_samples, 6)) #  np.random.multivariate_normal(mean=np.zeros(6), cov=np.eye(6)*self.resampling_noise, size=(self.num_samples)) #
         resampled_particles = np.vstack(
             [new_particles[i] for i in idx]) + noises
 
-        self.particles = new_particles
+        self.particles = resampled_particles 
+        for particle in resampled_particles:
+            particle_mat = SE3(particle)
+            rot = particle_mat[0:3, 0:3]
+            trans = particle_mat[0:3, 3]
+            #draw_pose(trans, rot, mat=True)
+            draw_sphere_marker(trans, 0.05, (1.0, 0.0, 0.0, 1.0)) 
+            print(particle)
+
         return SE3(best_estimate)
