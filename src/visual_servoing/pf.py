@@ -53,7 +53,7 @@ class ParticleFilter():
         # make action into matrix via Exp  
         action_mat = SE3(action)
         # convert particles into matrix and apply action, then convert back to Rod
-        new_particles = np.array([SE3(SE3(particle) @ action_mat) for particle in self.particles])# self.particles 
+        new_particles = np.array([SE3(action_mat @ SE3(particle) ) for particle in self.particles])# self.particles 
 
         # find weight of each particle by seeing how well it matches the sensor reading
         weights = np.ones(new_particles.shape[0])
