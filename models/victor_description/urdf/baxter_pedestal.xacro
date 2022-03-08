@@ -1,0 +1,43 @@
+<?xml version="1.0" ?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+    <xacro:macro name="baxter_pedestal" params="robot_name">
+        <link name="${robot_name}_root"/>
+
+        <joint name="${robot_name}_dummy_root_joint" type="fixed">
+            <parent link="${robot_name}_root"/>
+            <child link="${robot_name}_pedestal"/>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <axis xyz="0 0 1"/>
+        </joint>
+        <link name="${robot_name}_pedestal">
+            <visual>
+                <origin rpy="0 0 0" xyz="0 0 0.9245"/>
+                <geometry>
+                    <mesh filename="package://victor_description/meshes/baxter_pedestal/pedestal_visual.stl"/>
+                </geometry>
+                <material name="DarkGray"/>
+            </visual>
+            <collision>
+                <origin rpy="0 0 0" xyz="0 0 0.9245"/>
+                <geometry>
+                    <mesh filename="package://victor_description/meshes/baxter_pedestal/pedestal_collision.stl"/>
+                </geometry>
+                <material name="DarkGray"/>
+            </collision>
+            <inertial>
+                <origin rpy="0 0 0" xyz="0 0 0"/>
+                <mass value="60.86397744"/>
+                <inertia ixx="5.0635929" ixy="0.00103417" ixz="0.80199628" iyy="6.08689388" iyz="0.00105311" izz="4.96191932"/>
+            </inertial>
+        </link>
+
+        <joint name="${robot_name}_base_plate_mount_joint" type="fixed">
+            <parent link="${robot_name}_pedestal"/>
+            <child link="${robot_name}_base_plate_mount"/>
+            <origin xyz="0 0 0.863" rpy="0 0 0"/>
+            <axis xyz="0 0 1"/>
+        </joint>
+        <link name="${robot_name}_base_plate_mount"/>
+    </xacro:macro>
+</robot>

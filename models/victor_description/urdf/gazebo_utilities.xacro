@@ -1,0 +1,118 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+
+    <xacro:macro name="squishify" params="link_name">
+        <gazebo reference="${link_name}">
+            <collision>
+                <surface>
+                    <bounce>
+                        <restitution_coefficient>0.15</restitution_coefficient>
+                    </bounce>
+                    <contact>
+                        <ode>
+                            <soft_cfm>0.5</soft_cfm>
+                            <soft_erp>0.8</soft_erp>
+                            <kp>100000</kp>
+                            <min_depth>0.0001</min_depth>
+                        </ode>
+                    </contact>
+                </surface>
+            </collision>
+        </gazebo>
+    </xacro:macro>
+
+    <xacro:macro name="springify" params="joint_name">
+        <gazebo reference="${joint_name}">
+            <axis>
+                <dynamics>
+                    <spring_stiffness>0.1</spring_stiffness>
+                    <spring_reference>0.0</spring_reference>
+                    <damping>0.5</damping>
+                </dynamics>
+            </axis>
+        </gazebo>
+    </xacro:macro>
+
+    <xacro:macro name="add_simulation_compliance_arm_helper" params="arm index">
+        <xacro:squishify link_name="${arm}_link_${index}"/>
+        <xacro:springify joint_name="${arm}_joint_${index}"/>
+        <xacro:if value="${index-1}">
+            <xacro:add_simulation_compliance_arm_helper arm="${arm}" index="${index-1}"/>
+        </xacro:if>
+        <xacro:unless value="${index-1}">
+            <xacro:squishify link_name="${arm}_link_${index-1}"/>
+        </xacro:unless>
+    </xacro:macro>
+
+    <xacro:macro name="add_simulation_compliance_finger_helper" params="finger">
+        <xacro:squishify link_name="${finger}_base"/>
+        <xacro:squishify link_name="${finger}_prox"/>
+        <xacro:squishify link_name="${finger}_med"/>
+        <xacro:squishify link_name="${finger}_dist"/>
+
+        <xacro:springify joint_name="${finger}_joint_2"/>
+        <xacro:springify joint_name="${finger}_joint_3"/>
+        <xacro:springify joint_name="${finger}_joint_4"/>
+    </xacro:macro>
+
+    <xacro:macro name="add_gazebo_control_plugin" params="robot_namespace">
+        <gazebo>
+            <plugin name="gazebo_ros_control" filename="libgazebo_ros_control.so">
+                <robotNamespace>${robot_namespace}</robotNamespace>
+                <legacyModeNS>false</legacyModeNS>
+            </plugin>
+        </gazebo>
+    </xacro:macro>
+
+    <xacro:macro name="add_moveit_planning_scene_plugin" params="robot_namespace root_frame_id">
+        <gazebo>
+            <plugin name="gazebo_ros_moveit_planning_scene" filename="libgazebo_ros_moveit_planning_scene.so">
+                <robotName>${robot_namespace}</robotName>
+                <robotNamespace>${robot_namespace}</robotNamespace>
+                <!--  This must be the same as the root frame of the robot you're using -->
+                <frameId>${root_frame_id}</frameId>
+                <excludedModels>collision_sphere</excludedModels>
+                <scalePrimitivesFactor>1.1</scalePrimitivesFactor>
+            </plugin>
+        </gazebo>
+    </xacro:macro>
+
+    <xacro:macro name="add_gazebo_fixed_link" params="base_link:=base_link">
+        <link name="world"/>
+        <joint name="world_joint" type="fixed">
+            <parent link="world"/>
+            <child link="${base_link}"/>
+            <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
+        </joint>
+    </xacro:macro>
+
+    <xacro:macro name="add_joint_cfm_damping" params="joint_name cfm_damping">
+        <gazebo reference="${joint_name}">
+            <physics>
+                <ode>
+                    <cfm>0.01</cfm>
+                    <implicit_spring_damper>1</implicit_spring_damper>
+                </ode>
+            </physics>
+        </gazebo>
+    </xacro:macro>
+
+    <xacro:macro name="add_transmission" params="joint_name hardware_interface">
+        <transmission name="${joint_name}_tran">
+            <type>transmission_interface/SimpleTransmission</type>
+            <joint name="${joint_name}">
+                <hardwareInterface>${hardware_interface}</hardwareInterface>
+            </joint>
+            <actuator name="${joint_name}_motor">
+                <mechanicalReduction>1</mechanicalReduction>
+            </actuator>
+        </transmission>
+    </xacro:macro>
+
+    <xacro:macro name="preserve" params="joint_name">
+        <gazebo reference='${joint_name}'>
+            <preserveFixedJoint>true</preserveFixedJoint>
+        </gazebo>
+    </xacro:macro>
+</robot>

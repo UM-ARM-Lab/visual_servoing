@@ -1,0 +1,35 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+    <xacro:include filename="$(find robotiq_3f_gripper_visualization)/cfg/kinematic_robotiq_hand_macro.urdf.xacro"/>
+
+    <xacro:arg name="hardware_interface" default="hardware_interface/PositionJointInterface"/>
+
+    <xacro:robotiq_hand prefix="l_" parent="$(arg robot_name)_left_gripper_mounting_bracket" kinematic="1"
+                        hardware_interface="$(arg hardware_interface)">
+        <origin xyz="0 0 0.07" rpy="${PI/2} 0 ${PI/4}"/>
+    </xacro:robotiq_hand>
+
+    <gazebo>
+        <plugin name="kinematic_robotiq_3f_gripper_plugin" filename="libkinematic_robotiq_3f_gripper_plugin.so">
+            <prefix>l_</prefix>
+            <armName>left_arm</armName>
+            <robotNamespace>victor</robotNamespace>
+        </plugin>
+    </gazebo>
+
+
+    <xacro:robotiq_hand prefix="r_" parent="$(arg robot_name)_right_gripper_mounting_bracket" kinematic="1"
+                        hardware_interface="$(arg hardware_interface)">
+        <origin xyz="0 0 0.07" rpy="${PI/2} 0 ${PI/4}"/>
+    </xacro:robotiq_hand>
+
+    <gazebo>
+        <plugin name="kinematic_robotiq_3f_gripper_plugin" filename="libkinematic_robotiq_3f_gripper_plugin.so">
+            <prefix>r_</prefix>
+            <armName>right_arm</armName>
+            <robotNamespace>victor</robotNamespace>
+        </plugin>
+    </gazebo>
+
+</robot>

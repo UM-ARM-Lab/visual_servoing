@@ -1,0 +1,78 @@
+<?xml version="1.0"?>
+<robot name="victor" xmlns:xacro="http://www.ros.org/wiki/xacro">
+    <xacro:property name="gripper" value="kinematic_robotiq" />
+    <xacro:arg name="robot_name" default="victor"/>
+    <xacro:arg name="kinematic_arms" default="0"/>
+    <xacro:arg name="hardware_interface" default="hardware_interface/PositionJointInterface"/>
+
+    <!-- Import Rviz colors -->
+    <xacro:include filename="$(find victor_description)/urdf/materials.xacro"/>
+
+    <!-- pedestal -->
+    <xacro:include filename="$(find victor_description)/urdf/baxter_pedestal.xacro"/>
+    <xacro:baxter_pedestal robot_name="$(arg robot_name)"/>
+
+    <!-- torso -->
+    <xacro:include filename="$(find victor_description)/urdf/victor_torso.xacro"/>
+    <xacro:dual_arm_torso robot_name="$(arg robot_name)" parent="$(arg robot_name)_base_plate_mount"/>
+
+    <!-- iiwa arms -->
+    <!--Import the lbr iiwa macro -->
+    <xacro:include filename="$(find victor_description)/urdf/iiwa7.xacro"/>
+
+    <xacro:iiwa7 hardware_interface="$(arg hardware_interface)" robot_name="$(arg robot_name)_left_arm"
+                 parent="$(arg robot_name)_left_arm_mount" kinematic="$(arg kinematic_arms)">
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+    </xacro:iiwa7>
+    <joint name="$(arg robot_name)_joint_left_arm_world_frame_kuka" type="fixed">
+        <parent link="$(arg robot_name)_left_arm_mount"/>
+        <child link="$(arg robot_name)_left_arm_world_frame_kuka"/>
+        <origin xyz="0 0 0" rpy="1.57079632679 0 0"/>
+    </joint>
+    <link name="$(arg robot_name)_left_arm_world_frame_kuka">
+    </link>
+
+    <xacro:iiwa7 hardware_interface="$(arg hardware_interface)" robot_name="$(arg robot_name)_right_arm"
+                 parent="$(arg robot_name)_right_arm_mount" kinematic="$(arg kinematic_arms)">
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+    </xacro:iiwa7>
+    <joint name="$(arg robot_name)_joint_right_arm_world_frame_kuka" type="fixed">
+        <parent link="$(arg robot_name)_right_arm_mount"/>
+        <child link="$(arg robot_name)_right_arm_world_frame_kuka"/>
+        <origin xyz="0 0 0" rpy="-1.57079632679 0 0"/>
+    </joint>
+    <link name="$(arg robot_name)_right_arm_world_frame_kuka">
+    </link>
+
+    <!-- arm to gripper adapter -->
+    <xacro:include filename="$(find victor_description)/urdf/iiwa7_to_robotiq_adapter.xacro"/>
+    <xacro:iia7_to_robotiq_adapter parent="$(arg robot_name)_left_arm_flange" prefix="$(arg robot_name)_left">
+        <origin xyz="0 0 -0.01" rpy="0 0 0"/>
+    </xacro:iia7_to_robotiq_adapter>
+    <xacro:iia7_to_robotiq_adapter parent="$(arg robot_name)_right_arm_flange" prefix="$(arg robot_name)_right">
+        <origin xyz="0 0 -0.01" rpy="0 0 0"/>
+    </xacro:iia7_to_robotiq_adapter>
+
+
+    <!-- Robotiq grippers -->
+    <xacro:if value="${gripper == 'kinematic_robotiq'}">
+        <xacro:include filename="$(find victor_description)/urdf/kinematic_robotiq_grippers.xacro"/>
+    </xacro:if>
+    <xacro:if value="${gripper == 'robotiq'}">
+        <xacro:include filename="$(find victor_description)/urdf/robotiq_grippers.xacro"/>
+    </xacro:if>
+
+    <!-- Define additional links as "tools", which are useful for planning and getting transforms -->
+    <xacro:include filename="$(find victor_description)/urdf/robotiq_pinch_grasp_tools.xacro"/>
+    <xacro:robotiq_pinch_grasp_tools robot_name="$(arg robot_name)"/>
+    <!-- Add Gazebo properties for whole robot -->
+    <xacro:include filename="$(find victor_description)/urdf/victor.gazebo.xacro"/>
+    <xacro:include filename="$(find victor_description)/urdf/gazebo_utilities.xacro"/>
+    <!-- Load Gazebo lib and set the robot namespace -->
+    <xacro:add_gazebo_control_plugin robot_namespace="$(arg robot_name)"/>
+    <xacro:add_moveit_planning_scene_plugin robot_namespace="$(arg robot_name)" root_frame_id="victor_root"/>
+
+    <!-- Rigidly attach Victor to the Gazebo world -->
+    <xacro:add_gazebo_fixed_link base_link="$(arg robot_name)_root"/>
+
+</robot>

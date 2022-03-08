@@ -29,9 +29,10 @@ def SE3(se3):
 # developed with rlybrdgs@umich.edu
 class ParticleFilter():
     def __init__(self):
-        self.num_samples = 1000
-        self.resampling_noise = 0.0008
-        self.sensor_pos_variance = 0.005
+        self.num_samples = 5000
+        self.resampling_pos_noise = 0.0058
+        self.resampling_rot_noise = 0.01
+        self.sensor_pos_variance = 0.001
         self.sensor_rot_variance = 0.01 
         self.is_setup = False
         self.sensor_cov = np.array([
@@ -41,6 +42,15 @@ class ParticleFilter():
                 [0, 0, 0, self.sensor_rot_variance, 0,  0], 
                 [0, 0, 0, 0, self.sensor_rot_variance, 0], 
                 [0, 0, 0, 0, 0, self.sensor_rot_variance]
+            ]) 
+        
+        self.resampling_cov = np.array([
+                [self.resampling_pos_noise, 0, 0, 0, 0, 0 ], 
+                [0, self.resampling_pos_noise, 0, 0, 0, 0], 
+                [0, 0, self.resampling_pos_noise, 0, 0, 0],
+                [0, 0, 0, self.resampling_rot_noise,  0,  0], 
+                [0, 0, 0, 0, self.resampling_rot_noise, 0], 
+                [0, 0, 0, 0, 0, self.resampling_rot_noise]
             ]) 
         self.marker_ids = []
 
@@ -75,7 +85,7 @@ class ParticleFilter():
         weights /= np.sum(weights)
 
         # use the weighted average of all particles as the state estimate
-        #best_estimate = np.average(new_particles, axis=0, weights=weights)
+        best_estimate = np.average(new_particles, axis=0, weights=weights)
         # use max weight particle as state estimate        
         best_estimate = new_particles[np.argmax(weights)]
 
@@ -85,7 +95,7 @@ class ParticleFilter():
 
         # add a small amount of gaussian noise to sampled particles to avoid duplicates
         #noises = np.zeros((self.num_samples, 6)) # 
-        noises = np.random.multivariate_normal(mean=np.zeros(6), cov=np.eye(6)*self.resampling_noise, size=(self.num_samples))  
+        noises = np.random.multivariate_normal(mean=np.zeros(6), cov=self.resampling_cov, size=(self.num_samples))  
         resampled_particles = np.vstack(
             [new_particles[i] for i in idx]) + noises
 

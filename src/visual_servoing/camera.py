@@ -97,6 +97,19 @@ class PyBulletCamera(Camera):
         depth_img = np.array(depthImg)
         return rgb_img, depth_img
 
+    def get_pointcloud(self, depth):
+        projectionMatrix = np.asarray(self.ogl_projection_matrix).reshape([4, 4], order='F')
+        #viewMatrix = np.asarray(self.ogl_view_matrix).reshape([4, 4], order='F')
+        T = np.linalg.inv(projectionMatrix)
+        u, v = np.meshgrid(np.arange(start=0, stop=self.image_dim[0]), np.arange(start=0, stop=self.image_dim[1]))
+        u = (2 * u - self.image_dim[0]) / self.image_dim[0]
+        v = (2 * v - self.image_dim[1]) / self.image_dim[1]
+        depth_mod = 2 * depth - 1
+        img_coords = np.vstack((u.reshape(-1), v.reshape(-1), depth_mod.reshape(-1), np.ones(self.image_dim[0]*self.image_dim[1])))
+        cam_coords = T @ img_coords
+        cam_coords = cam_coords[0:3, :] / cam_coords[3, :] 
+        return cam_coords
+
     def get_xyz(self, u, v, depth):
         # This code querys the depth buffer returned from the simulated camera and gets the <x,y,z> 
         # point of the AR tag in world space 

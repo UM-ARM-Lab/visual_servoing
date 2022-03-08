@@ -1,0 +1,66 @@
+<?xml version="1.0"?>
+
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+    <xacro:macro name="iiwa_gazebo" params="robot_name kinematic">
+
+        <!-- Link0 -->
+        <gazebo reference="${robot_name}_link_0">
+            <kinematic>${kinematic}</kinematic>
+            <mu1>0.2</mu1>
+            <mu2>0.2</mu2>
+        </gazebo>
+
+        <!-- Link1 -->
+        <gazebo reference="${robot_name}_link_1">
+            <kinematic>${kinematic}</kinematic>
+            <mu1>0.2</mu1>
+            <mu2>0.2</mu2>
+        </gazebo>
+
+        <!-- Link2 -->
+        <gazebo reference="${robot_name}_link_2">
+            <kinematic>${kinematic}</kinematic>
+            <mu1>0.2</mu1>
+            <mu2>0.2</mu2>
+        </gazebo>
+
+        <!-- Link3 -->
+        <gazebo reference="${robot_name}_link_3">
+            <kinematic>${kinematic}</kinematic>
+            <mu1>0.2</mu1>
+            <mu2>0.2</mu2>
+        </gazebo>
+
+        <!-- Link4 -->
+        <gazebo reference="${robot_name}_link_4">
+            <kinematic>${kinematic}</kinematic>
+            <mu1>0.2</mu1>
+            <mu2>0.2</mu2>
+        </gazebo>
+
+        <!-- Link5 -->
+        <gazebo reference="${robot_name}_link_5">
+            <kinematic>${kinematic}</kinematic>
+            <mu1>0.2</mu1>
+            <mu2>0.2</mu2>
+        </gazebo>
+
+        <!-- Link6 -->
+        <gazebo reference="${robot_name}_link_6">
+            <kinematic>${kinematic}</kinematic>
+            <mu1>0.2</mu1>
+            <mu2>0.2</mu2>
+        </gazebo>
+
+        <!-- Link7 -->
+        <gazebo reference="${robot_name}_link_7">
+            <kinematic>${kinematic}</kinematic>
+            <mu1>0.2</mu1>
+            <mu2>0.2</mu2>
+        </gazebo>
+
+    </xacro:macro>
+
+</robot>
+

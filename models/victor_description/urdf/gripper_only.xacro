@@ -1,0 +1,19 @@
+<!-- Note: This is not the normal path of execution to launch Victor -->
+<!-- This creates a standalone robot from the 3_finger gripper -->
+
+<?xml version="1.0"?>
+<robot name="gripper" xmlns:xacro="http://www.ros.org/wiki/xacro">
+    <xacro:arg name="robot_name" default="gripper"/>
+
+    <!-- Import Rviz colors -->
+    <xacro:include filename="$(find victor_description)/urdf/materials.xacro"/>
+
+    <xacro:include filename="$(find victor_description)/urdf/utilities.xacro"/>
+
+    <link name="gripper_root"/>
+    <xacro:include filename="$(find victor_description)/urdf/robotiq_3finger_gripper.xacro"/>
+    <xacro:robotiq_3finger parent="gripper_root" prefix="gripper_visual">
+        <origin xyz="0 0 0.02705" rpy="0 0 ${PI/4}"/> <!-- Offset measured with a tape measure; please confirm/fix this value -->
+    </xacro:robotiq_3finger>
+
+</robot>

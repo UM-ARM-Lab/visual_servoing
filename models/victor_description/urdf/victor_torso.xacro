@@ -1,0 +1,66 @@
+<?xml version="1.0" ?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+    <xacro:macro name="dual_arm_torso" params="robot_name parent">
+        <joint name="${robot_name}_base_plate_joint" type="fixed">
+            <parent link="${parent}"/>
+            <child link="${robot_name}_base_plate"/>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <axis xyz="0 0 1"/>
+        </joint>
+        <link name="${robot_name}_base_plate">
+            <visual>
+                <origin xyz="0 0 0" rpy="0 0 0"/>
+                <geometry>
+                    <mesh filename="package://victor_description/meshes/torso/torso_visual.stl"/>
+                </geometry>
+                <material name="LightGrey"/>
+            </visual>
+
+            <collision>
+                <origin xyz="0 0 0.2" rpy="0 0 0"/>
+                <geometry>
+                    <!--<mesh filename="package://victor_description/meshes/torso_visual_model.stl"/>-->
+                    <cylinder length="0.7" radius="0.2"/>
+                </geometry>
+                <material name="LightGrey"/>
+            </collision>
+        </link>
+
+
+        <joint name="${robot_name}_left_arm_mount_joint" type="fixed">
+            <parent link="${robot_name}_base_plate"/>
+            <child link="$(arg robot_name)_left_arm_mount"/>
+            <origin xyz="-0.02 0.1384885 0.385" rpy="-1.5707963268 0 -0.785398163397448"/>
+            <axis xyz="0 0 1"/>
+        </joint>
+        <link name="${robot_name}_left_arm_mount">
+            <collision>
+                <origin xyz="0 0 -0.013" rpy="0 0 0"/>
+                <geometry>
+                    <!--<mesh filename="package://victor_description/meshes/torso_visual_model.stl"/>-->
+                    <box size="0.31 0.31 0.032"/>
+                </geometry>
+                <material name="LightGrey"/>
+            </collision>
+        </link>
+
+
+        <joint name="${robot_name}_right_arm_mount_joint" type="fixed">
+            <parent link="${robot_name}_base_plate"/>
+            <child link="${robot_name}_right_arm_mount"/>
+            <origin xyz="-0.02 -0.1384885 0.385" rpy="1.5707963268 0 0.785398163397448"/>
+            <axis xyz="0 0 1"/>
+        </joint>
+        <link name="${robot_name}_right_arm_mount">
+            <collision>
+                <origin xyz="0 0 -0.013" rpy="0 0 0"/>
+                <geometry>
+                    <!--<mesh filename="package://victor_description/meshes/torso_visual_model.stl"/>-->
+                    <box size="0.31 0.31 0.032"/>
+                </geometry>
+                <material name="LightGrey"/>
+            </collision>
+        </link>
+    </xacro:macro>
+</robot>

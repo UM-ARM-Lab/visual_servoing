@@ -1,0 +1,55 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+    <xacro:arg name="tool_dist_to_link_7" default="0.254"/>
+
+    <xacro:macro name="robotiq_pinch_grasp_tools" params="robot_name">
+        <link name="left_tool">
+            <visual name="left_tool_visual">
+                <origin xyz="0 0 0" rpy="0 0 0"/>
+                <geometry>
+                    <sphere radius="0.002"/>
+                </geometry>
+            </visual>
+            <inertial>
+                <origin xyz="0 0 0" rpy="0 0 0"/>
+                <!-- It's important that these have non-zero mass, otherwise gazebos URDF to SDF conversion will ignore them -->
+                <mass value="0.001"/>
+                <inertia ixx="0"
+                         ixy="0"
+                         ixz="0"
+                         iyy="0"
+                         iyz="0"
+                         izz="0"/>
+            </inertial>
+        </link>
+        <joint name="left_tool_joint" type="fixed">
+            <parent link="$(arg robot_name)_left_arm_link_7"/>
+            <child link="left_tool"/>
+            <origin xyz="0 0 $(arg tool_dist_to_link_7)"/>
+        </joint>
+
+        <link name="right_tool">
+            <visual name="right_tool_visual">
+                <origin xyz="0 0 0" rpy="0 0 0"/>
+                <geometry>
+                    <sphere radius="0.002"/>
+                </geometry>
+            </visual>
+            <inertial>
+                <origin xyz="0 0 0" rpy="0 0 0"/>
+                <mass value="0.001"/>
+                <inertia ixx="0"
+                         ixy="0"
+                         ixz="0"
+                         iyy="0"
+                         iyz="0"
+                         izz="0"/>
+            </inertial>
+        </link>
+        <joint name="right_tool_joint" type="fixed">
+            <parent link="$(arg robot_name)_right_arm_link_7"/>
+            <child link="right_tool"/>
+            <origin xyz="0 0 $(arg tool_dist_to_link_7)"/>
+        </joint>
+    </xacro:macro>
+</robot>

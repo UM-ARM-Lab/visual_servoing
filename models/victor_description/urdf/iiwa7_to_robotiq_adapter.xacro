@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+    <xacro:macro name="iia7_to_robotiq_adapter" params="parent prefix *origin">
+        <!--joint between {parent} and link_0-->
+        <joint name="${parent}_${prefix}_joint" type="fixed">
+            <xacro:insert_block name="origin"/>
+            <parent link="${parent}"/>
+            <child link="${prefix}_gripper_mounting_bracket"/>
+        </joint>
+        <link name="${prefix}_gripper_mounting_bracket">
+            <visual>
+                <origin xyz="0 0 0" rpy="0 0 0"/>
+                <geometry>
+                    <mesh filename="package://victor_description/meshes/robotiq_3finger/kuka_to_palm_connectors_visual.stl"/>
+                </geometry>
+                <material name="LightGrey"/>
+            </visual>
+            <collision>
+                <origin xyz="0 0 0" rpy="0 0 0"/>
+                <geometry>
+                    <mesh filename="package://victor_description/meshes/robotiq_3finger/kuka_to_palm_connectors_collision.stl"/>
+                </geometry>
+                <material name="LightGrey"/>
+            </collision>
+        </link>
+    </xacro:macro>
+
+</robot>

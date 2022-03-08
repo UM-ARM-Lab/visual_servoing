@@ -1,0 +1,28 @@
+<!-- Note: This is not the normal path of execution to launch Victor -->
+<!-- This creates a "robot" from the robotiq 3 finger gripper. -->
+<!-- This is useful for manually viewing the gripper in RViz when using something such as a grasp planner -->
+<!-- Place the gripper by publishing a transform from [baseframe] to [gripper_root]-->
+
+<launch>
+
+    <group ns="gripper_visual">
+        <arg name="model" default="$(find victor_description)/urdf/gripper_only.xacro"/>
+        <arg name="joint_state_publisher" default="true"/>
+        <arg name="gui" default="true"/>
+        <arg name="rviz" default="false"/>
+        <arg name="set_default_robot_tf" default="true"/>
+
+        <param name="robot_description" command="$(find xacro)/xacro $(arg model)"/>
+        <param name="use_gui" value="$(arg gui)"/>
+
+        <node name="joint_state_publisher" pkg="joint_state_publisher"
+              type="joint_state_publisher"/>
+        <node name="gripper_target_joint_state_gui" pkg="joint_state_publisher_gui"
+              type="joint_state_publisher_gui"/>
+        <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher"/>
+
+        <node name="rviz" pkg="rviz" type="rviz" required="true" if="$(arg rviz)"/>
+    </group>
+
+</launch>
+
