@@ -120,6 +120,8 @@ class Val:
         if np.linalg.norm(q_prime) > 0.55:
             q_prime = 0.55 * q_prime / np.linalg.norm(q_prime)  # * np.linalg.norm(x_prime)
 
+
+
         # joint limits 
 
         # control

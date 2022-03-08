@@ -42,6 +42,7 @@ class ParticleFilter():
                 [0, 0, 0, 0, self.sensor_rot_variance, 0], 
                 [0, 0, 0, 0, 0, self.sensor_rot_variance]
             ]) 
+        self.marker_ids = []
 
     def setup(self, mu_start):
         # particles are N x 6 where each 6 vec represents SE3 pose via <xyz, rod>
@@ -89,12 +90,14 @@ class ParticleFilter():
             [new_particles[i] for i in idx]) + noises
 
         self.particles = resampled_particles 
+        for marker_id in self.marker_ids:
+            p.removeBody(marker_id)
+        self.marker_ids = []
         #for particle in resampled_particles:
         #    particle_mat = SE3(particle)
         #    rot = particle_mat[0:3, 0:3]
         #    trans = particle_mat[0:3, 3]
         #    #draw_pose(trans, rot, mat=True)
-        #    draw_sphere_marker(trans, 0.05, (1.0, 0.0, 0.0, 1.0)) 
-        #    print(particle)
+        #    self.marker_ids.append(draw_sphere_marker(trans, 0.05, (1.0, 0.0, 0.0, 1.0)))
 
         return SE3(best_estimate)
