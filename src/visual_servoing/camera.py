@@ -60,6 +60,14 @@ class PyBulletCamera(Camera):
             cameraTargetPosition=self.camera_look,
             cameraUpVector=camera_up)
 
+        self.projectionMatrix = np.asarray(self.ogl_projection_matrix).reshape([4, 4], order='F')
+        # viewMatrix = np.asarray(self.ogl_view_matrix).reshape([4, 4], order='F')
+        self.T = np.linalg.inv(self.projectionMatrix)
+        u, v = np.meshgrid(np.arange(start=0, stop=self.image_dim[0]), np.arange(start=0, stop=self.image_dim[1]))
+        self.u = ((2 * u - self.image_dim[0]) / self.image_dim[0]).reshape(-1)
+        self.v = ((2 * v - self.image_dim[1]) / self.image_dim[1]).reshape(-1)
+        self.ones = np.ones(self.image_dim[0] * self.image_dim[1])
+
     def get_intrinsics(self):
         proj_4x4 = np.array(self.ogl_projection_matrix).reshape(4, 4)
         proj_3x3 = np.array(self.ogl_projection_matrix).reshape(4, 4)[:3, :3]
@@ -90,7 +98,7 @@ class PyBulletCamera(Camera):
             viewMatrix=self.ogl_view_matrix,
             projectionMatrix=self.ogl_projection_matrix,
             lightDirection=-(self.camera_look - self.camera_eye),
-            #renderer=p.ER_BULLET_HARDWARE_OPENGL
+            # renderer=p.ER_BULLET_HARDWARE_OPENGL
         )
 
         rgb_img = np.array(rgbImg)[:, :, :3]
@@ -98,16 +106,13 @@ class PyBulletCamera(Camera):
         return rgb_img, depth_img
 
     def get_pointcloud(self, depth):
-        projectionMatrix = np.asarray(self.ogl_projection_matrix).reshape([4, 4], order='F')
-        #viewMatrix = np.asarray(self.ogl_view_matrix).reshape([4, 4], order='F')
-        T = np.linalg.inv(projectionMatrix)
-        u, v = np.meshgrid(np.arange(start=0, stop=self.image_dim[0]), np.arange(start=0, stop=self.image_dim[1]))
-        u = (2 * u - self.image_dim[0]) / self.image_dim[0]
-        v = (2 * v - self.image_dim[1]) / self.image_dim[1]
         depth_mod = 2 * depth - 1
-        img_coords = np.vstack((u.reshape(-1), v.reshape(-1), depth_mod.reshape(-1), np.ones(self.image_dim[0]*self.image_dim[1])))
-        cam_coords = T @ img_coords
-        cam_coords = cam_coords[0:3, :] / cam_coords[3, :] 
+        img_coords = np.vstack((self.u,
+                                self.v,
+                                depth_mod.reshape(-1),
+                                self.ones))
+        cam_coords = self.T @ img_coords
+        cam_coords = cam_coords[0:3, :] / cam_coords[3, :]
         return cam_coords
 
     def get_xyz(self, u, v, depth):
@@ -143,9 +148,9 @@ class RealsenseCamera(Camera):
         self.color = Listener("/camera/color/image_raw", Image)
         self.params = Listener("/camera/color/camera_info", CameraInfo)
         info = self.params.get()
-        self.intrisnics = np.array(info.K).reshape(3,3)
+        self.intrisnics = np.array(info.K).reshape(3, 3)
 
-        #print(self.intrisnics)
+        # print(self.intrisnics)
 
     def get_intrinsics(self):
         """Return OpenCV style intrinsics 3x3"""
@@ -167,4 +172,4 @@ class RealsenseCamera(Camera):
     def get_xyz(self, u, v, depth):
         """ Retrieve pointcloud point from depth and image pt """
 
-        return np.array([0,0,0])
+        return np.array([0, 0, 0])
