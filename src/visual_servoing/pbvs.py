@@ -145,16 +145,17 @@ class MarkerPBVS:
             return Twe_sensor  
 
 
-    def update_state_estimate(self, Twe_sensor):
+    def update_state_estimate(self, Twe_sensor, dt):
         # call PF update
-        dt = time.time() - self.prev_time
+        if(dt is None):
+            dt = time.time() - self.prev_time
         self.pf.update_particles(self.prev_twist, dt, Twe_sensor)  
 
     # Executes an iteration of PBVS control and returns a twist command
     # Two: (Pose of target object w.r.t world)
     # Tae: (Pose of end effector w.r.t. ar tag coordinates)
     # Returns the twist command [v, omega] and pose of end effector in world
-    def do_pbvs(self, rgb, depth, Two, Tae, jac, jac_inv, debug=True):
+    def do_pbvs(self, rgb, depth, Two, Tae, jac, jac_inv, dt=None, debug=True):
         # Find the EEF ar tag board 
         markers = self.detect_markers(rgb)
         ref_marker = self.get_board_pose(markers, self.eef_board, rgb)
@@ -172,7 +173,7 @@ class MarkerPBVS:
             Twe_sensor = Twa_sensor @ Tae
 
         # compute twist command based on state estimate and target
-        self.update_state_estimate(Twe_sensor)
+        self.update_state_estimate(Twe_sensor, dt)
         Twe = self.get_eef_state_estimate(Twe_sensor)
         if(Twe is not None):
             ctrl = self.get_control(Twe, Two)

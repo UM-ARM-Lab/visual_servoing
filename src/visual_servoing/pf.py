@@ -111,6 +111,6 @@ class ParticleFilter():
             rot = particle_mat[0:3, 0:3]
             trans = particle_mat[0:3, 3]
             #draw_pose(trans, rot, mat=True)
-            self.marker_ids.append(draw_sphere_marker(trans, 0.05, (1.0, 0.0, 0.0, 1.0)))
+            self.marker_ids.append(draw_sphere_marker(trans, 0.02, (1.0, 0.0, 0.0, 1.0)))
 
         return SE3(best_estimate)

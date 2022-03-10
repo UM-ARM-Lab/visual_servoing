@@ -76,7 +76,9 @@ ids = np.array([1, 2, 3])
 ids2 = np.array([4,5,6])
 
 pbvs = MarkerPBVS(camera, 0.1, 0.1, ids, tag_geometry, ids2, tag_geometry, True, 0.55)
-p.setRealTimeSimulation(1)
+sim_dt = 0.02
+p.setTimeStep(sim_dt)
+#p.setRealTimeSimulation(1)
 
 Two = None
 Twa = None
@@ -117,6 +119,7 @@ armed = False
 
 while True:
     t0 = time.time()
+    p.stepSimulation()
 
     # Visualization ground truth AR link [delete me]
     tool_idx = val.left_tag[0]
@@ -141,8 +144,9 @@ while True:
     ctrl = np.zeros(6)
     #cv2.imshow("image", rgb_edit)
     if armed and Two is not None:
-        ctrl, Twe = pbvs.do_pbvs(rgb_edit, depth, Two, Tae, val.get_arm_jacobian("left"), val.get_jacobian_pinv("left"))
+        ctrl, Twe = pbvs.do_pbvs(rgb_edit, depth, Two, Tae, val.get_arm_jacobian("left"), val.get_jacobian_pinv("left"), sim_dt)
 
+        val.set_velo(val.get_jacobian_pinv("left") @ ctrl)
         # Visualize estimated end effector pose 
         if (uids_eef_marker is not None):
             erase_pos(uids_eef_marker)
@@ -166,7 +170,7 @@ while True:
 
 
     # Execute control on Val
-    val.set_velo(val.get_jacobian_pinv("left") @ ctrl)
+    #val.set_velo(val.get_jacobian_pinv("left") @ ctrl)
 
     # Do target pose estimation while not armed, but stop once servoing starts so occlusions don't get in the way
     if(not armed):
