@@ -29,8 +29,8 @@ def SE3(se3):
 # developed with rlybrdgs@umich.edu
 class ParticleFilter():
     def __init__(self):
-        self.num_samples = 10000
-        self.resampling_pos_noise = 0.0010
+        self.num_samples = 1000
+        self.resampling_pos_noise = 0.0005
         self.resampling_rot_noise = 0.01
         self.sensor_pos_variance = 0.001
         self.sensor_rot_variance = 0.03 
