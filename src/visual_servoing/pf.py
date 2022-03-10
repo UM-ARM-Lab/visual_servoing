@@ -67,6 +67,8 @@ class ParticleFilter():
         return w_pos
 
     def update_particles(self, action, dt, sensor_pose=None):
+        if(not self.is_setup):
+            return
         # make action into matrix via Exp  
         action_mat = SE3(action * dt)
         # convert particles into matrix and apply action, then convert back to Rod
@@ -97,15 +99,14 @@ class ParticleFilter():
     # take action (Rod) and sensor_pose (Rod)
     def get_state(self):
         # use the weighted average of all particles as the state estimate
-        best_estimate = np.average(new_particles, axis=0, weights=weights)
+        best_estimate = np.average(self.particles, axis=0, weights=self.weights)
         # use max weight particle as state estimate        
-        best_estimate = new_particles[np.argmax(weights)]
+        best_estimate = self.particles[np.argmax(self.weights)]
 
-        self.particles = resampled_particles 
         for marker_id in self.marker_ids:
             p.removeBody(marker_id)
         self.marker_ids = []
-        for particle in resampled_particles:
+        for particle in self.particles:
             particle_mat = SE3(particle)
             rot = particle_mat[0:3, 0:3]
             trans = particle_mat[0:3, 3]

@@ -106,7 +106,7 @@ class Val:
         else:
             return np.vstack((jac_t[:, 11:18], jac_r[:, 11:18]))
 
-    def get_jacobian_pinv(side):
+    def get_jacobian_pinv(self,side):
         J = self.get_arm_jacobian(side)
         lmda = 0.0000001
         J_pinv = np.dot(np.linalg.inv(np.dot(J.T, J) + lmda * np.eye(7)), J.T)

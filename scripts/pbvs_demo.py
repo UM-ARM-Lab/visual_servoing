@@ -75,7 +75,7 @@ tag_geometry = [tag0, tag1, tag2]
 ids = np.array([1, 2, 3])
 ids2 = np.array([4,5,6])
 
-pbvs = MarkerPBVS(camera, 0.1, 0.1, ids, tag_geometry, ids2, tag_geometry, True)
+pbvs = MarkerPBVS(camera, 0.1, 0.1, ids, tag_geometry, ids2, tag_geometry, True, 0.55)
 p.setRealTimeSimulation(1)
 
 Two = None
@@ -141,12 +141,13 @@ while True:
     ctrl = np.zeros(6)
     #cv2.imshow("image", rgb_edit)
     if armed and Two is not None:
-        ctrl, Twe = pbvs.do_pbvs(rgb_edit, depth, Two, Tae)
+        ctrl, Twe = pbvs.do_pbvs(rgb_edit, depth, Two, Tae, val.get_arm_jacobian("left"), val.get_jacobian_pinv("left"))
 
         # Visualize estimated end effector pose 
         if (uids_eef_marker is not None):
             erase_pos(uids_eef_marker)
-        uids_eef_marker = draw_pose(Twe[0:3, 3], Twe[0:3, 0:3], mat=True)
+        if(Twe is not None):
+            uids_eef_marker = draw_pose(Twe[0:3, 3], Twe[0:3, 0:3], mat=True)
 
         #  Visualize target pose 
         if (uids_target_marker is not None):
@@ -154,18 +155,20 @@ while True:
         uids_target_marker = draw_pose(Two[0:3, 3], Two[0:3, 0:3], mat=True)
         #print(gt_t - Twe[0:3, 3])
 
-        position_error.append( np.linalg.norm(Twe[0:3, 3] - Two[0:3, 3]))
-        r, _ = cv2.Rodrigues( (Twe[0:3, 0:3] @ Two[0:3, 0:3].T ).T)
-        rotation_error.append(np.linalg.norm(r))
+        if(Twe is not None):
+            position_error.append( np.linalg.norm(Twe[0:3, 3] - Two[0:3, 3]))
+            r, _ = cv2.Rodrigues( (Twe[0:3, 0:3] @ Two[0:3, 0:3].T ).T)
+            rotation_error.append(np.linalg.norm(r))
 
-        marker_pos_error.append(np.linalg.norm(Twe[0:3, 3] - link_trn))
-        link_rod, _ = cv2.Rodrigues(np.array(p.getMatrixFromQuaternion(link_rot)).reshape(3,3) @ Twe[0:3, 0:3].T)
-        marker_rot_error.append(np.linalg.norm(link_rod))
+            marker_pos_error.append(np.linalg.norm(Twe[0:3, 3] - link_trn))
+            link_rod, _ = cv2.Rodrigues(np.array(p.getMatrixFromQuaternion(link_rot)).reshape(3,3) @ Twe[0:3, 0:3].T)
+            marker_rot_error.append(np.linalg.norm(link_rod))
+
 
     # Execute control on Val
-    val.psuedoinv_ik_controller("left", ctrl)
-    #ctrl = np.zeros(6)
+    val.set_velo(val.get_jacobian_pinv("left") @ ctrl)
 
+    # Do target pose estimation while not armed, but stop once servoing starts so occlusions don't get in the way
     if(not armed):
         Two = pbvs.get_target_pose(rgb_edit, depth, Tao)
         if Two is not None:
@@ -173,32 +176,10 @@ while True:
                 erase_pos(uids_target_marker)
             uids_target_marker = draw_pose(Two[0:3, 3], Two[0:3, 0:3], mat=True)
     
-    #ctrl[0:3] = test_target - val.get_eef_pos("left")[0:3]
-    #draw_sphere_marker(val.get_eef_pos("left")[0:3], 0.01, (0.0, 1.0, 0.0, 1.0))
-    #draw_sphere_marker(test_target, 0.01, (1.0, 0.0, 0.0, 1.0))
-
-    #val.psuedoinv_ik_controller("left", ctrl)
-    #p.setJointMotorControlArray(self.urdf, joint_list, p.VELOCITY_CONTROL, targetVelocities=q_prime)
-    #val.set_velo([5.0, 0.0, 0.0, 0.0,0.0, 0.0, 0.0])
-    #val.get_arm_jacobian("left")
     cv2.waitKey(1)
 
     # Process keyboard to change target position
     events = p.getKeyboardEvents()
-    if KEY_U in events:
-        target = initial_arm + np.array([-0.1, -0.2, 0.1])
-        Rwo = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((np.pi / 7, np.pi / 4, -np.pi / 2)))).reshape(
-            3, 3)
-        Two[0:3, 0:3] = Rwo
-        Two[0:3, 3] = target
-
-    if KEY_K in events:
-        target = initial_arm + np.array([0.2, -0.1, 0.1])
-        Rwo = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((np.pi / 4, np.pi / 4, -np.pi / 2)))).reshape(
-            3, 3)
-        Two[0:3, 0:3] = Rwo
-        Two[0:3, 3] = target
-
     if KEY_N in events:
         armed = True
 

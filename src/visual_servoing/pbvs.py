@@ -137,10 +137,10 @@ class MarkerPBVS:
         if(self.use_pf):
             if(self.pf.is_setup):
                 return self.pf.get_state()
-            else if(Twe_sensor is not None):
+            elif(Twe_sensor is not None):
                 self.pf.setup(Twe_sensor)
             else:
-                return Twe_sensor 
+                return None 
         else:
             return Twe_sensor  
 
