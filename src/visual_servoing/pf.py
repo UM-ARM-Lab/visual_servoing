@@ -29,7 +29,7 @@ def SE3(se3):
 # developed with rlybrdgs@umich.edu
 class ParticleFilter():
     def __init__(self):
-        self.num_samples = 5000
+        self.num_samples = 10
         self.resampling_pos_noise = 0.0058
         self.resampling_rot_noise = 0.01
         self.sensor_pos_variance = 0.001
@@ -94,8 +94,8 @@ class ParticleFilter():
             weights.shape[0], new_particles.shape[0], list(weights))
 
         # add a small amount of gaussian noise to sampled particles to avoid duplicates
-        #noises = np.zeros((self.num_samples, 6)) # 
-        noises = np.random.multivariate_normal(mean=np.zeros(6), cov=self.resampling_cov, size=(self.num_samples))  
+        noises = np.zeros((self.num_samples, 6)) # 
+        #noises = np.random.multivariate_normal(mean=np.zeros(6), cov=self.resampling_cov, size=(self.num_samples))  
         resampled_particles = np.vstack(
             [new_particles[i] for i in idx]) + noises
 
@@ -103,11 +103,11 @@ class ParticleFilter():
         for marker_id in self.marker_ids:
             p.removeBody(marker_id)
         self.marker_ids = []
-        #for particle in resampled_particles:
-        #    particle_mat = SE3(particle)
-        #    rot = particle_mat[0:3, 0:3]
-        #    trans = particle_mat[0:3, 3]
-        #    #draw_pose(trans, rot, mat=True)
-        #    self.marker_ids.append(draw_sphere_marker(trans, 0.05, (1.0, 0.0, 0.0, 1.0)))
+        for particle in resampled_particles:
+            particle_mat = SE3(particle)
+            rot = particle_mat[0:3, 0:3]
+            trans = particle_mat[0:3, 3]
+            #draw_pose(trans, rot, mat=True)
+            self.marker_ids.append(draw_sphere_marker(trans, 0.05, (1.0, 0.0, 0.0, 1.0)))
 
         return SE3(best_estimate)

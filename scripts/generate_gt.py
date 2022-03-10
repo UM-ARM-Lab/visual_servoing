@@ -77,7 +77,7 @@ while(True):
     pcl = o3d.geometry.PointCloud() 
     pcl.points = o3d.utility.Vector3dVector(pcl_raw.T)
     pcl.colors = o3d.utility.Vector3dVector(rgb_edit.reshape(-1, 3)/255.0)
-    #o3d.visualization.draw_geometries([pcl])
+    o3d.visualization.draw_geometries([pcl])
     cv2.waitKey(1)
 
 
@@ -103,5 +103,5 @@ while(True):
     Twe = Tcw @ Tec
     draw_pose(Twe[0:3, 3], Twe[0:3, 0:3], mat=True) 
 # draw_pose(camera.camera_eye, (np.linalg.inv(camera.get_extrinsics())@Tc1c2 )[0:3, 0:3], mat=True, axis_len=0.1)
-    pkl_write_example(Path("/home/ashwin/Desktop/temp/"), {"a": "a"}, 1) 
-    break
+    #pkl_write_example(Path("/home/ashwin/Desktop/temp/"), {"a": "a"}, 1) 
+    #break
