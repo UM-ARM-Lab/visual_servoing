@@ -33,7 +33,7 @@ class ParticleFilter():
         self.resampling_pos_noise = 0.0058
         self.resampling_rot_noise = 0.01
         self.sensor_pos_variance = 0.001
-        self.sensor_rot_variance = 0.01 
+        self.sensor_rot_variance = 100.01 
         self.is_setup = False
         self.sensor_cov = np.array([
                 [self.sensor_pos_variance, 0, 0, 0, 0, 0 ], 
@@ -89,8 +89,8 @@ class ParticleFilter():
             weights.shape[0], new_particles.shape[0], list(weights))
 
         # add a small amount of gaussian noise to sampled particles to avoid duplicates
-        noises = np.zeros((self.num_samples, 6)) # 
-        #noises = np.random.multivariate_normal(mean=np.zeros(6), cov=self.resampling_cov, size=(self.num_samples)) 
+        #noises = np.zeros((self.num_samples, 6)) # 
+        noises = np.random.multivariate_normal(mean=np.zeros(6), cov=self.resampling_cov, size=(self.num_samples)) 
         # build up new particles
         resampled_particles = np.vstack(
             [new_particles[i] for i in idx]) + noises

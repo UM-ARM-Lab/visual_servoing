@@ -75,7 +75,7 @@ tag_geometry = [tag0, tag1, tag2]
 ids = np.array([1, 2, 3])
 ids2 = np.array([4,5,6])
 
-pbvs = MarkerPBVS(camera, 0.9, 0.9, ids, tag_geometry, ids2, tag_geometry, False, 0.55)
+pbvs = MarkerPBVS(camera, 0.9, 0.9, ids, tag_geometry, ids2, tag_geometry, True, 0.55)
 sim_dt = 0.1#1/240
 p.setTimeStep(sim_dt)
 #p.setRealTimeSimulation(1)

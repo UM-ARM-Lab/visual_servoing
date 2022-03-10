@@ -183,8 +183,8 @@ class MarkerPBVS:
         # compute the joint velocities using jac_inv and PBVS twist cmd
         q_prime = jac_inv @ ctrl 
         # rescale joint velocities to self.max_joint_velo if the largest exceeds the limit 
-        if(np.max(q_prime) > self.max_joint_velo):
-            q_prime /= np.max(q_prime)
+        if(np.max(np.abs(q_prime)) > self.max_joint_velo):
+            q_prime /= np.max(np.abs(q_prime))
             q_prime *= self.max_joint_velo
         # compute the actual end effector velocity given the limit
         ctrl = jac @ q_prime
