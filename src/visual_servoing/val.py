@@ -30,16 +30,16 @@ class Val:
         if start_orientation is None:
             start_orientation = [0, 0, 0]
         if start_pos is None:
-            start_pos = [0, 0, 0]
+            start_pos = [0, 0, -0.0]
         self.client = p.connect(p.GUI)
         p.setAdditionalSearchPath(pybullet_data.getDataPath())
-        p.setGravity(0, 0, -10)
+        #p.setGravity(0, 0, -10)
 
         # Load Val URDF
         self.urdf =  p.loadURDF("models/husky_custom_description/urdf/mic09_description.urdf", start_pos, p.getQuaternionFromEuler(start_orientation))
         #self.urdf = p.loadURDF("models/hdt_michigan_description_orig/urdf/hdt_michigan_generated.urdf", start_pos,
         #                       p.getQuaternionFromEuler(start_orientation))
-        planeId = p.loadURDF("models/short_floor.urdf", [start_pos[0], start_pos[1], start_pos[2]-0.5], useFixedBase=1)
+        planeId = p.loadURDF("models/short_floor.urdf", [start_pos[0], start_pos[1], start_pos[2]-0.15], useFixedBase=1)
 
         # Organize joints into a dict from name->info
         self.joints_by_name = {}

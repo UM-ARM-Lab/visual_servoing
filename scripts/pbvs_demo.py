@@ -19,7 +19,7 @@ KEY_N = 110
 KEY_M = 109
 
 # Val robot and PVBS controller
-val = Val([0.0, 0.0, 0.0])
+val = Val([0.0, 0.0, -0.5])
 # y = -1.3
 camera = PyBulletCamera(camera_eye=np.array([0.7, -0.8, 0.5]), camera_look=np.array([0.7, 0.0, 0.2]))
 
@@ -75,8 +75,8 @@ tag_geometry = [tag0, tag1, tag2]
 ids = np.array([1, 2, 3])
 ids2 = np.array([4,5,6])
 
-pbvs = MarkerPBVS(camera, 0.1, 0.1, ids, tag_geometry, ids2, tag_geometry, True, 0.55)
-sim_dt = 0.02
+pbvs = MarkerPBVS(camera, 0.9, 0.9, ids, tag_geometry, ids2, tag_geometry, False, 0.55)
+sim_dt = 0.1#1/240
 p.setTimeStep(sim_dt)
 #p.setRealTimeSimulation(1)
 
@@ -119,8 +119,8 @@ armed = False
 
 while True:
     t0 = time.time()
-    p.stepSimulation()
 
+    p.stepSimulation()
     # Visualization ground truth AR link [delete me]
     tool_idx = val.left_tag[0]
     result = p.getLinkState(val.urdf,
