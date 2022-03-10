@@ -29,11 +29,11 @@ def SE3(se3):
 # developed with rlybrdgs@umich.edu
 class ParticleFilter():
     def __init__(self):
-        self.num_samples = 10
-        self.resampling_pos_noise = 0.0058
+        self.num_samples = 10000
+        self.resampling_pos_noise = 0.0010
         self.resampling_rot_noise = 0.01
         self.sensor_pos_variance = 0.001
-        self.sensor_rot_variance = 100.01 
+        self.sensor_rot_variance = 0.03 
         self.is_setup = False
         self.sensor_cov = np.array([
                 [self.sensor_pos_variance, 0, 0, 0, 0, 0 ], 
@@ -75,18 +75,34 @@ class ParticleFilter():
         new_particles = np.array([SE3(action_mat @ SE3(particle) ) for particle in self.particles])# self.particles 
 
         # find weight of each particle by seeing how well it matches the sensor reading
-        weights = np.ones(new_particles.shape[0])
+        self.weights = np.ones(new_particles.shape[0])
         if(sensor_pose is not None):
+            print("here")
             for i in range(new_particles.shape[0]):
-                weights[i] = self.particle_weight(
+                self.weights[i] = self.particle_weight(
                     new_particles[i], SE3(sensor_pose))
 
         # normalize particle weights so they sum to 1
-        self.weights /= np.sum(weights)
+        self.weights /= np.sum(self.weights)
+
+        
+        #self.best_estimate = new_particles[np.argmax(self.weights)]
+
+        self.best_estimate = np.average(self.particles, axis=0, weights=self.weights)
+        # visualize particles and weights
+        #for marker_id in self.marker_ids:
+        #    p.removeBody(marker_id)
+        #self.marker_ids = []
+        #for i, particle in enumerate(new_particles):
+        #    particle_mat = SE3(particle)
+        #    rot = particle_mat[0:3, 0:3]
+        #    trans = particle_mat[0:3, 3]
+        #    #draw_pose(trans, rot, mat=True)
+        #    self.marker_ids.append(draw_sphere_marker(trans, 0.02, (self.weights[i], 0.0, 0.0, 1.0)))
 
         # resample particles with probability equal to their weights
         idx = np.random.choice(
-            weights.shape[0], new_particles.shape[0], list(weights))
+            self.weights.shape[0], new_particles.shape[0], list(self.weights))
 
         # add a small amount of gaussian noise to sampled particles to avoid duplicates
         #noises = np.zeros((self.num_samples, 6)) # 
@@ -99,18 +115,10 @@ class ParticleFilter():
     # take action (Rod) and sensor_pose (Rod)
     def get_state(self):
         # use the weighted average of all particles as the state estimate
-        best_estimate = np.average(self.particles, axis=0, weights=self.weights)
+        #best_estimate = np.average(self.particles, axis=0)#, weights=self.weights)
         # use max weight particle as state estimate        
-        best_estimate = self.particles[np.argmax(self.weights)]
+        #best_estimate = self.particles[np.argmax(self.weights)]
+        #print(self.weights)
 
-        for marker_id in self.marker_ids:
-            p.removeBody(marker_id)
-        self.marker_ids = []
-        for particle in self.particles:
-            particle_mat = SE3(particle)
-            rot = particle_mat[0:3, 0:3]
-            trans = particle_mat[0:3, 3]
-            #draw_pose(trans, rot, mat=True)
-            self.marker_ids.append(draw_sphere_marker(trans, 0.02, (1.0, 0.0, 0.0, 1.0)))
 
-        return SE3(best_estimate)
+        return SE3(self.best_estimate)
