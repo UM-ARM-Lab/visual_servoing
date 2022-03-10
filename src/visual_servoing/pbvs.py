@@ -33,7 +33,7 @@ class MarkerPBVS:
     # eef_tag_geometry: (list of 4x3 numpy, each numpy mat is the 3d coordinates of
     # the 4 tag corners, tl, tr, br, bl in that order in the eef_tag 
     # coordinate system the list is length N for a board of N many tags)
-    def __init__(self, camera: Camera, k_v, k_omega, eef_tag_ids, eef_tag_geometry, target_tag_ids, target_tag_geometry, use_pf=False):
+    def __init__(self, camera: Camera, k_v, k_omega, eef_tag_ids, eef_tag_geometry, target_tag_ids, target_tag_geometry, use_pf=False, max_joint_velo=0):
         self.k_v = k_v
         self.k_omega = k_omega
         self.camera = camera
@@ -51,6 +51,7 @@ class MarkerPBVS:
         self.prev_twist = np.zeros(6)
         self.prev_time = time.time()
         self.pf = ParticleFilter()
+        self.max_joint_velo = max_joint_velo
 
     # Detect ArUco tags in a given RGB frame
     # Return a list of Marker objects
@@ -131,17 +132,36 @@ class MarkerPBVS:
         Twm[0:3, 3] = pos_unstable #pos[0:3]
         return Twm
 
+    # Get eef -> world transform Twe 
+    def get_eef_state_estimate(self, Twe_sensor):
+        if(self.use_pf):
+            if(self.pf.is_setup):
+                return self.pf.get_state()
+            else if(Twe_sensor is not None):
+                self.pf.setup(Twe_sensor)
+            else:
+                return Twe_sensor 
+        else:
+            return Twe_sensor  
+
+
+    def update_state_estimate(self, Twe_sensor):
+        # call PF update
+        dt = time.time() - self.prev_time
+        self.pf.update_particles(self.prev_twist, dt, Twe_sensor)  
+
     # Executes an iteration of PBVS control and returns a twist command
     # Two: (Pose of target object w.r.t world)
     # Tae: (Pose of end effector w.r.t. ar tag coordinates)
     # Returns the twist command [v, omega] and pose of end effector in world
-    def do_pbvs(self, rgb, depth, Two, Tae, debug=True):
-        # Find the EEF ar tag board
+    def do_pbvs(self, rgb, depth, Two, Tae, jac, jac_inv, debug=True):
+        # Find the EEF ar tag board 
         markers = self.detect_markers(rgb)
         ref_marker = self.get_board_pose(markers, self.eef_board, rgb)
         if debug:
             cv2.imshow("image", rgb)
 
+        # If it was found, compute its pose estimate
         ctrl = np.zeros(6)
         Twe = np.zeros((4,4))
         Twe_sensor = None
@@ -150,21 +170,30 @@ class MarkerPBVS:
             # compute transform from world to end effector by including rigid transform from
             # eef ar tag to end effector frame
             Twe_sensor = Twa_sensor @ Tae
-            if(not self.pf.is_setup):
-                self.pf.setup(Twe_sensor)
-                self.prev_time = time.time()
-            if(not self.use_pf):
-                return self.get_control(Twe_sensor, Two), Twe_sensor 
-        if(self.pf.is_setup and self.use_pf):        
-            curTime = time.time()
-            dt = curTime - self.prev_time
-            self.prev_time = curTime
-            Twe = self.pf.get_next_state(self.prev_twist, dt, Twe_sensor) 
-            # compute twist command
+
+        # compute twist command based on state estimate and target
+        self.update_state_estimate(Twe_sensor)
+        Twe = self.get_eef_state_estimate(Twe_sensor)
+        if(Twe is not None):
             ctrl = self.get_control(Twe, Two)
-            self.prev_twist = ctrl
+        else:
+            ctrl = np.zeros(6)
+        
+        # compute the joint velocities using jac_inv and PBVS twist cmd
+        q_prime = jac_inv @ ctrl 
+        # rescale joint velocities to self.max_joint_velo if the largest exceeds the limit 
+        if(np.max(q_prime) > self.max_joint_velo):
+            q_prime /= np.max(q_prime)
+            q_prime *= self.max_joint_velo
+        # compute the actual end effector velocity given the limit
+        ctrl = jac @ q_prime
+
+        # store results
+        self.prev_time = time.time()
+        self.prev_twist = ctrl
         return ctrl, Twe
     
+    #def do_pbvs(self, rgb, depth, Two, Tae, debug=True):
     # Find pose of target board
     def get_target_pose(self, rgb, depth, Tao, debug=True):
         markers = self.detect_markers(rgb)

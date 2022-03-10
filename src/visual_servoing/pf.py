@@ -58,6 +58,7 @@ class ParticleFilter():
         # particles are N x 6 where each 6 vec represents SE3 pose via <xyz, rod>
         mu_start = SE3(mu_start)
         self.particles = np.vstack([mu_start for _ in range(self.num_samples)])
+        self.weights = np.ones(self.num_samples)/self.num_samples
         self.is_setup = True
 
     # sample the sensor reading from a distribution centered at position to get its probability
@@ -65,10 +66,7 @@ class ParticleFilter():
         w_pos = scipy.stats.multivariate_normal.pdf(sensor_pose, mean=particle_pose, cov=self.sensor_cov)
         return w_pos
 
-
-    # take action (Rod) and sensor_pose (Rod)
-    def get_next_state(self, action, dt, sensor_pose=None):
-        #print(dt)
+    def update_particles(self, action, dt, sensor_pose=None):
         # make action into matrix via Exp  
         action_mat = SE3(action * dt)
         # convert particles into matrix and apply action, then convert back to Rod
@@ -82,12 +80,7 @@ class ParticleFilter():
                     new_particles[i], SE3(sensor_pose))
 
         # normalize particle weights so they sum to 1
-        weights /= np.sum(weights)
-
-        # use the weighted average of all particles as the state estimate
-        best_estimate = np.average(new_particles, axis=0, weights=weights)
-        # use max weight particle as state estimate        
-        best_estimate = new_particles[np.argmax(weights)]
+        self.weights /= np.sum(weights)
 
         # resample particles with probability equal to their weights
         idx = np.random.choice(
@@ -95,9 +88,18 @@ class ParticleFilter():
 
         # add a small amount of gaussian noise to sampled particles to avoid duplicates
         noises = np.zeros((self.num_samples, 6)) # 
-        #noises = np.random.multivariate_normal(mean=np.zeros(6), cov=self.resampling_cov, size=(self.num_samples))  
+        #noises = np.random.multivariate_normal(mean=np.zeros(6), cov=self.resampling_cov, size=(self.num_samples)) 
+        # build up new particles
         resampled_particles = np.vstack(
             [new_particles[i] for i in idx]) + noises
+        self.particles = resampled_particles 
+
+    # take action (Rod) and sensor_pose (Rod)
+    def get_state(self):
+        # use the weighted average of all particles as the state estimate
+        best_estimate = np.average(new_particles, axis=0, weights=weights)
+        # use max weight particle as state estimate        
+        best_estimate = new_particles[np.argmax(weights)]
 
         self.particles = resampled_particles 
         for marker_id in self.marker_ids:

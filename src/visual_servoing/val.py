@@ -106,6 +106,12 @@ class Val:
         else:
             return np.vstack((jac_t[:, 11:18], jac_r[:, 11:18]))
 
+    def get_jacobian_pinv(side):
+        J = self.get_arm_jacobian(side)
+        lmda = 0.0000001
+        J_pinv = np.dot(np.linalg.inv(np.dot(J.T, J) + lmda * np.eye(7)), J.T)
+        return J_pinv
+
     def psuedoinv_ik_controller(self, side, target, current=None):
         x_prime = target
         if current is not None:
@@ -117,8 +123,8 @@ class Val:
         J_pinv = np.dot(np.linalg.inv(np.dot(J.T, J) + lmda * np.eye(7)), J.T)
 
         q_prime = np.dot(J_pinv, x_prime)
-        #if np.linalg.norm(q_prime) > 0.55:
-        #    q_prime = 0.55 * q_prime / np.linalg.norm(q_prime)  # * np.linalg.norm(x_prime)
+        if np.linalg.norm(q_prime) > 0.55:
+            q_prime = 0.55 * q_prime / np.linalg.norm(q_prime)  # * np.linalg.norm(x_prime)
 
 
 
