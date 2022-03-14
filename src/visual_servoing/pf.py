@@ -30,6 +30,7 @@ def SE3(se3):
 class ParticleFilter():
     def __init__(self):
         self.num_samples = 1000
+        self.resampling_percent = 1#0.2
         self.resampling_pos_noise = 0.0005
         self.resampling_rot_noise = 0.01
         self.sensor_pos_variance = 0.001
@@ -101,13 +102,19 @@ class ParticleFilter():
         #    self.marker_ids.append(draw_sphere_marker(trans, 0.02, (self.weights[i], 0.0, 0.0, 1.0)))
 
         # resample particles with probability equal to their weights
-        idx = np.random.choice(
-            self.weights.shape[0], new_particles.shape[0], list(self.weights))
+        num_resample = new_particles.shape[0]#int(self.resampling_percent*new_particles.shape[0]) 
+        new_sample_idx= np.random.choice(
+            self.weights.shape[0], num_resample, list(self.weights))
 
         # add a small amount of gaussian noise to sampled particles to avoid duplicates
         #noises = np.zeros((self.num_samples, 6)) # 
         noises = np.random.multivariate_normal(mean=np.zeros(6), cov=self.resampling_cov, size=(self.num_samples)) 
         # build up new particles
+        #resampled_particles[np.random.choice(new_particles.shape[0], num_resample)] = new_particles[new_sample_idx] 
+        #resampled_particles = new_particles
+        #resampled_particles[np.arange(new_particles.shape[0])] = new_particles[new_sample_idx]
+        #resampled_particles = resampled_particles + noises
+        idx = np.random.choice(self.weights.shape[0], new_particles.shape[0], list(self.weights))
         resampled_particles = np.vstack(
             [new_particles[i] for i in idx]) + noises
         self.particles = resampled_particles 

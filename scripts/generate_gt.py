@@ -10,7 +10,7 @@ from visual_servoing.camera import *
 import open3d as o3d
 from visual_servoing.utils import draw_pose, draw_sphere_marker, erase_pos
 
-from link_bot_data.coerce_types import coerce_types
+#from link_bot_data.coerce_types import coerce_types
 import pickle
 client = p.connect(p.GUI)
 #p.setGravity(0, 0, -10)
