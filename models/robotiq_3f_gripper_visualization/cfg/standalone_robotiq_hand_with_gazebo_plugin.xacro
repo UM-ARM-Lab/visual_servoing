@@ -1,0 +1,19 @@
+<?xml version="1.0" ?>
+<robot name="robotiq-3f-gripper_articulated" xmlns:xacro="http://ros.org/wiki/xacro">
+
+    <link name="world"/>
+
+    <xacro:include filename="$(find robotiq_3f_gripper_visualization)/cfg/robotiq_hand_macro.urdf.xacro"/>
+    <xacro:robotiq_hand prefix="l_" parent="world">
+        <origin xyz="0 0 0.1" rpy="0 1 0"/>
+    </xacro:robotiq_hand>
+
+    <gazebo>
+        <plugin name="RobotiqHandPlugin" filename="libRobotiqHandPlugin.so">
+            <side>left</side>
+            <kp_position>0.2</kp_position>
+            <kd_position>0.05</kd_position>
+        </plugin>
+    </gazebo>
+</robot>
+
