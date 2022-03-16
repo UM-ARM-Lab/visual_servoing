@@ -37,19 +37,23 @@ print(gripper_pcl)
 gpcl = o3d.geometry.PointCloud()
 gpcl.points = o3d.utility.Vector3dVector(gripper_pcl)
 #o3d.visualization.draw_geometries([gpcl])
+target = np.hstack(( np.array([0.5, 0.5, 0.5]), np.array(p.getQuaternionFromEuler((0, 0, 0))) ) )
 
+uids_target_marker = None
+uids_eef_marker = None
 while(True):
     p.stepSimulation()
     # create point cloud from RGBD image
     rgb, depth = camera.get_image()
     rgb_edit = rgb[..., [2, 1, 0]].copy()
-    cv2.imshow("RGB", rgb_edit)
+    #cv2.imshow("RGB", rgb_edit)
     pcl_raw = camera.get_pointcloud(depth)
     pcl = o3d.geometry.PointCloud() 
     pcl.points = o3d.utility.Vector3dVector(pcl_raw.T)
     pcl.colors = o3d.utility.Vector3dVector(rgb_edit.reshape(-1, 3)/255.0)
     #o3d.visualization.draw_geometries([pcl])
-    cv2.waitKey(1)
+    #cv2.waitKey(1)
+    #victor.set_velo([10.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0])
 
 
     # draw tool ground truth
@@ -60,8 +64,15 @@ while(True):
                             computeForwardKinematics=1)
 
     link_trn, link_rot, com_trn, com_rot, frame_pos, frame_rot, link_vt, link_vr = result
-    draw_pose(link_trn, link_rot)
-    ## draw camera pose
+    if (uids_eef_marker is not None):
+        erase_pos(uids_eef_marker)
+    uids_eef_marker = draw_pose(link_trn, link_rot)
+
+    if (uids_target_marker is not None):
+        erase_pos(uids_target_marker)
+    uids_target_marker = draw_pose(target[0:3], target[3:7]) 
+    victor.psuedoinv_ik_controller("left", np.hstack(((target[0:3] - link_trn)*10, target[4:7])))
+   
     #draw_pose(np.linalg.inv(camera.get_extrinsics())[0:3, 3], np.linalg.inv(camera.get_extrinsics())[0:3, 0:3], mat=True)
     #Tcw = camera.get_extrinsics()
     #Tew = np.zeros((4,4))
