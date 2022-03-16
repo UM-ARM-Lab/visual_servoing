@@ -1,7 +1,7 @@
 import numpy as np
 import pybullet as p
 import pybullet_data
-
+from visual_servoing.utils import get_link_tf
 # Joint names
 right_arm_joints = [
     'victor_right_arm_joint_1',
@@ -13,6 +13,15 @@ right_arm_joints = [
     'victor_right_arm_joint_7',
 ]
 
+left_arm_joints = [
+    'victor_left_arm_joint_1',
+    'victor_left_arm_joint_2',
+    'victor_left_arm_joint_3',
+    'victor_left_arm_joint_4',
+    'victor_left_arm_joint_5',
+    'victor_left_arm_joint_6',
+    'victor_left_arm_joint_7',
+]
 
 class Victor:
     def __init__(self, start_pos=None, start_orientation=None):
@@ -32,14 +41,26 @@ class Victor:
             self.joints_by_name[joint_name] = info
             self.links_by_name[link_name] = info
             print(f"idx: {info[0]}, joint: {joint_name}, link: {link_name}, type:{info[2]} ")
-        eef_idx = 16
+        self.eef_idx = 16
 
         # Get arm and end effector joint indicies
-        self.right_tool = p.getJointInfo(self.urdf, eef_idx)
+        self.right_tool = p.getJointInfo(self.urdf, self.eef_idx)
+        self.left_tool = p.getJointInfo(self.urdf, self.eef_idx)
 
         self.right_arm_joints = []
-        for i in range(1, 8):
-            self.right_arm_joints.append(self.joints_by_name["joint" + str(i)][0])
+        self.left_arm_joints = []
+        for joint_name in left_arm_joints: 
+            self.left_arm_joints.append(self.joints_by_name[joint_name][0])
+
+    # transform helper, gets Tab b --> a 
+    def get_tf(self, link_a, link_b):
+        #joints_by_name[link_a]
+        link_info_a = self.links_by_name[link_a]
+        link_info_b = self.links_by_name[link_b]
+        Twa = get_link_tf(self.urdf, link_info_a[0])
+        Twb = get_link_tf(self.urdf, link_info_b[0])
+        Tab = Twb @ np.linalg.inv(Twa)
+        return Tab
 
     def get_eef_pos(self, side):
         """
@@ -79,8 +100,7 @@ class Victor:
         jac_r = np.array(jac_r)
         
         if side == "left": 
-
-            return np.vstack((jac_t[:, 6+6:13+6], jac_r[:, 6+6:13+6]))  # Jacobian is 6 (end effector dof) x 7 (joints)
+            return np.vstack((jac_t[:, 0:7], jac_r[:, 0:7]))  # Jacobian is 6 (end effector dof) x 7 (joints)
         else:
             return np.vstack((jac_t[:, 11:18], jac_r[:, 11:18]))
 
@@ -103,8 +123,6 @@ class Victor:
         q_prime = np.dot(J_pinv, x_prime)
         if np.linalg.norm(q_prime) > 0.55:
             q_prime = 0.55 * q_prime / np.linalg.norm(q_prime)  # * np.linalg.norm(x_prime)
-
-
 
         # joint limits 
 

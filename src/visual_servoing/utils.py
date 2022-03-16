@@ -2,6 +2,20 @@ import pybullet as p
 import numpy as np
 
 
+def get_link_tf(urdf, idx):
+    result = p.getLinkState(urdf,
+                            idx,
+                            computeLinkVelocity=1,
+                            computeForwardKinematics=1)
+
+    link_trn, link_rot, com_trn, com_rot, frame_pos, frame_rot, link_vt, link_vr = result
+    rot_mat = np.array(p.getMatrixFromQuaternion(link_rot)).reshape(3,3)
+    tf = np.zeros((4,4))
+    tf[0:3, 0:3] = rot_mat
+    tf[0:3, 3] = link_trn
+    tf[3, 3] = 1
+    return tf
+
 def draw_sphere_marker(position, radius, color):
     vs_id = p.createVisualShape(p.GEOM_SPHERE, radius=radius, rgbaColor=color)
     marker_id = p.createMultiBody(basePosition=position, baseCollisionShapeIndex=-1, baseVisualShapeIndex=vs_id)
