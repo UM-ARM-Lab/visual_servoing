@@ -20,6 +20,12 @@ camera = PyBulletCamera(np.array([1.0, -1.0, 1.0]), np.array([1.0, 0.0, 1.0]))
 # load pickle
 gripper_pts = pickle.load(open("robot_points.pkl", 'rb'))
 gripper_pcl = []
+
+#joint_to_tf = {}
+# statically initialize TF from world -> palm
+#joint_to_tf["victor"]
+# apply transforms for downstream joints
+
 for link in gripper_pts ['points'].keys():
     if(link in victor.links_by_name):
         pass
@@ -36,7 +42,7 @@ gripper_pcl = gripper_pcl[:, 0:3]
 print(gripper_pcl)
 gpcl = o3d.geometry.PointCloud()
 gpcl.points = o3d.utility.Vector3dVector(gripper_pcl)
-#o3d.visualization.draw_geometries([gpcl])
+o3d.visualization.draw_geometries([gpcl])
 target = np.hstack(( np.array([0.5, 0.5, 0.5]), np.array(p.getQuaternionFromEuler((0, 0, 0))) ) )
 
 uids_target_marker = None
