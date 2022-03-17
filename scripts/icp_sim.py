@@ -38,7 +38,7 @@ for link in links:
     tf = parent_tf @ victor.get_tf(parent_link, link )
     link_tf[link] = tf
 
-
+links.insert(0, "l_palm")
 for link in links: 
     pts = np.array(gripper_pts['points'][link]).T
     pts = np.vstack((pts, np.ones(pts.shape[1]))) 
