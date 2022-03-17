@@ -52,14 +52,14 @@ class Victor:
         for joint_name in left_arm_joints: 
             self.left_arm_joints.append(self.joints_by_name[joint_name][0])
 
-    # transform helper, gets Tab b --> a 
+    # transform helper, gets Tab 
     def get_tf(self, link_a, link_b):
         #joints_by_name[link_a]
         link_info_a = self.links_by_name[link_a]
         link_info_b = self.links_by_name[link_b]
         Twa = get_link_tf(self.urdf, link_info_a[0])
         Twb = get_link_tf(self.urdf, link_info_b[0])
-        Tab = Twb @ np.linalg.inv(Twa)
+        Tab = np.linalg.inv(Twa) @ Twb
         return Tab
 
     def get_eef_pos(self, side):

@@ -35,7 +35,7 @@ for link in links:
     if(parent_link not in link_tf):
         print("ERROR")
     parent_tf = link_tf[parent_link]
-    tf = parent_tf @ victor.get_tf(parent_link ,link)
+    tf = parent_tf @ victor.get_tf(parent_link, link )
     link_tf[link] = tf
 
 
