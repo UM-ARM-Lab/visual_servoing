@@ -17,41 +17,10 @@ from visual_servoing.victor import *
 victor = Victor()
 camera = PyBulletCamera(np.array([1.0, -1.0, 1.0]), np.array([1.0, 0.0, 1.0]))
 
-# load pickle
-gripper_pts = pickle.load(open("robot_points.pkl", 'rb'))
-gripper_pcl = []
-
-link_tf = {}
-# statically initialize TF from world -> palm
-link_tf["l_palm"] = np.eye(4)
-# apply transforms for downstream joints
-links = list(gripper_pts['points'].keys())[10:22]
-
-for link in links:
-    link = str(link)
-    link_info = victor.links_by_name[link]
-    parent_idx = link_info[16]
-    parent_link = p.getJointInfo(victor.urdf, parent_idx)[12].decode("ascii")
-    if(parent_link not in link_tf):
-        print("ERROR")
-    parent_tf = link_tf[parent_link]
-    tf = parent_tf @ victor.get_tf(parent_link, link )
-    link_tf[link] = tf
-
-links.insert(0, "l_palm")
-for link in links: 
-    pts = np.array(gripper_pts['points'][link]).T
-    pts = np.vstack((pts, np.ones(pts.shape[1]))) 
-    tf = link_tf[link] #get_link_tf(victor.urdf, victor.links_by_name[link][0])
-    pts_tf = tf @ pts
-    gripper_pcl.append(pts_tf.T)
-gripper_pcl = np.vstack(gripper_pcl)
-gripper_pcl = gripper_pcl[:, 0:3]
-print(gripper_pcl)
 gpcl = o3d.geometry.PointCloud()
-gpcl.points = o3d.utility.Vector3dVector(gripper_pcl)
+gpcl.points = o3d.utility.Vector3dVector(victor.get_gripper_pcl(np.eye(4)))
 o3d.visualization.draw_geometries([gpcl])
-#target = np.hstack(( np.array([0.5, 0.5, 0.5]), np.array(p.getQuaternionFromEuler((0, 0, 0))) ) )
+target = np.hstack(( np.array([0.5, 0.5, 0.5]), np.array(p.getQuaternionFromEuler((0, 0, 0))) ) )
 
 uids_target_marker = None
 uids_eef_marker = None

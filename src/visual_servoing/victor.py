@@ -2,6 +2,7 @@ import numpy as np
 import pybullet as p
 import pybullet_data
 from visual_servoing.utils import get_link_tf
+import pickle
 # Joint names
 right_arm_joints = [
     'victor_right_arm_joint_1',
@@ -52,6 +53,9 @@ class Victor:
         for joint_name in left_arm_joints: 
             self.left_arm_joints.append(self.joints_by_name[joint_name][0])
 
+        # load pickle
+        self.gripper_pkl = pickle.load(open("robot_points.pkl", 'rb'))
+
     # transform helper, gets Tab 
     def get_tf(self, link_a, link_b):
         #joints_by_name[link_a]
@@ -61,6 +65,37 @@ class Victor:
         Twb = get_link_tf(self.urdf, link_info_b[0])
         Tab = np.linalg.inv(Twa) @ Twb
         return Tab
+
+    def get_gripper_pcl(self, tf_to_palm): 
+        gripper_pcl = []
+
+        link_tf = {}
+        # statically initialize TF from world -> palm
+        link_tf["l_palm"] = np.eye(4)
+        # apply transforms for downstream joints
+        links = list(self.gripper_pkl['points'].keys())[10:22]
+
+        for link in links:
+            link = str(link)
+            link_info = self.links_by_name[link]
+            parent_idx = link_info[16]
+            parent_link = p.getJointInfo(self.urdf, parent_idx)[12].decode("ascii")
+            if(parent_link not in link_tf):
+                print("ERROR")
+            parent_tf = link_tf[parent_link]
+            tf = parent_tf @ self.get_tf(parent_link, link )
+            link_tf[link] = tf
+
+        links.insert(0, "l_palm")
+        for link in links: 
+            pts = np.array(self.gripper_pkl['points'][link]).T
+            pts = np.vstack((pts, np.ones(pts.shape[1]))) 
+            tf = link_tf[link] #get_link_tf(victor.urdf, victor.links_by_name[link][0])
+            pts_tf = tf @ pts
+            gripper_pcl.append(pts_tf.T)
+        gripper_pcl = np.vstack(gripper_pcl)
+        gripper_pcl = gripper_pcl[:, 0:3]
+        return gripper_pcl
 
     def get_eef_pos(self, side):
         """
