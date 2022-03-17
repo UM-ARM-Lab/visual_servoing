@@ -42,7 +42,7 @@ for link in links:
 for link in links: 
     pts = np.array(gripper_pts['points'][link]).T
     pts = np.vstack((pts, np.ones(pts.shape[1]))) 
-    tf = get_link_tf(victor.urdf, victor.links_by_name[link][0])
+    tf = link_tf[link] #get_link_tf(victor.urdf, victor.links_by_name[link][0])
     pts_tf = tf @ pts
     gripper_pcl.append(pts_tf.T)
 gripper_pcl = np.vstack(gripper_pcl)
