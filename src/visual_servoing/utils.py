@@ -9,10 +9,10 @@ def get_link_tf(urdf, idx):
                             computeForwardKinematics=1)
 
     link_trn, link_rot, com_trn, com_rot, frame_pos, frame_rot, link_vt, link_vr = result
-    rot_mat = np.array(p.getMatrixFromQuaternion(link_rot)).reshape(3,3)
+    rot_mat = np.array(p.getMatrixFromQuaternion(frame_rot)).reshape(3,3)
     tf = np.zeros((4,4))
     tf[0:3, 0:3] = rot_mat
-    tf[0:3, 3] = link_trn
+    tf[0:3, 3] = frame_pos
     tf[3, 3] = 1
     return tf
 
