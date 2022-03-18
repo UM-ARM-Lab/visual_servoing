@@ -78,6 +78,13 @@ class PyBulletCamera(Camera):
         proj_3x3[2, 2] = 1
         return proj_3x3
 
+    # return OpenGL view mat, Tcw
+    def get_view(self):
+        # Note that the OpenGL [C2] and OpenCV [C/C1] camera systems are different
+        # An additional transform is needed
+        view = np.array(self.ogl_view_matrix).reshape([4, 4], order='F')
+        return view
+
     def get_extrinsics(self):
         # Note that the OpenGL [C2] and OpenCV [C/C1] camera systems are different
         # An additional transform is needed

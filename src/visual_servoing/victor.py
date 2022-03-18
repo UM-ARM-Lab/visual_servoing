@@ -71,7 +71,7 @@ class Victor:
 
         link_tf = {}
         # statically initialize TF from world -> palm
-        link_tf["l_palm"] = np.eye(4)
+        link_tf["l_palm"] = tf_to_palm 
         # apply transforms for downstream joints
         links = list(self.gripper_pkl['points'].keys())[10:22]
 

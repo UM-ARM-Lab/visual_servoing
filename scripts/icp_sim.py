@@ -17,9 +17,7 @@ from visual_servoing.victor import *
 victor = Victor()
 camera = PyBulletCamera(np.array([1.0, -1.0, 1.0]), np.array([1.0, 0.0, 1.0]))
 
-gpcl = o3d.geometry.PointCloud()
-gpcl.points = o3d.utility.Vector3dVector(victor.get_gripper_pcl(np.eye(4)))
-o3d.visualization.draw_geometries([gpcl])
+#o3d.visualization.draw_geometries([gpcl])
 target = np.hstack(( np.array([0.5, 0.5, 0.5]), np.array(p.getQuaternionFromEuler((0, 0, 0))) ) )
 
 uids_target_marker = None
@@ -34,7 +32,6 @@ while(True):
     pcl = o3d.geometry.PointCloud() 
     pcl.points = o3d.utility.Vector3dVector(pcl_raw.T)
     pcl.colors = o3d.utility.Vector3dVector(rgb_edit.reshape(-1, 3)/255.0)
-    #o3d.visualization.draw_geometries([pcl])
     #cv2.waitKey(1)
     #victor.set_velo([10.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0])
 
@@ -47,23 +44,35 @@ while(True):
                             computeForwardKinematics=1)
 
     link_trn, link_rot, com_trn, com_rot, frame_pos, frame_rot, link_vt, link_vr = result
-    if (uids_eef_marker is not None):
-        erase_pos(uids_eef_marker)
-    uids_eef_marker = draw_pose(link_trn, link_rot)
+    #if (uids_eef_marker is not None):
+    #    erase_pos(uids_eef_marker)
+    #uids_eef_marker = draw_pose(link_trn, link_rot)
 
-    if (uids_target_marker is not None):
-        erase_pos(uids_target_marker)
-    uids_target_marker = draw_pose(target[0:3], target[3:7]) 
-    victor.psuedoinv_ik_controller("left", np.hstack(((target[0:3] - link_trn)*10, target[4:7])))
+    #if (uids_target_marker is not None):
+    #    erase_pos(uids_target_marker)
+    #uids_target_marker = draw_pose(target[0:3], target[3:7]) 
+    #victor.psuedoinv_ik_controller("left", np.hstack(((target[0:3] - link_trn)*10, target[4:7])))
    
-    #draw_pose(np.linalg.inv(camera.get_extrinsics())[0:3, 3], np.linalg.inv(camera.get_extrinsics())[0:3, 0:3], mat=True)
-    #Tcw = camera.get_extrinsics()
-    #Tew = np.zeros((4,4))
-    #Tew[0:3, 0:3] = np.array(p.getMatrixFromQuaternion(link_rot)).reshape(3,3) 
-    #Tew[0:3, 3] = link_trn
-    #Tew[3,3] = 1
-    #Tec = np.linalg.inv(Tcw) @ Tew
-
-    ## draw EEF pose as observed from camera gt
+    draw_pose(np.linalg.inv(camera.get_extrinsics())[0:3, 3], np.linalg.inv(camera.get_extrinsics())[0:3, 0:3], mat=True)
+    Tcw = camera.get_view() 
+    Twe = np.zeros((4,4))
+    Twe[0:3, 0:3] = np.array(p.getMatrixFromQuaternion(frame_rot)).reshape(3,3) 
+    Twe[0:3, 3] = frame_pos
+    Twe[3,3] = 1
+    Tce = Tcw @ Twe 
+    # draw EEF pose as observed from camera gt
     #Twe = Tcw @ Tec
     #draw_pose(Twe[0:3, 3], Twe[0:3, 0:3], mat=True) 
+
+    pc_t = victor.get_gripper_pcl(Twe)
+    print(pc_t.shape)
+    draw_sphere_marker(np.array([-0.5, -0.5, -0.5]), 0.11, (1.0, 0.0, 0.0, 1.0))
+    #draw_pose(np.array([-0.5, -0.5, -0.5]), p.getQuaternionFromEuler((0, 0, 0))) 
+    for pt in pc_t:
+        #draw_sphere_marker((pt[0], pt[1], pt[2]), 0.11, (1.0, 0.0, 0.0, 1.0))
+        draw_pose(pt, p.getQuaternionFromEuler((0, 0, 0))) 
+        print(pt)
+
+    gpcl = o3d.geometry.PointCloud()
+    gpcl.points = o3d.utility.Vector3dVector(victor.get_gripper_pcl(Tce))
+    o3d.visualization.draw_geometries([pcl, gpcl])
