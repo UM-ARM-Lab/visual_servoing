@@ -63,16 +63,26 @@ while(True):
     # draw EEF pose as observed from camera gt
     #Twe = Tcw @ Tec
     #draw_pose(Twe[0:3, 3], Twe[0:3, 0:3], mat=True) 
+    
+    Twc = np.linalg.inv(Tcw)
+    draw_pose(Twc[0:3, 3], Twc[0:3, 0:3], mat=True)
 
-    pc_t = victor.get_gripper_pcl(Twe)
-    print(pc_t.shape)
-    draw_sphere_marker(np.array([-0.5, -0.5, -0.5]), 0.11, (1.0, 0.0, 0.0, 1.0))
+    #pc_t = victor.get_gripper_pcl(Twe)
+    #pc_t = victor.get_gripper_pcl(Twc @ Tce)
+    #print(pc_t.shape)
+    #draw_sphere_marker(np.array([-0.5, -0.5, -0.5]), 0.11, (1.0, 0.0, 0.0, 1.0))
     #draw_pose(np.array([-0.5, -0.5, -0.5]), p.getQuaternionFromEuler((0, 0, 0))) 
-    for pt in pc_t:
-        #draw_sphere_marker((pt[0], pt[1], pt[2]), 0.11, (1.0, 0.0, 0.0, 1.0))
-        draw_pose(pt, p.getQuaternionFromEuler((0, 0, 0))) 
-        print(pt)
+    #for pt in pcl_raw.T:
+    #    #draw_sphere_marker((pt[0], pt[1], pt[2]), 0.11, (1.0, 0.0, 0.0, 1.0))
+    #    pt = np.hstack((pt, 1))
+    #    pt = (Twc @ pt)
+    #    #pt = pt[0:3] / pt[3]        
+    #    draw_pose(pt[0:3], p.getQuaternionFromEuler((0, 0, 0)), axis_len=0.01) 
+    #    print(pt)
+
+    #mesh_frame = o3d.geometry.TriangleMesh.create_coordinate_frame(
+    #size=0.6, origin=(Tce@np.hstack((frame_pos, 1)))[0:3])
 
     gpcl = o3d.geometry.PointCloud()
-    gpcl.points = o3d.utility.Vector3dVector(victor.get_gripper_pcl(Tce))
+    gpcl.points = o3d.utility.Vector3dVector(victor.get_gripper_pcl(Twe))#Tce) 
     o3d.visualization.draw_geometries([pcl, gpcl])

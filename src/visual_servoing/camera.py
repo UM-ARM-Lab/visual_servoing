@@ -61,8 +61,9 @@ class PyBulletCamera(Camera):
             cameraUpVector=camera_up)
 
         self.projectionMatrix = np.asarray(self.ogl_projection_matrix).reshape([4, 4], order='F')
-        # viewMatrix = np.asarray(self.ogl_view_matrix).reshape([4, 4], order='F')
-        self.T = np.linalg.inv(self.projectionMatrix)
+        self.viewMatrix = np.asarray(self.ogl_view_matrix).reshape([4, 4], order='F')
+        #self.T = np.linalg.inv(self.projectionMatrix)
+        self.T = np.linalg.inv(np.matmul(self.projectionMatrix, self.viewMatrix))
         u, v = np.meshgrid(np.arange(start=0, stop=self.image_dim[0]), np.arange(start=0, stop=self.image_dim[1]))
         self.u = ((2 * u - self.image_dim[0]) / self.image_dim[0]).reshape(-1)
         self.v = ((2 * v - self.image_dim[1]) / self.image_dim[1]).reshape(-1)
