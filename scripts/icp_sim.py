@@ -13,12 +13,26 @@ import open3d as o3d
 from visual_servoing.utils import get_link_tf, draw_pose, draw_sphere_marker, erase_pos
 import pickle
 from visual_servoing.victor import *
+import copy
 
 victor = Victor()
 camera = PyBulletCamera(np.array([1.0, -1.0, 1.0]), np.array([1.0, 0.0, 1.0]))
 
 #o3d.visualization.draw_geometries([gpcl])
 target = np.hstack(( np.array([0.5, 0.5, 0.5]), np.array(p.getQuaternionFromEuler((0, 0, 0))) ) )
+
+
+def draw_registration_result(source, target, transformation):
+    source_temp = copy.deepcopy(source)
+    target_temp = copy.deepcopy(target)
+    source_temp.paint_uniform_color([1, 0.706, 0])
+    target_temp.paint_uniform_color([0, 0.651, 0.929])
+    source_temp.transform(transformation)
+    o3d.visualization.draw_geometries([source_temp, target_temp],
+                                      zoom=0.4459,
+                                      front=[0.9288, -0.2951, -0.2242],
+                                      lookat=[1.6784, 2.0612, 1.4451],
+                                      up=[-0.3402, -0.9189, -0.1996])
 
 uids_target_marker = None
 uids_eef_marker = None
@@ -85,4 +99,22 @@ while(True):
 
     gpcl = o3d.geometry.PointCloud()
     gpcl.points = o3d.utility.Vector3dVector(victor.get_gripper_pcl(Twe))#Tce) 
+
+    # ICP 
+    reg = o3d.pipelines.registration.registration_icp(
+        pcl, gpcl, 0.1, np.eye(4), o3d.pipelines.registration.TransformationEstimationPointToPoint()
+    )
+    #print(reg.transformation)
+    evaluation = o3d.pipelines.registration.evaluate_registration(
+    pcl, gpcl, 0.1, np.eye(4))
+    print(evaluation)
+    evaluation_2 = o3d.pipelines.registration.evaluate_registration(
+    pcl, gpcl, 0.1, reg.transformation)
+    print(evaluation_2)
+
+    draw_registration_result(pcl, gpcl, reg.transformation)
+
     o3d.visualization.draw_geometries([pcl, gpcl])
+    # mask out non-gripper link
+    # icp accounting for known occlusion/free space
+    # deep learning
