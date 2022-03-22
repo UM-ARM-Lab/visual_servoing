@@ -68,8 +68,8 @@ class PyBulletCamera(Camera):
         intrinsic[0:3, 0:3] = self.get_intrinsics()
         intrinsic[3, 3] = 1
         #self.T = np.linalg.inv(intrinsic)
-        #self.T = np.linalg.inv(self.projectionMatrix)
-        self.T = np.linalg.inv(np.matmul(self.projectionMatrix, self.viewMatrix))
+        self.T = np.linalg.inv(self.projectionMatrix)
+        #self.T = np.linalg.inv(np.matmul(self.projectionMatrix, self.viewMatrix))
         u, v = np.meshgrid(np.arange(start=0, stop=self.image_dim[0]), np.arange(start=0, stop=self.image_dim[1]))
         self.u = ((2 * u - self.image_dim[0]) / self.image_dim[0]).reshape(-1)
         self.v = -((2 * v - self.image_dim[1]) / self.image_dim[1]).reshape(-1)
