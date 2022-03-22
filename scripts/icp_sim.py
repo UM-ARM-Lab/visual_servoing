@@ -21,6 +21,19 @@ camera = PyBulletCamera(np.array([1.0, -1.0, 1.0]), np.array([1.0, 0.0, 1.0]))
 #o3d.visualization.draw_geometries([gpcl])
 target = np.hstack(( np.array([0.5, 0.5, 0.5]), np.array(p.getQuaternionFromEuler((0, 0, 0))) ) )
 
+def generate_noise_tf(translation_noise, rotation_noise):
+    rx = np.random.uniform(0, rotation_noise) 
+    ry = np.random.uniform(0, rotation_noise) 
+    rz = np.random.uniform(0, rotation_noise) 
+    mat, _ = cv2.Rodrigues( np.array([rx, ry, rz]))
+    tx = np.random.uniform(0, translation_noise)
+    ty = np.random.uniform(0, translation_noise)
+    tz = np.random.uniform(0, translation_noise)
+    t = np.array([tx, ty, tz])
+    T = np.eye(4)
+    T[0:3, 0:3] = mat
+    T[0:3, 3] = t
+    return T
 
 def draw_registration_result(source, target, transformation):
     source_temp = copy.deepcopy(source)
@@ -101,27 +114,27 @@ while(True):
 
     #mesh_frame = o3d.geometry.TriangleMesh.create_coordinate_frame(
     #size=0.6, origin=(Tce@np.hstack((frame_pos, 1)))[0:3])
-
+    Tce_perturb = Tce @ generate_noise_tf(0.1, 0.3) 
     gpcl = o3d.geometry.PointCloud()
-    gpcl.points = o3d.utility.Vector3dVector(victor.get_gripper_pcl(Tce))#Tce) 
+    gpcl.points = o3d.utility.Vector3dVector(victor.get_gripper_pcl(Tce_perturb))#Tce) 
 
-    # ICP 
-    #reg = o3d.pipelines.registration.registration_icp(
-    #    pcl, gpcl, 0.1, np.eye(4), o3d.pipelines.registration.TransformationEstimationPointToPoint()
-    #)
-    ##print(reg.transformation)
-    #evaluation = o3d.pipelines.registration.evaluate_registration(
-    #pcl, gpcl, 0.1, np.eye(4))
-    #print(evaluation)
-    #evaluation_2 = o3d.pipelines.registration.evaluate_registration(
-    #pcl, gpcl, 0.1, reg.transformation)
-    ##print(evaluation_2)
-
-    ##draw_registration_result(pcl, gpcl, reg.transformation)
-    #print(reg.transformation)
-    #draw_registration_result(pcl, gpcl, np.eye(4))
+    pcl.paint_uniform_color([1, 0.706, 0])
+    gpcl.paint_uniform_color([0, 0.651, 0.929])
 
     o3d.visualization.draw_geometries([pcl,gpcl ])
+    # ICP 
+    reg = o3d.pipelines.registration.registration_icp(
+        pcl, gpcl, 0.3, np.eye(4), o3d.pipelines.registration.TransformationEstimationPointToPoint()
+    )
+    #print(reg.transformation)
+    evaluation_2 = o3d.pipelines.registration.evaluate_registration(
+    pcl, gpcl, 0.3, reg.transformation)
+    #print(evaluation_2)
+
+    #draw_registration_result(pcl, gpcl, reg.transformation)
+    print(reg.transformation)
+    draw_registration_result(pcl, gpcl, reg.transformation)
+
     # mask out non-gripper link
     # icp accounting for known occlusion/free space
     # deep learning
