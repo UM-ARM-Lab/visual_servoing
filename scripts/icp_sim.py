@@ -101,20 +101,20 @@ while(True):
     gpcl.points = o3d.utility.Vector3dVector(victor.get_gripper_pcl(Twe))#Tce) 
 
     # ICP 
-    reg = o3d.pipelines.registration.registration_icp(
-        pcl, gpcl, 0.1, np.eye(4), o3d.pipelines.registration.TransformationEstimationPointToPoint()
-    )
-    #print(reg.transformation)
-    evaluation = o3d.pipelines.registration.evaluate_registration(
-    pcl, gpcl, 0.1, np.eye(4))
-    print(evaluation)
-    evaluation_2 = o3d.pipelines.registration.evaluate_registration(
-    pcl, gpcl, 0.1, reg.transformation)
-    print(evaluation_2)
+    #reg = o3d.pipelines.registration.registration_icp(
+    #    pcl, gpcl, 0.1, np.eye(4), o3d.pipelines.registration.TransformationEstimationPointToPoint()
+    #)
+    ##print(reg.transformation)
+    #evaluation = o3d.pipelines.registration.evaluate_registration(
+    #pcl, gpcl, 0.1, np.eye(4))
+    #print(evaluation)
+    #evaluation_2 = o3d.pipelines.registration.evaluate_registration(
+    #pcl, gpcl, 0.1, reg.transformation)
+    #print(evaluation_2)
 
-    draw_registration_result(pcl, gpcl, reg.transformation)
+    #draw_registration_result(pcl, gpcl, reg.transformation)
 
-    o3d.visualization.draw_geometries([pcl, gpcl])
+    #o3d.visualization.draw_geometries([pcl, gpcl])
     # mask out non-gripper link
     # icp accounting for known occlusion/free space
     # deep learning
