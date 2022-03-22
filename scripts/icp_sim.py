@@ -28,11 +28,12 @@ def draw_registration_result(source, target, transformation):
     source_temp.paint_uniform_color([1, 0.706, 0])
     target_temp.paint_uniform_color([0, 0.651, 0.929])
     source_temp.transform(transformation)
-    o3d.visualization.draw_geometries([source_temp, target_temp],
-                                      zoom=0.4459,
-                                      front=[0.9288, -0.2951, -0.2242],
-                                      lookat=[1.6784, 2.0612, 1.4451],
-                                      up=[-0.3402, -0.9189, -0.1996])
+    o3d.visualization.draw_geometries([source_temp, target_temp])
+    #o3d.visualization.draw_geometries([source_temp, target_temp],
+    #                                  zoom=0.4459,
+    #                                  front=[0.9288, -0.2951, -0.2242],
+    #                                  lookat=[1.6784, 2.0612, 1.4451],
+    #                                  up=[-0.3402, -0.9189, -0.1996])
 
 uids_target_marker = None
 uids_eef_marker = None
@@ -45,6 +46,7 @@ while(True):
     pcl_raw = camera.get_pointcloud(depth)
 
     pcl_raw = camera.segmented_pointcloud(pcl_raw, (np.arange(16, 30) + 1) << 24, seg)
+    print(pcl_raw.shape)
 
     pcl = o3d.geometry.PointCloud() 
     pcl.points = o3d.utility.Vector3dVector(pcl_raw.T)
@@ -104,18 +106,20 @@ while(True):
     gpcl.points = o3d.utility.Vector3dVector(victor.get_gripper_pcl(Twe))#Tce) 
 
     # ICP 
-    #reg = o3d.pipelines.registration.registration_icp(
-    #    pcl, gpcl, 0.1, np.eye(4), o3d.pipelines.registration.TransformationEstimationPointToPoint()
-    #)
-    ##print(reg.transformation)
-    #evaluation = o3d.pipelines.registration.evaluate_registration(
-    #pcl, gpcl, 0.1, np.eye(4))
-    #print(evaluation)
-    #evaluation_2 = o3d.pipelines.registration.evaluate_registration(
-    #pcl, gpcl, 0.1, reg.transformation)
+    reg = o3d.pipelines.registration.registration_icp(
+        pcl, gpcl, 0.1, np.eye(4), o3d.pipelines.registration.TransformationEstimationPointToPoint()
+    )
+    #print(reg.transformation)
+    evaluation = o3d.pipelines.registration.evaluate_registration(
+    pcl, gpcl, 0.1, np.eye(4))
+    print(evaluation)
+    evaluation_2 = o3d.pipelines.registration.evaluate_registration(
+    pcl, gpcl, 0.1, reg.transformation)
     #print(evaluation_2)
 
     #draw_registration_result(pcl, gpcl, reg.transformation)
+    print(reg.transformation)
+    draw_registration_result(pcl, gpcl, np.eye(4))
 
     o3d.visualization.draw_geometries([pcl,gpcl ])
     # mask out non-gripper link
