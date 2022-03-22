@@ -1,3 +1,4 @@
+from xml.etree.ElementInclude import include
 import numpy as np
 import pybullet as p
 
@@ -104,7 +105,7 @@ class PyBulletCamera(Camera):
         Tcw = Tc1c2 @ Tc2w
         return Tcw
 
-    def get_image(self):
+    def get_image(self, include_seg=False):
         width, height, rgbImg, depthImg, segImg = p.getCameraImage(
             width=self.image_dim[0],
             height=self.image_dim[1],
@@ -117,7 +118,18 @@ class PyBulletCamera(Camera):
 
         rgb_img = np.array(rgbImg)[:, :, :3]
         depth_img = np.array(depthImg)
+        if(include_seg):
+            return rgb_img, depth_img, np.array(segImg)
         return rgb_img, depth_img
+
+    def segmented_pointcloud(self, cloud, classes, seg_img):
+        keep = []
+        for y in range(seg_img.shape[0]):
+            for x in range(seg_img.shape[1]):
+                if(seg_img[y][x] in classes):
+                    keep.append(y*seg_img.shape[1] + x)
+        print(len(keep))
+        return cloud[:, keep]
 
     def get_pointcloud(self, depth):
         depth_mod = 2 * depth - 1

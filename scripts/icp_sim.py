@@ -39,10 +39,13 @@ uids_eef_marker = None
 while(True):
     p.stepSimulation()
     # create point cloud from RGBD image
-    rgb, depth = camera.get_image()
+    rgb, depth, seg = camera.get_image(True)
     rgb_edit = rgb[..., [2, 1, 0]].copy()
     #cv2.imshow("RGB", rgb_edit)
     pcl_raw = camera.get_pointcloud(depth)
+
+    pcl_raw = camera.segmented_pointcloud(pcl_raw, (np.arange(16, 30) + 1) << 24, seg)
+
     pcl = o3d.geometry.PointCloud() 
     pcl.points = o3d.utility.Vector3dVector(pcl_raw.T)
     pcl.colors = o3d.utility.Vector3dVector(rgb_edit.reshape(-1, 3)/255.0)
@@ -114,7 +117,7 @@ while(True):
 
     #draw_registration_result(pcl, gpcl, reg.transformation)
 
-    #o3d.visualization.draw_geometries([pcl, gpcl])
+    o3d.visualization.draw_geometries([pcl,gpcl ])
     # mask out non-gripper link
     # icp accounting for known occlusion/free space
     # deep learning
