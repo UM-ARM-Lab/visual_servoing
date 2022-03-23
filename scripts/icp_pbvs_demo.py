@@ -82,7 +82,7 @@ while(True):
     ctrl, Twe = pbvs.do_pbvs(depth, seg, to_homogenous(target), victor.get_arm_jacobian('left'), victor.get_jacobian_pinv('left')) 
     print("finished pbvs")
     #victor.psuedoinv_ik_controller("left", np.hstack(((target[0:3] - link_trn)*10, target[4:7])))
-    #victor.psuedoinv_ik_controller("left", ctrl)
+    victor.psuedoinv_ik_controller("left", ctrl)
 
     # draw EEF pose as observed from camera gt
     if (uids_eef_marker is not None):
