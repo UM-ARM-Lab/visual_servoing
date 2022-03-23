@@ -47,7 +47,8 @@ class ICPPBVS:
             pcl, self.model, 0.1, self.prev_pose, o3d.pipelines.registration.TransformationEstimationPointToPoint()
         )
         print(f'register pcl {time.time() -t}')
-        Tcl = np.linalg.inv(reg.transformation)
+        Tcl = reg.transformation#np.linalg.inv(reg.transformation)
+        self.prev_pose = Tcl
         return Tcl
         
 
