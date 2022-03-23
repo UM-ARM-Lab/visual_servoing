@@ -3,7 +3,7 @@ import numpy as np
 import open3d as o3d
 from visual_servoing.camera import Camera
 import time
-
+import copy
 
 class ICPPBVS:
     # camera: (Instance of a camera following the Camera interface)
@@ -23,6 +23,19 @@ class ICPPBVS:
         self.prev_time = time.time()
         self.max_joint_velo = max_joint_velo
 
+        self.pcl = o3d.geometry.PointCloud()
+        #self.vis = o3d.visualization.Visualizer()
+        #self.vis.create_window()
+        #self.vis.add_geometry(self.pcl)
+        #self.vis.add_geometry(self.model)
+
+    def draw_registration_result(self):
+        o3d.visualization.draw_geometries([self.pcl, self.model])
+        #self.vis.update_geometry(self.pcl)
+        #self.vis.update_geometry(self.model)
+        #self.vis.poll_events()
+        #self.vis.update_renderer()
+
     def get_segmented_pcl_sim(self):
         pass
 
@@ -39,18 +52,17 @@ class ICPPBVS:
         pcl_raw = self.camera.get_pointcloud_seg(depth, u, v, ones)
         print(f'segment pcl {time.time() -t}')
         t = time.time()
-        pcl = o3d.geometry.PointCloud() 
-        pcl.points = o3d.utility.Vector3dVector(pcl_raw.T)
-        pcl.paint_uniform_color([1, 0.706, 0])
-        o3d.visualization.draw_geometries([pcl, self.model])
-
+        self.pcl.points = o3d.utility.Vector3dVector(pcl_raw.T)
+        self.pcl.paint_uniform_color([1, 0.706, 0])
         # Run ICP from previous est 
         # we want Tcl, transform of eef link (l) in camera frame, but we do ICP the other way so we estimate Tlc instead
         reg = o3d.pipelines.registration.registration_icp(
-            pcl, self.model, 0.1, self.prev_pose, o3d.pipelines.registration.TransformationEstimationPointToPoint()
+            self.pcl, self.model, 0.5, np.linalg.inv(self.prev_pose), o3d.pipelines.registration.TransformationEstimationPointToPoint()
         )
         print(f'register pcl {time.time() -t}')
-        Tcl = reg.transformation#np.linalg.inv(reg.transformation)
+        self.pcl.transform(reg.transformation)
+        Tcl = np.linalg.inv(reg.transformation)#np.linalg.inv(reg.transformation)
+        self.draw_registration_result()
         self.prev_pose = Tcl
         return Tcl
         
