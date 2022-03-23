@@ -1,4 +1,5 @@
 from xml.etree.ElementInclude import include
+from grpc import FutureCancelledError
 import numpy as np
 import pybullet as p
 
@@ -11,7 +12,7 @@ import rospy
 from arc_utilities.listener import Listener
 from sensor_msgs.msg import Image
 from sensor_msgs.msg import CameraInfo
-
+import functools
 
 class Camera:
     def __init__(self, camera_eye, camera_look, image_dim):
@@ -130,6 +131,32 @@ class PyBulletCamera(Camera):
                     keep.append(y*seg_img.shape[1] + x)
         print(len(keep))
         return cloud[:, keep]
+
+    # return u v depth lists only for pixels that belong to one of our classes 
+    def seg_img(self, classes, seg, depth):
+        seg_reshape = seg.reshape(-1)
+        depth_reshape = depth.reshape(-1)
+        mask = np.zeros(seg_reshape.shape, dtype=bool)
+
+        for c in classes:
+            mask = mask | (seg_reshape == c )
+
+        keep_pix = np.argwhere(mask)
+        u = self.u[keep_pix] 
+        v = self.v[keep_pix]
+        depth = depth_reshape[keep_pix]
+        return u, v, depth, np.ones((len(u),1))
+
+    def get_pointcloud_seg(self, depth, u, v, ones):
+        depth_mod = 2 * depth - 1
+        img_coords = np.vstack((u.squeeze(),
+                                v.squeeze(),
+                                depth_mod.squeeze(),
+                                ones.squeeze()))
+        print(img_coords.shape)
+        cam_coords = self.T @ img_coords
+        cam_coords = cam_coords[0:3, :] / cam_coords[3, :]
+        return cam_coords
 
     def get_pointcloud(self, depth):
         depth_mod = 2 * depth - 1

@@ -61,6 +61,18 @@ while(True):
     rgb, depth, seg = camera.get_image(True)
     rgb_edit = rgb[..., [2, 1, 0]].copy()
 
+    # gen pc
+    #u, v, depth, ones = camera.seg_img((np.arange(16, 30) + 1) << 24, seg, depth)
+    #print(u.shape)
+    #print(v.shape)
+    #print(depth.shape)
+    #print(ones.shape)
+    #pcl_raw = camera.get_pointcloud_seg(depth, u, v, ones)
+    #pcl = o3d.geometry.PointCloud() 
+    #pcl.points = o3d.utility.Vector3dVector(pcl_raw.T)
+    ##pcl.paint_uniform_color([1, 0.706, 0])
+    #o3d.visualization.draw_geometries([pcl])
+
     # draw tool ground truth
     #tool_idx = victor.eef_idx 
     #result = p.getLinkState(victor.urdf,

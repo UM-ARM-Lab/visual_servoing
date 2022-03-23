@@ -31,15 +31,18 @@ class ICPPBVS:
     def get_eef_state_estimate(self, depth, seg):
         t = time.time()
         # Compute segmented point cloud of eef from depth/seg img
-        pcl_raw = self.camera.get_pointcloud(depth)
-        print(f'Get pcl {time.time() -t}')
+        #pcl_raw = self.camera.get_pointcloud(depth)
+        #print(f'Get pcl {time.time() -t}')
         t = time.time()
-        pcl_raw = self.camera.segmented_pointcloud(pcl_raw, (np.arange(16, 30) + 1) << 24, seg)
+        #pcl_raw = self.camera.segmented_pointcloud(pcl_raw, (np.arange(16, 30) + 1) << 24, seg)
+        u, v, depth, ones = self.camera.seg_img((np.arange(16, 30) + 1) << 24, seg, depth)
+        pcl_raw = self.camera.get_pointcloud_seg(depth, u, v, ones)
         print(f'segment pcl {time.time() -t}')
         t = time.time()
         pcl = o3d.geometry.PointCloud() 
         pcl.points = o3d.utility.Vector3dVector(pcl_raw.T)
         pcl.paint_uniform_color([1, 0.706, 0])
+        o3d.visualization.draw_geometries([pcl, self.model])
 
         # Run ICP from previous est 
         # we want Tcl, transform of eef link (l) in camera frame, but we do ICP the other way so we estimate Tlc instead
