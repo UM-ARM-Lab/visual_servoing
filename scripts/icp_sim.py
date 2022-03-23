@@ -57,7 +57,6 @@ while(True):
     rgb_edit = rgb[..., [2, 1, 0]].copy()
     #cv2.imshow("RGB", rgb_edit)
     pcl_raw = camera.get_pointcloud(depth)
-
     pcl_raw = camera.segmented_pointcloud(pcl_raw, (np.arange(16, 30) + 1) << 24, seg)
     print(pcl_raw.shape)
 
@@ -118,7 +117,7 @@ while(True):
     gpcl = o3d.geometry.PointCloud()
     gpcl.points = o3d.utility.Vector3dVector(victor.get_gripper_pcl(Tce_perturb))#Tce) 
 
-    pcl.paint_uniform_color([1, 0.706, 0])
+
     gpcl.paint_uniform_color([0, 0.651, 0.929])
 
     o3d.visualization.draw_geometries([pcl,gpcl ])
