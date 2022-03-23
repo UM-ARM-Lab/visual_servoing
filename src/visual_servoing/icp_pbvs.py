@@ -9,7 +9,7 @@ class ICPPBVS:
     # camera: (Instance of a camera following the Camera interface)
     # k_v: (Scaling constant for linear velocity control)
     # k_omega: (Scaling constant for angular velocity control) 
-    # start_eef_pose: (Starting pose of end effector in camera frame (Tce))
+    # start_eef_pose: (Starting pose of end effector link in camera frame (Tcl))
     def __init__(self, camera, k_v, k_omega, model, start_eef_pose, max_joint_velo=0):
         self.k_v = k_v
         self.k_omega = k_omega
