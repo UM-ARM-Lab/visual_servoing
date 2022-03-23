@@ -29,9 +29,14 @@ class ICPPBVS:
     # Will only work in sim
     # get EEF state estimate relative to camera
     def get_eef_state_estimate(self, depth, seg):
+        t = time.time()
         # Compute segmented point cloud of eef from depth/seg img
         pcl_raw = self.camera.get_pointcloud(depth)
+        print(f'Get pcl {time.time() -t}')
+        t = time.time()
         pcl_raw = self.camera.segmented_pointcloud(pcl_raw, (np.arange(16, 30) + 1) << 24, seg)
+        print(f'segment pcl {time.time() -t}')
+        t = time.time()
         pcl = o3d.geometry.PointCloud() 
         pcl.points = o3d.utility.Vector3dVector(pcl_raw.T)
         pcl.paint_uniform_color([1, 0.706, 0])
@@ -41,6 +46,7 @@ class ICPPBVS:
         reg = o3d.pipelines.registration.registration_icp(
             pcl, self.model, 0.1, self.prev_pose, o3d.pipelines.registration.TransformationEstimationPointToPoint()
         )
+        print(f'register pcl {time.time() -t}')
         Tcl = np.linalg.inv(reg.transformation)
         return Tcl
         

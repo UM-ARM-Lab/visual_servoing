@@ -41,7 +41,7 @@ def to_homogenous(vec):
     quat = vec[3:7]
     pos = vec[0:3]
     H = np.eye(4)
-    H[0:3, 0:3] = np.array(p.getMatrixFromQuaternion(H)).reshape(3,3)
+    H[0:3, 0:3] = np.array(p.getMatrixFromQuaternion(quat)).reshape(3,3)
     H[0:3, 3] = pos
     return H
 
@@ -62,13 +62,13 @@ while(True):
     rgb_edit = rgb[..., [2, 1, 0]].copy()
 
     # draw tool ground truth
-    tool_idx = victor.eef_idx 
-    result = p.getLinkState(victor.urdf,
-                            tool_idx,
-                            computeLinkVelocity=1,
-                            computeForwardKinematics=1)
+    #tool_idx = victor.eef_idx 
+    #result = p.getLinkState(victor.urdf,
+    #                        tool_idx,
+    #                        computeLinkVelocity=1,
+    #                        computeForwardKinematics=1)
 
-    link_trn, link_rot, com_trn, com_rot, frame_pos, frame_rot, link_vt, link_vr = result
+    #link_trn, link_rot, com_trn, com_rot, frame_pos, frame_rot, link_vt, link_vr = result
     #if (uids_eef_marker is not None):
     #    erase_pos(uids_eef_marker)
     #uids_eef_marker = draw_pose(link_trn, link_rot)
@@ -78,13 +78,16 @@ while(True):
         erase_pos(uids_target_marker)
     uids_target_marker = draw_pose(target[0:3], target[3:7]) 
 
-    #ctrl, Twe = pbvs.do_pbvs(depth, seg, to_homogenous(target), victor.get_arm_jacobian('left'), victor.get_jacobian_pinv('left')) 
+    print("doing pbvs")
+    ctrl, Twe = pbvs.do_pbvs(depth, seg, to_homogenous(target), victor.get_arm_jacobian('left'), victor.get_jacobian_pinv('left')) 
+    print("finished pbvs")
     #victor.psuedoinv_ik_controller("left", np.hstack(((target[0:3] - link_trn)*10, target[4:7])))
-   
-    draw_pose(np.linalg.inv(camera.get_extrinsics())[0:3, 3], np.linalg.inv(camera.get_extrinsics())[0:3, 0:3], mat=True)
+    #victor.psuedoinv_ik_controller("left", ctrl)
+
     # draw EEF pose as observed from camera gt
-    #Twe = Tcw @ Tec
-    #draw_pose(Twe[0:3, 3], Twe[0:3, 0:3], mat=True) 
-    
+    if (uids_eef_marker is not None):
+        erase_pos(uids_eef_marker)
+    uids_eef_marker = draw_pose(Twe[0:3, 3], Twe[0:3, 0:3], mat=True) 
+
     Twc = np.linalg.inv(Tcw)
     draw_pose(Twc[0:3, 3], Twc[0:3, 0:3], mat=True)
