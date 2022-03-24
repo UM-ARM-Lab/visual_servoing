@@ -41,6 +41,7 @@ Tce = Tcw @ Twe
 pbvs = ICPPBVS(camera, 10, 10, victor.get_gripper_pcl(np.eye(4)), Tce, 200)
 
 target = np.hstack(( np.array([0.5, 0.5, 0.5]), np.array(p.getQuaternionFromEuler((0, 0, 0))) ) )
+#target = np.hstack(( np.array([0.8, 1.3, 0.4]), np.array(p.getQuaternionFromEuler((0, 0, 0))) ) )
 
 def to_homogenous(vec):
     quat = vec[3:7]
