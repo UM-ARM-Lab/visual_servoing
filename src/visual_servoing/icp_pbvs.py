@@ -52,8 +52,13 @@ class ICPPBVS:
         pcl_raw = self.camera.get_pointcloud_seg(depth, u, v, ones)
         print(f'segment pcl {time.time() -t}')
         t = time.time()
+
         self.pcl.points = o3d.utility.Vector3dVector(pcl_raw.T)
         self.pcl.paint_uniform_color([1, 0.706, 0])
+        #self.pcl.transform(self.prev_pose)
+        #self.draw_registration_result()
+        #self.pcl.points = o3d.utility.Vector3dVector(pcl_raw.T)
+        
         # Run ICP from previous est 
         # we want Tcl, transform of eef link (l) in camera frame, but we do ICP the other way so we estimate Tlc instead
         reg = o3d.pipelines.registration.registration_icp(

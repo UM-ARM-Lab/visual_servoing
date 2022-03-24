@@ -15,6 +15,10 @@ from visual_servoing.utils import get_link_tf, draw_pose, draw_sphere_marker, er
 import pickle
 from visual_servoing.victor import *
 import copy
+import matplotlib.pyplot as plt
+
+
+KEY_N = 110
 
 victor = Victor()
 camera = PyBulletCamera(np.array([1.0, -1.0, 1.0]), np.array([1.0, 0.0, 1.0]))
@@ -55,32 +59,24 @@ def draw_registration_result(source, target, transformation):
 
 uids_target_marker = None
 uids_eef_marker = None
+
+pos_error = []
+rot_error = []
+
 while(True):
     p.stepSimulation()
     # create point cloud from RGBD image
     rgb, depth, seg = camera.get_image(True)
     rgb_edit = rgb[..., [2, 1, 0]].copy()
 
-    # gen pc
-    #u, v, depth, ones = camera.seg_img((np.arange(16, 30) + 1) << 24, seg, depth)
-    #print(u.shape)
-    #print(v.shape)
-    #print(depth.shape)
-    #print(ones.shape)
-    #pcl_raw = camera.get_pointcloud_seg(depth, u, v, ones)
-    #pcl = o3d.geometry.PointCloud() 
-    #pcl.points = o3d.utility.Vector3dVector(pcl_raw.T)
-    ##pcl.paint_uniform_color([1, 0.706, 0])
-    #o3d.visualization.draw_geometries([pcl])
-
     # draw tool ground truth
-    #tool_idx = victor.eef_idx 
-    #result = p.getLinkState(victor.urdf,
-    #                        tool_idx,
-    #                        computeLinkVelocity=1,
-    #                        computeForwardKinematics=1)
+    tool_idx = victor.eef_idx 
+    result = p.getLinkState(victor.urdf,
+                            tool_idx,
+                            computeLinkVelocity=1,
+                            computeForwardKinematics=1)
 
-    #link_trn, link_rot, com_trn, com_rot, frame_pos, frame_rot, link_vt, link_vr = result
+    link_trn, link_rot, com_trn, com_rot, frame_pos, frame_rot, link_vt, link_vr = result
     #if (uids_eef_marker is not None):
     #    erase_pos(uids_eef_marker)
     #uids_eef_marker = draw_pose(link_trn, link_rot)
@@ -103,3 +99,22 @@ while(True):
 
     #Twc = np.linalg.inv(Tcw)
     #draw_pose(Twc[0:3, 3], Twc[0:3, 0:3], mat=True)
+    pos_error.append(np.linalg.norm(Twe[0:3, 3] - frame_pos))
+    link_rod, _ = cv2.Rodrigues(np.array(p.getMatrixFromQuaternion(frame_rot)).reshape(3,3) @ Twe[0:3, 0:3].T)
+    rot_error.append(np.linalg.norm(link_rod))
+
+    # stop condition 
+    events = p.getKeyboardEvents()
+    if KEY_N in events:
+        break
+
+plt.plot(pos_error)
+plt.xlabel("iteration")
+plt.ylabel("meters")
+plt.title("EEF Position error (m)")
+plt.figure()
+plt.xlabel("iteration")
+plt.ylabel("Rodrigues norm")
+plt.title("EEF Rotation error")
+plt.plot(rot_error)
+plt.show()
