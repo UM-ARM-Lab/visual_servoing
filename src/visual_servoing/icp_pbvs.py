@@ -24,17 +24,17 @@ class ICPPBVS:
         self.max_joint_velo = max_joint_velo
 
         self.pcl = o3d.geometry.PointCloud()
-        #self.vis = o3d.visualization.Visualizer()
-        #self.vis.create_window()
-        #self.vis.add_geometry(self.pcl)
-        #self.vis.add_geometry(self.model)
+        self.vis = o3d.visualization.Visualizer()
+        self.vis.create_window()
+        self.vis.add_geometry(self.pcl)
+        self.vis.add_geometry(self.model)
 
     def draw_registration_result(self):
-        o3d.visualization.draw_geometries([self.pcl, self.model])
-        #self.vis.update_geometry(self.pcl)
-        #self.vis.update_geometry(self.model)
-        #self.vis.poll_events()
-        #self.vis.update_renderer()
+        #o3d.visualization.draw_geometries([self.pcl, self.model])
+        self.vis.update_geometry(self.pcl)
+        self.vis.update_geometry(self.model)
+        self.vis.poll_events()
+        self.vis.update_renderer()
 
     def get_segmented_pcl_sim(self):
         pass
