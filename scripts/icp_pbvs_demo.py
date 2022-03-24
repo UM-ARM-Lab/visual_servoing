@@ -33,7 +33,7 @@ Twe[0:3, 3] = frame_pos
 Twe[3,3] = 1
 Tce = Tcw @ Twe 
 
-pbvs = ICPPBVS(camera, 1, 1, victor.get_gripper_pcl(np.eye(4)), Tce, 100)
+pbvs = ICPPBVS(camera, 10, 10, victor.get_gripper_pcl(np.eye(4)), Tce, 200)
 
 target = np.hstack(( np.array([0.5, 0.5, 0.5]), np.array(p.getQuaternionFromEuler((0, 0, 0))) ) )
 
@@ -101,5 +101,5 @@ while(True):
         erase_pos(uids_eef_marker)
     uids_eef_marker = draw_pose(Twe[0:3, 3], Twe[0:3, 0:3], mat=True) 
 
-    Twc = np.linalg.inv(Tcw)
-    draw_pose(Twc[0:3, 3], Twc[0:3, 0:3], mat=True)
+    #Twc = np.linalg.inv(Tcw)
+    #draw_pose(Twc[0:3, 3], Twc[0:3, 0:3], mat=True)
