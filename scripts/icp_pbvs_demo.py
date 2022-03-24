@@ -62,8 +62,11 @@ uids_eef_marker = None
 
 pos_error = []
 rot_error = []
+plt.axis()
+i = 0
 
 while(True):
+    i+=1
     p.stepSimulation()
     # create point cloud from RGBD image
     rgb, depth, seg = camera.get_image(True)
@@ -102,6 +105,8 @@ while(True):
     pos_error.append(np.linalg.norm(Twe[0:3, 3] - frame_pos))
     link_rod, _ = cv2.Rodrigues(np.array(p.getMatrixFromQuaternion(frame_rot)).reshape(3,3) @ Twe[0:3, 0:3].T)
     rot_error.append(np.linalg.norm(link_rod))
+    plt.scatter(i, pos_error[-1])
+    plt.pause(0.01)
 
     # stop condition 
     events = p.getKeyboardEvents()
