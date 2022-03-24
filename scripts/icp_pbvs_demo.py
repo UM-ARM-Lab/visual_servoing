@@ -18,6 +18,7 @@ import copy
 import matplotlib.pyplot as plt
 
 
+KEY_U = 117
 KEY_N = 110
 
 victor = Victor()
@@ -49,25 +50,29 @@ def to_homogenous(vec):
     H[0:3, 3] = pos
     return H
 
-def draw_registration_result(source, target, transformation):
-    source_temp = copy.deepcopy(source)
-    target_temp = copy.deepcopy(target)
-    source_temp.paint_uniform_color([1, 0.706, 0])
-    target_temp.paint_uniform_color([0, 0.651, 0.929])
-    source_temp.transform(transformation)
-    o3d.visualization.draw_geometries([source_temp, target_temp])
-
 uids_target_marker = None
 uids_eef_marker = None
 
 pos_error = []
 rot_error = []
-fig, (ax1, ax2) = plt.subplots(1, 2)
+fig, (ax1, ax2) = plt.subplots(2, 1)
 i = 0
+start = False
 
 while(True):
-    i+=1
+    # stop condition 
+    events = p.getKeyboardEvents()
+
     p.stepSimulation()
+    if(KEY_U in events):
+        start = True
+    if KEY_N in events:
+        break
+    if(not start):
+        pbvs.draw_registration_result()
+        plt.pause(0.01)
+        continue
+    i+=1
     # create point cloud from RGBD image
     rgb, depth, seg = camera.get_image(True)
     rgb_edit = rgb[..., [2, 1, 0]].copy()
@@ -109,10 +114,6 @@ while(True):
     ax2.scatter(i, rot_error[-1], c='r')
     plt.pause(0.01)
 
-    # stop condition 
-    events = p.getKeyboardEvents()
-    if KEY_N in events:
-        break
 
 plt.plot(pos_error)
 plt.xlabel("iteration")
