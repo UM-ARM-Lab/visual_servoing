@@ -71,11 +71,13 @@ while(True):
     if(not start):
         pbvs.draw_registration_result()
         plt.pause(0.01)
+        cv2.imshow("Camera", np.zeros((800//5, 1280//5)))
         continue
     i+=1
     # create point cloud from RGBD image
     rgb, depth, seg = camera.get_image(True)
     rgb_edit = rgb[..., [2, 1, 0]].copy()
+    cv2.imshow("Camera", cv2.resize(rgb_edit, (1280//5, 800//5 )))
 
     # draw tool ground truth
     tool_idx = victor.eef_idx 
