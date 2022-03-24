@@ -62,7 +62,7 @@ uids_eef_marker = None
 
 pos_error = []
 rot_error = []
-plt.axis()
+fig, (ax1, ax2) = plt.subplots(1, 2)
 i = 0
 
 while(True):
@@ -105,7 +105,8 @@ while(True):
     pos_error.append(np.linalg.norm(Twe[0:3, 3] - frame_pos))
     link_rod, _ = cv2.Rodrigues(np.array(p.getMatrixFromQuaternion(frame_rot)).reshape(3,3) @ Twe[0:3, 0:3].T)
     rot_error.append(np.linalg.norm(link_rod))
-    plt.scatter(i, pos_error[-1])
+    ax1.scatter(i, pos_error[-1], c='g')
+    ax2.scatter(i, rot_error[-1], c='r')
     plt.pause(0.01)
 
     # stop condition 
