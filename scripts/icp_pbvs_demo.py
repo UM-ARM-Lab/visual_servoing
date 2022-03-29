@@ -117,7 +117,7 @@ while(True):
     ax2.scatter(i, rot_error[-1], c='r')
     plt.pause(0.01)
 
-
+plt.figure()
 plt.plot(pos_error)
 plt.xlabel("iteration")
 plt.ylabel("meters")

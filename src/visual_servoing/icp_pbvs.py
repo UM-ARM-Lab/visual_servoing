@@ -4,17 +4,20 @@ import open3d as o3d
 from visual_servoing.camera import Camera
 import time
 import copy
+from scipy.spatial.distance import cdist
 
 class ICPPBVS:
     # camera: (Instance of a camera following the Camera interface)
     # k_v: (Scaling constant for linear velocity control)
     # k_omega: (Scaling constant for angular velocity control) 
     # start_eef_pose: (Starting pose of end effector link in camera frame (Tcl))
-    def __init__(self, camera, k_v, k_omega, model, start_eef_pose, max_joint_velo=0):
+    def __init__(self, camera, k_v, k_omega, model, start_eef_pose, max_joint_velo=0, seg_range=0.1):
+        self.seg_range = seg_range
         self.k_v = k_v
         self.k_omega = k_omega
         self.camera = camera
         self.model = o3d.geometry.PointCloud()
+        self.model_raw = model
         self.model.points = o3d.utility.Vector3dVector(model)
         self.model.paint_uniform_color([0, 0.651, 0.929])
 
@@ -36,8 +39,18 @@ class ICPPBVS:
         self.vis.poll_events()
         self.vis.update_renderer()
 
-    def get_segmented_pcl_sim(self):
-        pass
+    def get_segmented_pcl(self, pcl_raw, use_prev_twist=False):
+        num_batches = 40
+        points_per_batch = pcl_raw.shape[0] / num_batches
+        # compute distance between points in new point clouds and points in transformed model
+        pcl_raw = np.hstack((pcl_raw.T, np.ones((pcl_raw.shape[1], 1))))
+        model_raw = np.hstack((self.model_raw, np.ones((self.model_raw.shape[0], 1))))
+        dist = cdist(pcl_raw, (model_raw @ self.prev_pose), metric='euclidean')
+        dist = dist < self.seg_range 
+        # aggregate over column dimension if a point was close enough to any other point
+        keep_list = np.max(dist, axis=1)
+        pcl = pcl_raw[:, keep_list]
+        return pcl
 
     # Will only work in sim
     # get EEF state estimate relative to camera
@@ -47,9 +60,11 @@ class ICPPBVS:
         #pcl_raw = self.camera.get_pointcloud(depth)
         #print(f'Get pcl {time.time() -t}')
         t = time.time()
-        #pcl_raw = self.camera.segmented_pointcloud(pcl_raw, (np.arange(16, 30) + 1) << 24, seg)
-        u, v, depth, ones = self.camera.seg_img((np.arange(16, 30) + 1) << 24, seg, depth)
-        pcl_raw = self.camera.get_pointcloud_seg(depth, u, v, ones)
+        #u, v, depth, ones = self.camera.seg_img((np.arange(16, 30) + 1) << 24, seg, depth)
+        #pcl_raw = self.camera.get_pointcloud_seg(depth, u, v, ones)
+        pcl_raw = self.camera.get_pointcloud(depth)
+        pcl_raw = self.get_segmented_pcl(pcl_raw)
+
         print(f'segment pcl {time.time() -t}')
         t = time.time()
 

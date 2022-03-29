@@ -118,9 +118,9 @@ while(True):
     gpcl.points = o3d.utility.Vector3dVector(victor.get_gripper_pcl(Tce_perturb))#Tce) 
 
 
-    gpcl.paint_uniform_color([0, 0.651, 0.929])
+    #gpcl.paint_uniform_color([0, 0.651, 0.929])
 
-    o3d.visualization.draw_geometries([pcl,gpcl ])
+    o3d.visualization.draw_geometries([gpcl ])
     # ICP 
     reg = o3d.pipelines.registration.registration_icp(
         pcl, gpcl, 0.3, np.eye(4), o3d.pipelines.registration.TransformationEstimationPointToPoint()
