@@ -2,9 +2,11 @@ import cv2
 import numpy as np
 import open3d as o3d
 from visual_servoing.camera import Camera
+import pickle as pkl
 import time
 import copy
 from scipy.spatial.distance import cdist
+import tensorflow as tf
 
 class ICPPBVS:
     # camera: (Instance of a camera following the Camera interface)
@@ -31,6 +33,7 @@ class ICPPBVS:
         self.vis.create_window()
         self.vis.add_geometry(self.pcl)
         self.vis.add_geometry(self.model)
+        self.model_sdf = pkl.load(open("points_and_sdf.pkl", "rb"))
 
     def draw_registration_result(self):
         #o3d.visualization.draw_geometries([self.pcl, self.model])
@@ -56,19 +59,68 @@ class ICPPBVS:
             keep_list.append(np.max(dist, axis=1))
         pcl = pcl_raw[:, keep_list]
         return pcl
+    
+    def round_to_res(self, x, res):
+        # helps with stupid numerics issues
+        return tf.cast(tf.round(x / res), tf.int64)
+
+    def batch_point_to_idx(self, points, res, origin_point):
+        """
+    ​
+        Args:
+            points: [b,3] points in a frame, call it world
+            res: [b] meters
+            origin_point: [b,3] the position [x,y,z] of the center of the voxel (0,0,0) in the same frame as points
+    ​
+        Returns:
+    ​
+        """
+        return self.round_to_res((points - origin_point), tf.expand_dims(res, -1))
+
+    def segment(self, pc, sdf, origin_point, res, threshold):
+        """
+    ​
+        Args:
+            pc: [n, 3], as set of n (x,y,z) points in the same frame as the voxel grid
+            sdf: [h, w, c], signed distance field
+            origin_point: [3], the (x,y,z) position of voxel [0,0,0]
+            res: scalar, size of one voxel in meters
+            threshold: the distance threshold determining what's segmented
+    ​
+        Returns:
+            [m, 3] the segmented points
+    ​
+        """
+        pc = tf.convert_to_tensor(pc, dtype=tf.float32)
+        indices = self.batch_point_to_idx(pc, res, origin_point)
+        in_bounds = tf.logical_not(tf.logical_or(tf.reduce_any(indices <= 0, -1), tf.reduce_any(indices >= sdf.shape, -1)))
+        in_bounds_indices = tf.boolean_mask(indices, in_bounds, axis=0)
+        in_bounds_pc = tf.boolean_mask(pc, in_bounds, axis=0)
+        distances = tf.gather_nd(sdf, in_bounds_indices)
+        close = distances < threshold
+        segmented_points = tf.boolean_mask(in_bounds_pc, close, axis=0)
+        return segmented_points
 
     # Will only work in sim
     # get EEF state estimate relative to camera
     def get_eef_state_estimate(self, depth, seg):
         t = time.time()
         # Compute segmented point cloud of eef from depth/seg img
-        #pcl_raw = self.camera.get_pointcloud(depth)
         #print(f'Get pcl {time.time() -t}')
         t = time.time()
         #u, v, depth, ones = self.camera.seg_img((np.arange(16, 30) + 1) << 24, seg, depth)
         #pcl_raw = self.camera.get_pointcloud_seg(depth, u, v, ones)
         pcl_raw = self.camera.get_pointcloud(depth)
-        pcl_raw = self.get_segmented_pcl(pcl_raw)
+        pcl_raw_linkfrm = np.linalg.inv(self.prev_pose)@np.vstack((pcl_raw,np.ones( (1, pcl_raw.shape[1] ) )))
+        pcl_raw_linkfrm = (pcl_raw_linkfrm.T)[:, 0:3]
+     
+        pcl_seg = self.segment(pcl_raw_linkfrm, self.model_sdf['sdf'], self.model_sdf['origin_point'], self.model_sdf['res'], 0.03)
+        pcl_raw = self.prev_pose@np.hstack((pcl_seg,np.ones( (pcl_seg.shape[0], 1) ))).T
+        pcl_raw = pcl_raw[ 0:3, :]
+        
+
+
+        #pcl_raw = self.get_segmented_pcl(pcl_raw)
 
         print(f'segment pcl {time.time() -t}')
         t = time.time()
