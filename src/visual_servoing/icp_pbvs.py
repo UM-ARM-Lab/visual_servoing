@@ -7,6 +7,21 @@ import time
 import copy
 from scipy.spatial.distance import cdist
 import tensorflow as tf
+from visual_servoing.utils import draw_pose, erase_pos
+def SE3(se3):
+    # convert TO homogenous TF
+    if(se3.shape[0] == 6):
+        rot_3x3, _ = cv2.Rodrigues(se3[3:6]) 
+        T = np.zeros((4,4)) 
+        T[0:3, 0:3] = rot_3x3 
+        T[0:3, 3] = se3[0:3] 
+        T[3, 3] = 1
+        return T
+    else:
+        rvec, _ = cv2.Rodrigues(se3[0:3, 0:3])
+        tvec = se3[0:3, 3].squeeze() 
+        return np.hstack((tvec, rvec.squeeze()))
+
 
 class ICPPBVS:
     # camera: (Instance of a camera following the Camera interface)
@@ -34,6 +49,8 @@ class ICPPBVS:
         self.vis.add_geometry(self.pcl)
         self.vis.add_geometry(self.model)
         self.model_sdf = pkl.load(open("points_and_sdf.pkl", "rb"))
+
+        self.pose_predict_uids = None
 
     def draw_registration_result(self):
         #o3d.visualization.draw_geometries([self.pcl, self.model])
@@ -103,7 +120,7 @@ class ICPPBVS:
 
     # Will only work in sim
     # get EEF state estimate relative to camera
-    def get_eef_state_estimate(self, depth, seg):
+    def get_eef_state_estimate(self, depth, seg, dt):
         t = time.time()
         # Compute segmented point cloud of eef from depth/seg img
         #print(f'Get pcl {time.time() -t}')
@@ -111,19 +128,31 @@ class ICPPBVS:
         #u, v, depth, ones = self.camera.seg_img((np.arange(16, 30) + 1) << 24, seg, depth)
         #pcl_raw = self.camera.get_pointcloud_seg(depth, u, v, ones)
         pcl_raw = self.camera.get_pointcloud(depth)
-        pcl_raw_linkfrm = np.linalg.inv(self.prev_pose)@np.vstack((pcl_raw,np.ones( (1, pcl_raw.shape[1] ) )))
+
+        #gripper_pos_tf_est = self.prev_pose @ self.prev_twist
+        action = self.prev_twist * dt
+        action_tf = SE3(action)
+        pose_predict = action_tf @ self.prev_pose
+        pose_predict_vis = np.linalg.inv(self.camera.get_view()) @ pose_predict  
+        if(self.pose_predict_uids is not None):
+            erase_pos(self.pose_predict_uids)
+        #draw_pose(pose_predict_vis[0:3, 3], pose_predict_vis[0:3, 0:3], axis_len=0.2, alpha=0.5, mat=True)
+
+        pcl_raw_linkfrm = np.linalg.inv(pose_predict)@np.vstack((pcl_raw,np.ones( (1, pcl_raw.shape[1] ) )))
         pcl_raw_linkfrm = (pcl_raw_linkfrm.T)[:, 0:3]
      
-        pcl_seg = self.segment(pcl_raw_linkfrm, self.model_sdf['sdf'], self.model_sdf['origin_point'], self.model_sdf['res'], 0.03)
-        pcl_raw = self.prev_pose@np.hstack((pcl_seg,np.ones( (pcl_seg.shape[0], 1) ))).T
+        pcl_seg = self.segment(pcl_raw_linkfrm, self.model_sdf['sdf'], self.model_sdf['origin_point'], self.model_sdf['res'], 0.02)
+        pcl_raw = pose_predict@np.hstack((pcl_seg,np.ones( (pcl_seg.shape[0], 1) ))).T
         pcl_raw = pcl_raw[ 0:3, :]
-        
 
+        #t = o3d.geometry.PointCloud()
+        #t.points = o3d.utility.Vector3dVector(pcl_raw.T)
+        #o3d.visualization.draw_geometries([t])
 
         #pcl_raw = self.get_segmented_pcl(pcl_raw)
 
-        print(f'segment pcl {time.time() -t}')
-        t = time.time()
+        #print(f'segment pcl {time.time() -t}')
+        #t = time.time()
 
         self.pcl.points = o3d.utility.Vector3dVector(pcl_raw.T)
         self.pcl.paint_uniform_color([1, 0.706, 0])
@@ -136,7 +165,7 @@ class ICPPBVS:
         reg = o3d.pipelines.registration.registration_icp(
             self.pcl, self.model, 0.5, np.linalg.inv(self.prev_pose), o3d.pipelines.registration.TransformationEstimationPointToPoint()
         )
-        print(f'register pcl {time.time() -t}')
+        #print(f'register pcl {time.time() -t}')
         self.pcl.transform(reg.transformation)
         Tcl = np.linalg.inv(reg.transformation)#np.linalg.inv(reg.transformation)
         self.draw_registration_result()
@@ -147,9 +176,9 @@ class ICPPBVS:
     # Executes an iteration of PBVS control and returns a twist command
     # Two: (Pose of target object w.r.t world)
     # Returns the twist command [v, omega] and pose of end effector in world
-    def do_pbvs(self, depth, seg, Two, jac, jac_inv, Tle=np.eye(4), debug=True):
+    def do_pbvs(self, depth, seg, Two, jac, jac_inv, dt=1/240, Tle=np.eye(4), debug=True):
         Tcw = self.camera.get_view()
-        Tcl = self.get_eef_state_estimate(depth, seg) 
+        Tcl = self.get_eef_state_estimate(depth, seg, dt) 
 
         Twc = np.linalg.inv(Tcw)
         ctrl = np.zeros(6)
