@@ -40,15 +40,20 @@ class ICPPBVS:
         self.vis.update_renderer()
 
     def get_segmented_pcl(self, pcl_raw, use_prev_twist=False):
-        num_batches = 40
-        points_per_batch = pcl_raw.shape[0] / num_batches
         # compute distance between points in new point clouds and points in transformed model
         pcl_raw = np.hstack((pcl_raw.T, np.ones((pcl_raw.shape[1], 1))))
         model_raw = np.hstack((self.model_raw, np.ones((self.model_raw.shape[0], 1))))
-        dist = cdist(pcl_raw, (model_raw @ self.prev_pose), metric='euclidean')
-        dist = dist < self.seg_range 
-        # aggregate over column dimension if a point was close enough to any other point
-        keep_list = np.max(dist, axis=1)
+        model_tf = model_raw @ self.prev_pose
+        keep_list = []
+        num_batches = 4
+        points_per_batch = pcl_raw.shape[0] // num_batches
+        for i in range(num_batches):
+            start_idx = int(i * points_per_batch)
+            end_idx = int((i+1) * (points_per_batch))
+            dist = cdist(pcl_raw[start_idx:end_idx], model_tf, metric='euclidean')
+            dist = dist < self.seg_range 
+            # aggregate over column dimension if a point was close enough to any other point
+            keep_list.append(np.max(dist, axis=1))
         pcl = pcl_raw[:, keep_list]
         return pcl
 
