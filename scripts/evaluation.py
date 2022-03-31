@@ -6,6 +6,7 @@ from visual_servoing.camera import *
 import numpy as np
 from visual_servoing.icp_pbvs import *
 from visual_servoing.victor import *
+from visual_servoing.utils import *
 
 def create_target_tf(target_pos, target_rot):
     H = np.eye(4)
@@ -32,10 +33,15 @@ def get_eef_gt_tf(victor, camera, world_relative=False):
         return Tce
 
 def run_servoing(pbvs, camera, victor, target, config):
+    pose_est_uids = None
+    target_uids = None
 
     p.setTimeStep(1/config['sim_hz'])
     sim_steps_per_pbvs = int(config['sim_hz']/config['pbvs_hz']) 
     start_time = time.time()
+
+    if(config['vis']):
+        draw_pose(target[0:3, 3], target[0:3, 0:3], mat=True, uids=target_uids)
 
     while(True):
         # check if timeout exceeded
@@ -43,17 +49,23 @@ def run_servoing(pbvs, camera, victor, target, config):
             return 0
 
         # check if error is low enough to terminate
+        
 
         # get camera image
         rgb, depth, seg = camera.get_image(True)
         rgb_edit = rgb[..., [2, 1, 0]].copy()
-        if(config['vis']):
-            cv2.imshow("Camera", cv2.resize(rgb_edit, (1280 // 5, 800 // 5))) 
         
         # do visual servo
         ctrl, Twe = pbvs.do_pbvs(depth, target, victor.get_arm_jacobian('left'),
                                 victor.get_jacobian_pinv('left'), 1/config['pbvs_hz'])
         victor.psuedoinv_ik_controller("left", ctrl)
+
+        # draw debug stuff
+        if(config['vis']):
+            erase_pos(pose_est_uids)
+            draw_pose(Twe[0:3, 3], Twe[0:3, 0:3], mat=True, uids=pose_est_uids)
+            cv2.imshow("Camera", cv2.resize(rgb_edit, (1280 // 5, 800 // 5))) 
+
         
         # step simulation
         for _ in range(sim_steps_per_pbvs):
