@@ -1,3 +1,4 @@
+from tkinter import W
 import cv2
 import numpy as np
 import open3d as o3d
@@ -8,8 +9,19 @@ import copy
 from scipy.spatial.distance import cdist
 import tensorflow as tf
 from visual_servoing.utils import draw_pose, erase_pos
+
+
 def SE3(se3):
-    # convert TO homogenous TF
+    """
+    Switches between SE3 representations of the same twist command
+    ​
+    Args:
+        se3: either a [vx,vy,vz,omegax,omegay,omegeaz] or homogenous tf
+    ​
+    Returns:
+        se3: the alternative representation of the input
+    ​
+    """
     if(se3.shape[0] == 6):
         rot_3x3, _ = cv2.Rodrigues(se3[3:6]) 
         T = np.zeros((4,4)) 
@@ -24,11 +36,19 @@ def SE3(se3):
 
 
 class ICPPBVS:
-    # camera: (Instance of a camera following the Camera interface)
-    # k_v: (Scaling constant for linear velocity control)
-    # k_omega: (Scaling constant for angular velocity control) 
-    # start_eef_pose: (Starting pose of end effector link in camera frame (Tcl))
-    def __init__(self, camera, k_v, k_omega, model, start_eef_pose, max_joint_velo=0, seg_range=0.1):
+    """
+    ​
+    Args:
+        camera: instance of a camera following generic camera interface, must have OpenGL intrinsics 
+        k_v: scaling constant for linear velocity control
+        k_omega: scaling constant for angular velocity control
+        start_eef_pose: the starting pose of the end effector link in camera frame (Tcl)
+        max_joint_velo: maximum joint velocity 
+        seg_range: segmentation range in meters
+        debug: do debugging visualizations or not
+    ​
+    """
+    def __init__(self, camera, k_v, k_omega, model, start_eef_pose, max_joint_velo=0, seg_range=0.04, debug=False):
         self.seg_range = seg_range
         self.k_v = k_v
         self.k_omega = k_omega
@@ -37,6 +57,8 @@ class ICPPBVS:
         self.model_raw = model
         self.model.points = o3d.utility.Vector3dVector(model)
         self.model.paint_uniform_color([0, 0.651, 0.929])
+        self.model_sdf = pkl.load(open("points_and_sdf.pkl", "rb"))
+        self.seg_range = seg_range
 
         self.prev_pose = start_eef_pose
         self.prev_twist = np.zeros(6)
@@ -44,11 +66,12 @@ class ICPPBVS:
         self.max_joint_velo = max_joint_velo
 
         self.pcl = o3d.geometry.PointCloud()
-        self.vis = o3d.visualization.Visualizer()
-        self.vis.create_window()
-        self.vis.add_geometry(self.pcl)
-        self.vis.add_geometry(self.model)
-        self.model_sdf = pkl.load(open("points_and_sdf.pkl", "rb"))
+        
+        if(debug):
+            self.vis = o3d.visualization.Visualizer()
+            self.vis.create_window()
+            self.vis.add_geometry(self.pcl)
+            self.vis.add_geometry(self.model)
 
         self.pose_predict_uids = None
 
@@ -59,24 +82,6 @@ class ICPPBVS:
         self.vis.poll_events()
         self.vis.update_renderer()
 
-    def get_segmented_pcl(self, pcl_raw, use_prev_twist=False):
-        # compute distance between points in new point clouds and points in transformed model
-        pcl_raw = np.hstack((pcl_raw.T, np.ones((pcl_raw.shape[1], 1))))
-        model_raw = np.hstack((self.model_raw, np.ones((self.model_raw.shape[0], 1))))
-        model_tf = model_raw @ self.prev_pose
-        keep_list = []
-        num_batches = 4
-        points_per_batch = pcl_raw.shape[0] // num_batches
-        for i in range(num_batches):
-            start_idx = int(i * points_per_batch)
-            end_idx = int((i+1) * (points_per_batch))
-            dist = cdist(pcl_raw[start_idx:end_idx], model_tf, metric='euclidean')
-            dist = dist < self.seg_range 
-            # aggregate over column dimension if a point was close enough to any other point
-            keep_list.append(np.max(dist, axis=1))
-        pcl = pcl_raw[:, keep_list]
-        return pcl
-    
     def round_to_res(self, x, res):
         # helps with stupid numerics issues
         return tf.cast(tf.round(x / res), tf.int64)
@@ -118,101 +123,149 @@ class ICPPBVS:
         segmented_points = tf.boolean_mask(in_bounds_pc, close, axis=0)
         return segmented_points
 
-    # Will only work in sim
-    # get EEF state estimate relative to camera
-    def get_eef_state_estimate(self, depth, seg, dt):
-        t = time.time()
-        # Compute segmented point cloud of eef from depth/seg img
-        #print(f'Get pcl {time.time() -t}')
-        t = time.time()
-        #u, v, depth, ones = self.camera.seg_img((np.arange(16, 30) + 1) << 24, seg, depth)
-        #pcl_raw = self.camera.get_pointcloud_seg(depth, u, v, ones)
+    def get_eef_state_estimate(self, depth, dt):
+        """
+        get eef state estimate relative to camera
+
+        Args:
+            depth: [h, w], depth image to create point cloud with 
+            dt: the time since the last command was executed, needed for state prediction
+    ​
+        Returns:
+            Tcl: homogenous transform from camera to eef link
+    ​
+        """
         pcl_raw = self.camera.get_pointcloud(depth)
 
-        #gripper_pos_tf_est = self.prev_pose @ self.prev_twist
+        # compute predicted pose using previous pose estimate, previously commanded twist and ellapsed time
         action = self.prev_twist * dt
         action_tf = SE3(action)
         pose_predict = action_tf @ self.prev_pose
-        pose_predict_vis = np.linalg.inv(self.camera.get_view()) @ pose_predict  
-        if(self.pose_predict_uids is not None):
-            erase_pos(self.pose_predict_uids)
-        #draw_pose(pose_predict_vis[0:3, 3], pose_predict_vis[0:3, 0:3], axis_len=0.2, alpha=0.5, mat=True)
+        if(self.debug):
+            if(self.pose_predict_uids is not None):
+                erase_pos(self.pose_predict_uids)
+            # convert to world frame for debugging
+            pose_predict_vis = np.linalg.inv(self.camera.get_view()) @ pose_predict  
+            draw_pose(pose_predict_vis[0:3, 3], pose_predict_vis[0:3, 0:3], axis_len=0.2, alpha=0.5, mat=True)
 
+        # transform point cloud into eef link frame using predicted pose
         pcl_raw_linkfrm = np.linalg.inv(pose_predict)@np.vstack((pcl_raw,np.ones( (1, pcl_raw.shape[1] ) )))
         pcl_raw_linkfrm = (pcl_raw_linkfrm.T)[:, 0:3]
      
-        pcl_seg = self.segment(pcl_raw_linkfrm, self.model_sdf['sdf'], self.model_sdf['origin_point'], self.model_sdf['res'], 0.04)
+        # segment the point cloud and convert back to camera frame 
+        pcl_seg = self.segment(pcl_raw_linkfrm, self.model_sdf['sdf'], self.model_sdf['origin_point'], self.model_sdf['res'], self.seg_range)
         pcl_raw = pose_predict@np.hstack((pcl_seg,np.ones( (pcl_seg.shape[0], 1) ))).T
         pcl_raw = pcl_raw[ 0:3, :]
 
-        #t = o3d.geometry.PointCloud()
-        #t.points = o3d.utility.Vector3dVector(pcl_raw.T)
-        #o3d.visualization.draw_geometries([t])
-
-        #pcl_raw = self.get_segmented_pcl(pcl_raw)
-
-        #print(f'segment pcl {time.time() -t}')
-        #t = time.time()
-
+        # store the segmented point cloud from the camera as a class member for vis
         self.pcl.points = o3d.utility.Vector3dVector(pcl_raw.T)
         self.pcl.paint_uniform_color([1, 0.706, 0])
-        #self.pcl.transform(self.prev_pose)
-        #self.draw_registration_result()
-        #self.pcl.points = o3d.utility.Vector3dVector(pcl_raw.T)
         
-        # Run ICP from previous est 
-        # we want Tcl, transform of eef link (l) in camera frame, but we do ICP the other way so we estimate Tlc instead
+        # run ICP: note we want Tcl, transform of eef link (l) in camera frame, but we do ICP with
+        # segmented camera cloud as source and the model in link frame as target, so we estimate Tlc instead
         reg = o3d.pipelines.registration.registration_icp(
             self.pcl, self.model, 0.5, np.linalg.inv(self.prev_pose), o3d.pipelines.registration.TransformationEstimationPointToPoint()
         )
-        #print(f'register pcl {time.time() -t}')
+        # for visualization purposes, PCL can be translated into link frame
         self.pcl.transform(reg.transformation)
-        Tcl = np.linalg.inv(reg.transformation)#np.linalg.inv(reg.transformation)
-        self.draw_registration_result()
+
+        # compute the thing we care about, the transform of the end effector in camera frame
+        Tcl = np.linalg.inv(reg.transformation)
+
+        # visualize 
+        if(self.debug):
+            self.draw_registration_result()
+        
+        # store eef pose in camera frame
         self.prev_pose = Tcl
         return Tcl
         
 
-    # Executes an iteration of PBVS control and returns a twist command
-    # Two: (Pose of target object w.r.t world)
-    # Returns the twist command [v, omega] and pose of end effector in world
-    def do_pbvs(self, depth, seg, Two, jac, jac_inv, dt=1/240, Tle=np.eye(4), debug=True):
+    def do_pbvs(self, depth, Two, jac, jac_inv, dt=1/240, Tle=np.eye(4), debug=True):
+        """
+        Computes a twist command for one iteration of PBVS control
+    ​
+        Args:
+            depth: [h, w], depth image to create point cloud with 
+            Two: homogenous transform of target object in world
+            jac: eef jacobian
+            jac_inv: eef jacobian inverse, probably will be jac psuedoinverse or transpose
+            dt: the time since the last command was executed, needed for state prediction
+            Tle: transform from end effector link to another point to servo relative to 
+            debug: do debug visualizations or not
+    ​
+        Returns:
+            [6,] twist command that is [vx, vy, vz, omegax,omegay,omegaz]
+    ​
+        """
+        # get the end effector state estimate relative to world frame using camera extrinsics + intrinsics
         Tcw = self.camera.get_view()
-        Tcl = self.get_eef_state_estimate(depth, seg, dt) 
-
+        Tcl = self.get_eef_state_estimate(depth, dt) 
         Twc = np.linalg.inv(Tcw)
         ctrl = np.zeros(6)
         Twe = Twc @ Tcl @ Tle 
 
+        # compute control using state estimate + target position
         ctrl = self.get_control(Twe, Two)
         
-        # compute the joint velocities using jac_inv and PBVS twist cmd
+        # compute the joint velocities this eef velocity would result in 
         q_prime = jac_inv @ ctrl 
+
         # rescale joint velocities to self.max_joint_velo if the largest exceeds the limit 
         if(np.max(np.abs(q_prime)) > self.max_joint_velo):
             q_prime /= np.max(np.abs(q_prime))
             q_prime *= self.max_joint_velo
+
         # compute the actual end effector velocity given the limit
         ctrl = jac @ q_prime
 
-        # store results
+        # store results and return eef twist command + pose estimate
         self.prev_time = time.time()
         self.prev_twist = ctrl
         return ctrl, Twe
-    
-    ####################
-    # PBVS control law #
-    #################### 
 
     def get_v(self, object_pos, eef_pos):
+        """
+        Get PBVS linear velocity command 
+    ​
+        Args:
+            object_pos: position of the target object in PBVS world
+            eef_pos: position of end effector in PBVS world
+    ​
+        Returns:
+            v: end effector linear velocity in arbitrary unit
+    ​
+        """
         return (object_pos - eef_pos) * self.k_v
 
     def get_omega(self, Rwa, Rwo):
+        """
+        Get PBVS angular velocity command 
+    ​
+        Args:
+            Rwa: rotation of end effector in PBVS world
+            Rwo: rotation of the target object in PBVS world
+    ​
+        Returns:
+            omega: end effector angular velocity rodrigues vector with arbitrary scale
+    ​
+        """
         Rao = np.matmul(Rwa, Rwo.T).T
         Rao_rod, _ = cv2.Rodrigues(Rao)
         return Rao_rod * self.k_omega
 
     def get_control(self, Twe, Two):
+        """
+        Get PBVS twist command
+    ​
+        Args:
+            Twe: pose of end effector in PBVS world
+            Two: pose of the target object in PBVS world
+    ​
+        Returns:
+            ctrl: end effector twist command
+    ​
+        """
         ctrl = np.zeros(6)
         ctrl[0:3] = self.get_v(Two[0:3, 3], Twe[0:3, 3])
         ctrl[3:6] = np.squeeze(self.get_omega(Twe[0:3, 0:3], Two[0:3, 0:3]))
