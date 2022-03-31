@@ -113,8 +113,8 @@ class PyBulletCamera(Camera):
             viewMatrix=self.ogl_view_matrix,
             projectionMatrix=self.ogl_projection_matrix,
             lightDirection=-(self.camera_look - self.camera_eye),
-            flags=p.ER_SEGMENTATION_MASK_OBJECT_AND_LINKINDEX
-            # renderer=p.ER_BULLET_HARDWARE_OPENGL
+            flags=p.ER_SEGMENTATION_MASK_OBJECT_AND_LINKINDEX,
+             renderer=p.ER_BULLET_HARDWARE_OPENGL
         )
 
         rgb_img = np.array(rgbImg)[:, :, :3]

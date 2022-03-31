@@ -62,7 +62,8 @@ while(True):
 
     pcl = o3d.geometry.PointCloud() 
     pcl.points = o3d.utility.Vector3dVector(pcl_raw.T)
-    pcl.colors = o3d.utility.Vector3dVector(rgb_edit.reshape(-1, 3)/255.0)
+    #pcl.colors = o3d.utility.Vector3dVector(rgb_edit.reshape(-1, 3)/255.0)
+    pcl.paint_uniform_color([1, 0.706, 0])
     #cv2.waitKey(1)
     #victor.set_velo([10.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0])
 
@@ -113,14 +114,14 @@ while(True):
 
     #mesh_frame = o3d.geometry.TriangleMesh.create_coordinate_frame(
     #size=0.6, origin=(Tce@np.hstack((frame_pos, 1)))[0:3])
-    Tce_perturb = Tce @ generate_noise_tf(0.1, 0.3) 
+    Tce_perturb = Tce #@ generate_noise_tf(0.1, 0.3) 
     gpcl = o3d.geometry.PointCloud()
     gpcl.points = o3d.utility.Vector3dVector(victor.get_gripper_pcl(Tce_perturb))#Tce) 
 
 
-    #gpcl.paint_uniform_color([0, 0.651, 0.929])
+    gpcl.paint_uniform_color([0, 0.651, 0.929])
 
-    o3d.visualization.draw_geometries([gpcl ])
+    o3d.visualization.draw_geometries([gpcl, pcl ])
     # ICP 
     reg = o3d.pipelines.registration.registration_icp(
         pcl, gpcl, 0.3, np.eye(4), o3d.pipelines.registration.TransformationEstimationPointToPoint()

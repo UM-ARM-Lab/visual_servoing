@@ -141,7 +141,7 @@ class ICPPBVS:
         pcl_raw_linkfrm = np.linalg.inv(pose_predict)@np.vstack((pcl_raw,np.ones( (1, pcl_raw.shape[1] ) )))
         pcl_raw_linkfrm = (pcl_raw_linkfrm.T)[:, 0:3]
      
-        pcl_seg = self.segment(pcl_raw_linkfrm, self.model_sdf['sdf'], self.model_sdf['origin_point'], self.model_sdf['res'], 0.02)
+        pcl_seg = self.segment(pcl_raw_linkfrm, self.model_sdf['sdf'], self.model_sdf['origin_point'], self.model_sdf['res'], 0.04)
         pcl_raw = pose_predict@np.hstack((pcl_seg,np.ones( (pcl_seg.shape[0], 1) ))).T
         pcl_raw = pcl_raw[ 0:3, :]
 
