@@ -7,6 +7,8 @@ import numpy as np
 from visual_servoing.icp_pbvs import *
 from visual_servoing.victor import *
 from visual_servoing.utils import *
+from datetime import datetime
+import pickle
 
 def create_target_tf(target_pos, target_rot):
     H = np.eye(4)
@@ -56,6 +58,7 @@ def run_servoing(pbvs, camera, victor, target, config):
         rgb_edit = rgb[..., [2, 1, 0]].copy()
         
         # do visual servo
+        pbvs.cheat(get_eef_gt_tf(victor, camera, False))
         ctrl, Twe = pbvs.do_pbvs(depth, target, victor.get_arm_jacobian('left'),
                                 victor.get_jacobian_pinv('left'), 1/config['pbvs_hz'])
         victor.psuedoinv_ik_controller("left", ctrl)
@@ -63,8 +66,8 @@ def run_servoing(pbvs, camera, victor, target, config):
         # draw debug stuff
         if(config['vis']):
             erase_pos(pose_est_uids)
-            draw_pose(Twe[0:3, 3], Twe[0:3, 0:3], mat=True, uids=pose_est_uids)
-            cv2.imshow("Camera", cv2.resize(rgb_edit, (1280 // 5, 800 // 5))) 
+            #pose_est_uids = draw_pose(Twe[0:3, 3], Twe[0:3, 0:3], mat=True) 
+            #cv2.imshow("Camera", cv2.resize(rgb_edit, (1280 // 5, 800 // 5)))  
 
         
         # step simulation
@@ -77,14 +80,23 @@ def main():
     config_text = config_file.read()
     config = hjson.loads(config_text)
 
+    result_dict = {}
+
+    # Executes servoing for all the servo configs provided
     servo_configs = config['servo_configs']
     for servo_config in servo_configs:
         camera = PyBulletCamera(np.array(servo_config['camera_pos']), np.array(servo_config['camera_look']))
         victor = Victor()
         target = create_target_tf(np.array(servo_config['target_pos']), np.array(servo_config['target_rot'])) 
         pbvs = ICPPBVS(camera, 1, 1, get_eef_gt_tf(victor, camera), 
-            config['pbvs_settings']['max_joint_velo'], config['pbvs_settings']['seg_range']) 
+            config['pbvs_settings']['max_joint_velo'], config['pbvs_settings']['seg_range'], debug=True) 
         run_servoing(pbvs, camera, victor, target, config)
+    
+    now = datetime.now()
+    filename = "result%Y%m%d-%H%M%S.pkl"
+    result_file = open(f'test-results/{filename}', 'w')
+    pickle.dump(result_dict, result_file)
+    result_file.close()
         
 
 main()

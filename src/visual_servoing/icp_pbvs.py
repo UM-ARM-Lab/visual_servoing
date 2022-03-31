@@ -76,7 +76,13 @@ class ICPPBVS:
             self.vis.add_geometry(self.model)
 
         self.pose_predict_uids = None
+        self.cheat_pose_uids = None
         self.debug = debug
+        self.cheat_pose = None
+    
+    # REMOVE ME
+    def cheat(self, gt_pose):
+        self.cheat_pose = gt_pose
 
     def draw_registration_result(self):
         #o3d.visualization.draw_geometries([self.pcl, self.model])
@@ -143,13 +149,17 @@ class ICPPBVS:
         # compute predicted pose using previous pose estimate, previously commanded twist and ellapsed time
         action = self.prev_twist * dt
         action_tf = SE3(action)
-        pose_predict = action_tf @ self.prev_pose
+        pose_predict = self.prev_pose @ np.linalg.inv(action_tf)
         if(self.debug):
-            if(self.pose_predict_uids is not None):
-                erase_pos(self.pose_predict_uids)
-            # convert to world frame for debugging
+            cheat_pose_vis = np.linalg.inv(self.camera.get_view()) @ self.cheat_pose  
+            erase_pos(self.cheat_pose_uids)
+            self.cheat_pose_uids = draw_pose(cheat_pose_vis[0:3, 3], cheat_pose_vis[0:3, 0:3], mat=True)
             pose_predict_vis = np.linalg.inv(self.camera.get_view()) @ pose_predict  
-            draw_pose(pose_predict_vis[0:3, 3], pose_predict_vis[0:3, 0:3], axis_len=0.2, alpha=0.5, mat=True)
+            erase_pos(self.pose_predict_uids)
+            self.pose_predict_uids = draw_pose(pose_predict_vis[0:3, 3], pose_predict_vis[0:3, 0:3], axis_len=0.2, alpha=0.5, mat=True)
+            predict_dist = np.linalg.norm(self.prev_pose[0:3, 3] - pose_predict[0:3, 3])
+            actual_dist = np.linalg.norm(self.prev_pose[0:3, 3] - self.cheat_pose[0:3, 3])
+            print(predict_dist/actual_dist)
 
         # transform point cloud into eef link frame using predicted pose
         pcl_raw_linkfrm = np.linalg.inv(pose_predict)@np.vstack((pcl_raw,np.ones( (1, pcl_raw.shape[1] ) )))
@@ -174,10 +184,11 @@ class ICPPBVS:
 
         # compute the thing we care about, the transform of the end effector in camera frame
         Tcl = np.linalg.inv(reg.transformation)
+        Tcl = self.cheat_pose#pose_predict
 
         # visualize 
-        if(self.debug):
-            self.draw_registration_result()
+        #if(self.debug):
+        #    self.draw_registration_result()
         
         # store eef pose in camera frame
         self.prev_pose = Tcl
