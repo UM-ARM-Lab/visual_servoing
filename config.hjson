@@ -11,7 +11,7 @@
     # max rotation error before terminating (radian)
     max_rot_error: 0.1
     # timeout if the desired position and rotation error are never achieved
-    timeout: 200
+    timeout: 5
 
     # do debug visualizations
     vis: true
@@ -26,6 +26,7 @@
             camera_look: [1.0, 0.0, 1.0]
             target_pos: [0.5, 0.5, 0.5]
             target_rot: [0.0, 0.0, 0.0, 1.0] 
+            arm_states: []
         },
     ]
 

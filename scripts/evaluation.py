@@ -34,7 +34,7 @@ def get_eef_gt_tf(victor, camera, world_relative=False):
         Tce = Tcw @ Twe
         return Tce
 
-def run_servoing(pbvs, camera, victor, target, config):
+def run_servoing(pbvs, camera, victor, target, config, result_dict):
     pose_est_uids = None
     target_uids = None
 
@@ -62,12 +62,14 @@ def run_servoing(pbvs, camera, victor, target, config):
         ctrl, Twe = pbvs.do_pbvs(depth, target, victor.get_arm_jacobian('left'),
                                 victor.get_jacobian_pinv('left'), 1/config['pbvs_hz'])
         victor.psuedoinv_ik_controller("left", ctrl)
+        print(victor.get_arm_joint_configs())
 
         # draw debug stuff
         if(config['vis']):
             erase_pos(pose_est_uids)
             #pose_est_uids = draw_pose(Twe[0:3, 3], Twe[0:3, 0:3], mat=True) 
             #cv2.imshow("Camera", cv2.resize(rgb_edit, (1280 // 5, 800 // 5)))  
+        result_dict["data"].append(Twe)
 
         
         # step simulation
@@ -84,17 +86,18 @@ def main():
 
     # Executes servoing for all the servo configs provided
     servo_configs = config['servo_configs']
-    for servo_config in servo_configs:
-        camera = PyBulletCamera(np.array(servo_config['camera_pos']), np.array(servo_config['camera_look']))
+    for i, servo_config in enumerate(servo_configs):
         victor = Victor()
+        camera = PyBulletCamera(np.array(servo_config['camera_pos']), np.array(servo_config['camera_look']))
         target = create_target_tf(np.array(servo_config['target_pos']), np.array(servo_config['target_rot'])) 
         pbvs = ICPPBVS(camera, 1, 1, get_eef_gt_tf(victor, camera), 
             config['pbvs_settings']['max_joint_velo'], config['pbvs_settings']['seg_range'], debug=True) 
-        run_servoing(pbvs, camera, victor, target, config)
+        result_dict[f"traj{i}"] = {"data": []}
+        run_servoing(pbvs, camera, victor, target, config, result_dict[f'traj{i}'])
     
     now = datetime.now()
-    filename = "result%Y%m%d-%H%M%S.pkl"
-    result_file = open(f'test-results/{filename}', 'w')
+    filename = now.strftime("result%Y%m%d-%H%M%S.pkl")
+    result_file = open(f'test-results/{filename}', 'wb')
     pickle.dump(result_dict, result_file)
     result_file.close()
         

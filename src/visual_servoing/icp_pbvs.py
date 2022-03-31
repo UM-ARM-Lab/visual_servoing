@@ -70,10 +70,11 @@ class ICPPBVS:
         self.pcl = o3d.geometry.PointCloud()
         
         if(debug):
-            self.vis = o3d.visualization.Visualizer()
-            self.vis.create_window()
-            self.vis.add_geometry(self.pcl)
-            self.vis.add_geometry(self.model)
+            pass
+            #self.vis = o3d.visualization.Visualizer()
+            #self.vis.create_window()
+            #self.vis.add_geometry(self.pcl)
+            #self.vis.add_geometry(self.model)
 
         self.pose_predict_uids = None
         self.cheat_pose_uids = None

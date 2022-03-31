@@ -55,6 +55,14 @@ class Victor:
 
         # load pickle
         self.gripper_pkl = pickle.load(open("robot_points.pkl", 'rb'))
+    
+    def get_arm_joint_configs(self):
+        joint_states = {}
+        for joint_name in left_arm_joints:
+            idx = self.joints_by_name[joint_name][0]
+            pos, vel, force, torque = p.getJointState(self.urdf, idx)
+            joint_states[joint_name] = pos
+        return joint_states
 
     # transform helper, gets Tab 
     def get_tf(self, link_a, link_b):
