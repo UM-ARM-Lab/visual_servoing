@@ -1,14 +1,15 @@
 {
     # type of end effector perception, can be auroco or icp
     eef_perception_type: icp
-    eef_perception_settings: {
+    pbvs_settings: {
         seg_range: 0.05
+        max_joint_velo: 1.5
     }
 
     # max position error before terminating (m)
     max_pos_error: 0.03
-    # max rotation error before terminating (degrees)
-    max_rot_error: 5
+    # max rotation error before terminating (radian)
+    max_rot_error: 0.1
     # timeout if the desired position and rotation error are never achieved
     timeout: 200
 
@@ -21,16 +22,10 @@
     
     servo_configs: [
         {
-            camera_pos: []
-            camera_rot: []
-            target_pos: []
-            target_rot: [] 
-        },
-        {
-            camera_pos: []
-            camera_rot: []
-            target_pos: []
-            target_rot: [] 
+            camera_pos: [1.0, -1.0, 1.0]
+            camera_look: [1.0, 0.0, 1.0]
+            target_pos: [0.5, 0.5, 0.5]
+            target_rot: [1.0, 0.0, 0.0, 0.0] 
         },
     ]
 

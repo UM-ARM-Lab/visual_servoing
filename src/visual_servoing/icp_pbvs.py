@@ -48,16 +48,18 @@ class ICPPBVS:
         debug: do debugging visualizations or not
     ​
     """
-    def __init__(self, camera, k_v, k_omega, model, start_eef_pose, max_joint_velo=0, seg_range=0.04, debug=False):
+    def __init__(self, camera, k_v, k_omega, start_eef_pose, max_joint_velo=0, seg_range=0.04, debug=False):
         self.seg_range = seg_range
         self.k_v = k_v
         self.k_omega = k_omega
         self.camera = camera
-        self.model = o3d.geometry.PointCloud()
-        self.model_raw = model
-        self.model.points = o3d.utility.Vector3dVector(model)
-        self.model.paint_uniform_color([0, 0.651, 0.929])
+
         self.model_sdf = pkl.load(open("points_and_sdf.pkl", "rb"))
+        self.model = o3d.geometry.PointCloud()
+        self.model_raw = np.array(self.model_sdf['points'])
+        self.model.points = o3d.utility.Vector3dVector(self.model_raw)
+        self.model.paint_uniform_color([0, 0.651, 0.929])
+
         self.seg_range = seg_range
 
         self.prev_pose = start_eef_pose
@@ -74,6 +76,7 @@ class ICPPBVS:
             self.vis.add_geometry(self.model)
 
         self.pose_predict_uids = None
+        self.debug = debug
 
     def draw_registration_result(self):
         #o3d.visualization.draw_geometries([self.pcl, self.model])
