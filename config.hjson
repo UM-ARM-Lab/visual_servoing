@@ -11,7 +11,7 @@
     # max rotation error before terminating (radian)
     max_rot_error: 0.1
     # timeout if the desired position and rotation error are never achieved
-    timeout: 5
+    timeout: 100
 
     # do debug visualizations
     vis: true

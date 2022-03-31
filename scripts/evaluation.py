@@ -48,9 +48,15 @@ def run_servoing(pbvs, camera, victor, target, config, result_dict):
     while(True):
         # check if timeout exceeded
         if(time.time() - start_time > config['timeout']):
-            return 0
+            return 1
 
         # check if error is low enough to terminate
+        eef_gt = get_eef_gt_tf(victor, camera, True)
+        pos_error = np.linalg.norm(eef_gt[0:3, 3] -  target[0:3, 3])
+        rot_error = np.linalg.norm(cv2.Rodrigues(eef_gt[0:3, 0:3].T @ target[0:3, 0:3])[0])
+        print(f"{pos_error} ---- {rot_error}")
+        if(pos_error < config['max_pos_error'] and rot_error < config['max_rot_error']):
+            return 0
         
 
         # get camera image
@@ -62,14 +68,16 @@ def run_servoing(pbvs, camera, victor, target, config, result_dict):
         ctrl, Twe = pbvs.do_pbvs(depth, target, victor.get_arm_jacobian('left'),
                                 victor.get_jacobian_pinv('left'), 1/config['pbvs_hz'])
         victor.psuedoinv_ik_controller("left", ctrl)
-        print(victor.get_arm_joint_configs())
 
         # draw debug stuff
         if(config['vis']):
             erase_pos(pose_est_uids)
             #pose_est_uids = draw_pose(Twe[0:3, 3], Twe[0:3, 0:3], mat=True) 
             #cv2.imshow("Camera", cv2.resize(rgb_edit, (1280 // 5, 800 // 5)))  
-        result_dict["data"].append(Twe)
+
+        result_dict["est_eef_pose"].append(Twe)
+        result_dict["gt_eef_pose"].append(eef_gt)
+        result_dict["joint_config"].append(victor.get_arm_joint_configs())
 
         
         # step simulation
@@ -92,7 +100,7 @@ def main():
         target = create_target_tf(np.array(servo_config['target_pos']), np.array(servo_config['target_rot'])) 
         pbvs = ICPPBVS(camera, 1, 1, get_eef_gt_tf(victor, camera), 
             config['pbvs_settings']['max_joint_velo'], config['pbvs_settings']['seg_range'], debug=True) 
-        result_dict[f"traj{i}"] = {"data": []}
+        result_dict[f"traj{i}"] = {"joint_config": [], "est_eef_pose": [], "gt_eef_pose": []}
         run_servoing(pbvs, camera, victor, target, config, result_dict[f'traj{i}'])
     
     now = datetime.now()
