@@ -96,6 +96,7 @@ def main():
 
     # Executes servoing for all the servo configs provided
     servo_configs = config['servo_configs']
+    client = p.connect(p.GUI)
     for i, servo_config in enumerate(servo_configs):
         victor = Victor(servo_config["arm_states"])
         camera = PyBulletCamera(np.array(servo_config['camera_pos']), np.array(servo_config['camera_look']))

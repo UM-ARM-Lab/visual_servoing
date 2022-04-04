@@ -28,7 +28,6 @@ class Victor:
     def __init__(self, arm_states=None, start_pos=None, start_orientation=None):
         # Set up simulation 
         # Load Victor URDF
-        client = p.connect(p.GUI)
         self.urdf = p.loadURDF("models/victor_description/urdf/victor.urdf", [0,0,0], p.getQuaternionFromEuler([0,0,0]))
 
         # Organize joints into a dict from name->info
