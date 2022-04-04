@@ -95,12 +95,13 @@ def main():
     # Executes servoing for all the servo configs provided
     servo_configs = config['servo_configs']
     for i, servo_config in enumerate(servo_configs):
-        victor = Victor()
+        victor = Victor(servo_config["arm_states"])
         camera = PyBulletCamera(np.array(servo_config['camera_pos']), np.array(servo_config['camera_look']))
         target = create_target_tf(np.array(servo_config['target_pos']), np.array(servo_config['target_rot'])) 
         pbvs = ICPPBVS(camera, 1, 1, get_eef_gt_tf(victor, camera), 
             config['pbvs_settings']['max_joint_velo'], config['pbvs_settings']['seg_range'], debug=True) 
-        result_dict[f"traj{i}"] = {"joint_config": [], "est_eef_pose": [], "gt_eef_pose": []}
+        result_dict[f"traj{i}"] = {"joint_config": [], "est_eef_pose": [], "gt_eef_pose": [],
+             "camera_to_world" : np.linalg.inv(camera.get_view()), "victor_to_world": np.eye(4)}
         run_servoing(pbvs, camera, victor, target, config, result_dict[f'traj{i}'])
     
     now = datetime.now()

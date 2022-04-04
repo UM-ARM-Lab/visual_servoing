@@ -25,7 +25,7 @@ left_arm_joints = [
 ]
 
 class Victor:
-    def __init__(self, start_pos=None, start_orientation=None):
+    def __init__(self, arm_states=None, start_pos=None, start_orientation=None):
         # Set up simulation 
         # Load Victor URDF
         client = p.connect(p.GUI)
@@ -55,7 +55,13 @@ class Victor:
 
         # load pickle
         self.gripper_pkl = pickle.load(open("robot_points.pkl", 'rb'))
-    
+
+        # set arm states
+        if(arm_states is not None):
+            for joint_name, state in zip(left_arm_joints, arm_states):
+                id = self.joints_by_name[joint_name][0]
+                p.resetJointState(self.urdf, id, state)
+
     def get_arm_joint_configs(self):
         joint_states = {}
         for joint_name in left_arm_joints:
