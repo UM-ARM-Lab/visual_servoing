@@ -9,6 +9,8 @@ from visual_servoing.victor import *
 from visual_servoing.utils import *
 from datetime import datetime
 import pickle
+import os
+import shutil
 
 def create_target_tf(target_pos, target_rot):
     H = np.eye(4)
@@ -105,10 +107,17 @@ def main():
         run_servoing(pbvs, camera, victor, target, config, result_dict[f'traj{i}'])
     
     now = datetime.now()
-    filename = now.strftime("result%Y%m%d-%H%M%S.pkl")
-    result_file = open(f'test-results/{filename}', 'wb')
+    dirname = now.strftime("test-results/%Y%m%d-%H%M%S")
+    if not os.path.exists(dirname):
+        os.makedirs(dirname)
+
+
+    result_file = open(f'{dirname}/result.pkl', 'wb')
     pickle.dump(result_dict, result_file)
     result_file.close()
+
+    # Copy config to result
+    shutil.copyfile('config.hjson', f'{dirname}/config.hjson')
         
 
 main()
