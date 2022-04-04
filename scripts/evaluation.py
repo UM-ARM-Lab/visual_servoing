@@ -96,8 +96,8 @@ def main():
 
     # Executes servoing for all the servo configs provided
     servo_configs = config['servo_configs']
-    client = p.connect(p.GUI)
     for i, servo_config in enumerate(servo_configs):
+        client = p.connect(p.GUI)
         victor = Victor(servo_config["arm_states"])
         camera = PyBulletCamera(np.array(servo_config['camera_pos']), np.array(servo_config['camera_look']))
         target = create_target_tf(np.array(servo_config['target_pos']), np.array(servo_config['target_rot'])) 
@@ -106,6 +106,7 @@ def main():
         result_dict[f"traj{i}"] = {"joint_config": [], "est_eef_pose": [], "gt_eef_pose": [],
              "camera_to_world" : np.linalg.inv(camera.get_view()), "victor_to_world": np.eye(4)}
         run_servoing(pbvs, camera, victor, target, config, result_dict[f'traj{i}'])
+        p.disconnect()
     
     now = datetime.now()
     dirname = now.strftime("test-results/%Y%m%d-%H%M%S")
