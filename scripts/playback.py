@@ -4,6 +4,9 @@ from sensor_msgs.msg import JointState
 import tf_conversions
 import tf2_ros
 import geometry_msgs.msg
+import matplotlib.pyplot as plt
+import numpy as np
+import cv2
 
 def publish_tf(tf, ref_frame, frame, static=False):
     if(static):
@@ -29,7 +32,13 @@ pub = rospy.Publisher('arm_joint_states', JointState, queue_size=10 )
 rate = rospy.Rate(10)
 result = pkl.load(open("test-results/20220404-122502/result.pkl", "rb"))
 
+fig, (ax1, ax2) = plt.subplots(2, 1)
+iterations = len(result["traj0"]["joint_config"])
+pos_error = []
+rot_error = []
+
 for i, joint_config in enumerate(result["traj0"]["joint_config"]):
+    #plt.clf()
     # Publish joint configs
     for key in joint_config:
         msg = JointState()
@@ -41,9 +50,21 @@ for i, joint_config in enumerate(result["traj0"]["joint_config"]):
     world_to_camera = result["traj0"]['camera_to_world']
     publish_tf(world_to_camera, "world", "camera", True)
 
-    # Publish TF from camera to estimated EEF
+    # Publish TF from world to estimated EEF
     est_eef_pose = result["traj0"]['est_eef_pose'][i]
+    gt_eef_pose = result["traj0"]['gt_eef_pose'][i]
     publish_tf(est_eef_pose, "world", "est_eef_pose")
+
+    # Compute error and plot
+    pos_error.append(np.linalg.norm(est_eef_pose[0:3, 3] - gt_eef_pose[0:3, 3]))
+    link_rod, _ = cv2.Rodrigues(est_eef_pose[0:3, 0:3] @ gt_eef_pose[0:3, 0:3].T)
+    rot_error.append(np.linalg.norm(link_rod))
+    #ax1.plot(pos_error)
+    #ax2.plot(rot_error)
+    ax1.scatter(i, pos_error[-1], c='g')
+    ax2.scatter(i, rot_error[-1], c='r')
+    #plt.show()
+    plt.pause(0.01)
 
     # Publish estimated EEF TF 
     rate.sleep()
