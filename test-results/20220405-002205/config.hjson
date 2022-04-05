@@ -2,7 +2,7 @@
     # type of end effector perception, can be auroco or icp
     eef_perception_type: icp
     pbvs_settings: {
-        seg_range: 0.02
+        seg_range: 0.05
         max_joint_velo: 1.5
     }
 
@@ -21,21 +21,21 @@
 
     
     servo_configs: [
-      /*  
+        
         {
             camera_pos: [1.0, -1.0, 1.0]
             camera_look: [1.0, 0.0, 1.0]
             target_pos: [0.5, 0.5, 0.5]
             target_rot: [0.0, 0.0, 0.0, 1.0] 
             arm_states: [1.5, 0.7, 0.7, 0.0, 0.0, 0.0, 0.0]
-        },*/
-        {
+        },
+        /*{
             camera_pos: [1.0, -1.0, 1.0]
             camera_look: [1.0, 0.0, 1.0]
             target_pos: [0.5, 0.5, 0.5]
             target_rot: [0.0, 0.0, 0.0, 1.0] 
             arm_states: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-        },
+        },*/
     ]
 
 

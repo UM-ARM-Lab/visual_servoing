@@ -161,16 +161,11 @@ class Victor:
     def psuedoinv_ik_controller(self, side, x_prime):
         J = self.get_arm_jacobian(side)
         lmda = 0.0000001
-
-        J_pinv = np.dot(np.linalg.inv(np.dot(J.T, J) + lmda * np.eye(7)), J.T)
-
-        q_prime = np.dot(J_pinv, x_prime)
-        #if np.linalg.norm(q_prime) > 100.55:
-        #    q_prime = 100.55 * q_prime / np.linalg.norm(q_prime)  # * np.linalg.norm(x_prime)
+        J_pinv = np.linalg.inv(J.T @ J + lmda * np.eye(7)) @ J.T
+        q_prime = J_pinv @ x_prime
 
         # control
         joint_list = self.left_arm_joints if (side == "left") else right_arm_joints
-
         p.setJointMotorControlArray(self.urdf, joint_list, p.VELOCITY_CONTROL, targetVelocities=q_prime)
 
     def set_velo(self, targetVelo):

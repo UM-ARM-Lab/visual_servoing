@@ -45,7 +45,9 @@ def run_servoing(pbvs, camera, victor, target, config, result_dict):
     start_time = time.time()
 
     if(config['vis']):
+        cam_inv = np.linalg.inv(camera.get_view())
         draw_pose(target[0:3, 3], target[0:3, 0:3], mat=True, uids=target_uids)
+        draw_pose(cam_inv[0:3, 3], cam_inv[0:3, 0:3], mat=True)
 
     while(True):
         # check if timeout exceeded
@@ -56,7 +58,7 @@ def run_servoing(pbvs, camera, victor, target, config, result_dict):
         eef_gt = get_eef_gt_tf(victor, camera, True)
         pos_error = np.linalg.norm(eef_gt[0:3, 3] -  target[0:3, 3])
         rot_error = np.linalg.norm(cv2.Rodrigues(eef_gt[0:3, 0:3].T @ target[0:3, 0:3])[0])
-        print(f"{pos_error} ---- {rot_error}")
+        #print(f"{pos_error} ---- {rot_error}")
         if(pos_error < config['max_pos_error'] and rot_error < config['max_rot_error']):
             return 0
         
@@ -66,15 +68,20 @@ def run_servoing(pbvs, camera, victor, target, config, result_dict):
         rgb_edit = rgb[..., [2, 1, 0]].copy()
         
         # do visual servo
-        pbvs.cheat(get_eef_gt_tf(victor, camera, False))
+        #pbvs.cheat(get_eef_gt_tf(victor, camera, False))
         ctrl, Twe = pbvs.do_pbvs(depth, target, victor.get_arm_jacobian('left'),
                                 victor.get_jacobian_pinv('left'), 1/config['pbvs_hz'])
         victor.psuedoinv_ik_controller("left", ctrl)
 
+        #print(ctrl)
+        #_, _, _, _, _, _, lin, ang = p.getLinkState(victor.urdf, victor.eef_idx, 1)
+        #print(lin + ang)
+        #print(" ")
+
         # draw debug stuff
         if(config['vis']):
             erase_pos(pose_est_uids)
-            #pose_est_uids = draw_pose(Twe[0:3, 3], Twe[0:3, 0:3], mat=True) 
+            pose_est_uids = draw_pose(Twe[0:3, 3], Twe[0:3, 0:3], mat=True) 
             #cv2.imshow("Camera", cv2.resize(rgb_edit, (1280 // 5, 800 // 5)))  
 
         result_dict["est_eef_pose"].append(Twe)
@@ -85,6 +92,11 @@ def run_servoing(pbvs, camera, victor, target, config, result_dict):
         # step simulation
         for _ in range(sim_steps_per_pbvs):
             p.stepSimulation()
+
+        _, _, _, _, _, _, lin, ang = p.getLinkState(victor.urdf, victor.eef_idx, 1)
+        print(np.linalg.norm(ctrl[0:3] - lin)/np.linalg.norm(ctrl[0:3]))
+        print(np.linalg.norm(ctrl[3:6] - ang)/np.linalg.norm(ctrl[3:6]))
+        print(" ")
 
 def main():
     # Loads hjson config to do visual servoing with
