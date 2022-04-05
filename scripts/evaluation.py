@@ -68,7 +68,7 @@ def run_servoing(pbvs, camera, victor, target, config, result_dict):
         rgb_edit = rgb[..., [2, 1, 0]].copy()
         
         # do visual servo
-        #pbvs.cheat(get_eef_gt_tf(victor, camera, False))
+        pbvs.cheat(get_eef_gt_tf(victor, camera, False))
         ctrl, Twe = pbvs.do_pbvs(depth, target, victor.get_arm_jacobian('left'),
                                 victor.get_jacobian_pinv('left'), 1/config['pbvs_hz'])
         victor.psuedoinv_ik_controller("left", ctrl)
