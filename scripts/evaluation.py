@@ -68,7 +68,7 @@ def run_servoing(pbvs, camera, victor, target, config, result_dict):
         rgb_edit = rgb[..., [2, 1, 0]].copy()
         
         # do visual servo
-        pbvs.cheat(get_eef_gt_tf(victor, camera, False))
+        #pbvs.cheat(get_eef_gt_tf(victor, camera, False))
         ctrl, Twe = pbvs.do_pbvs(depth, target, victor.get_arm_jacobian('left'),
                                 victor.get_jacobian_pinv('left'), 1/config['pbvs_hz'])
         victor.psuedoinv_ik_controller("left", ctrl)
@@ -82,7 +82,8 @@ def run_servoing(pbvs, camera, victor, target, config, result_dict):
         if(config['vis']):
             erase_pos(pose_est_uids)
             pose_est_uids = draw_pose(Twe[0:3, 3], Twe[0:3, 0:3], mat=True) 
-            #cv2.imshow("Camera", cv2.resize(rgb_edit, (1280 // 5, 800 // 5)))  
+            cv2.imshow("Camera", cv2.resize(rgb_edit, (1280 // 5, 800 // 5)))  
+            cv2.waitKey(1)
 
         result_dict["est_eef_pose"].append(Twe)
         result_dict["gt_eef_pose"].append(eef_gt)

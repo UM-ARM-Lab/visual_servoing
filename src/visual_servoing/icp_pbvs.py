@@ -161,16 +161,16 @@ class ICPPBVS:
         pose_predict = self.prev_pose#action_tf @ self.prev_pose#np.linalg.inv(action_tf) @ self.prev_pose #action_tf @ self.prev_pose  
         pose_predict[0:3, 3] = pose_predict[0:3, 3] + action_trans[0:3]
         pose_predict[0:3, 0:3] = action_tf[0:3, 0:3] @ pose_predict[0:3, 0:3]
-        if(self.debug):
-            cheat_pose_vis = np.linalg.inv(self.camera.get_view()) @ self.cheat_pose  
-            erase_pos(self.cheat_pose_uids)
-            self.cheat_pose_uids = draw_pose(cheat_pose_vis[0:3, 3], cheat_pose_vis[0:3, 0:3], mat=True)
-            pose_predict_vis = np.linalg.inv(self.camera.get_view()) @ pose_predict  
-            erase_pos(self.pose_predict_uids)
-            self.pose_predict_uids = draw_pose(pose_predict_vis[0:3, 3], pose_predict_vis[0:3, 0:3], axis_len=0.2, alpha=0.5, mat=True)
-            erase_pos(self.prev_pose_predict_uids)
-            prev_pose_vis = np.linalg.inv(self.camera.get_view()) @ self.prev_pose  
-            #self.prev_pose_predict_uids = draw_pose(prev_pose_vis[0:3, 3], prev_pose_vis[0:3, 0:3], axis_len=0.1, alpha=0.8, mat=True)
+        #if(self.debug):
+        #    cheat_pose_vis = np.linalg.inv(self.camera.get_view()) @ self.cheat_pose  
+        #    erase_pos(self.cheat_pose_uids)
+        #    self.cheat_pose_uids = draw_pose(cheat_pose_vis[0:3, 3], cheat_pose_vis[0:3, 0:3], mat=True)
+        #    pose_predict_vis = np.linalg.inv(self.camera.get_view()) @ pose_predict  
+        #    erase_pos(self.pose_predict_uids)
+        #    self.pose_predict_uids = draw_pose(pose_predict_vis[0:3, 3], pose_predict_vis[0:3, 0:3], axis_len=0.2, alpha=0.5, mat=True)
+        #    erase_pos(self.prev_pose_predict_uids)
+        #    prev_pose_vis = np.linalg.inv(self.camera.get_view()) @ self.prev_pose  
+        #    #self.prev_pose_predict_uids = draw_pose(prev_pose_vis[0:3, 3], prev_pose_vis[0:3, 0:3], axis_len=0.1, alpha=0.8, mat=True)
 
 
         # transform point cloud into eef link frame using predicted pose
