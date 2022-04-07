@@ -7,7 +7,8 @@ import geometry_msgs.msg
 import matplotlib.pyplot as plt
 import numpy as np
 import cv2
-from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QVBoxLayout, QFileDialog
+from PyQt5.QtWidgets import *
+from PyQt5.QtCore import *
 
 
 # publishes a homogenous TF to the TF2 tree
@@ -43,20 +44,89 @@ class GUI(QWidget):
         # File select dialog
         self.file_selector = QFileDialog()
         self.file_selector.setFileMode(QFileDialog.AnyFile)
+        self.file_selector.setDirectory("/home/ashwin/catkin_ws/src/Val-Visual-Servo/test-results")
+
+        # Trajectory chooser combo box
+        self.traj_choice = QComboBox()
+        self.traj_choice.currentIndexChanged.connect(self.traj_select)
+        self.layout.addWidget(self.traj_choice)
+
+        # Idx slider
+        self.traj_slider = QSlider(Qt.Horizontal)
+        self.traj_slider.setValue(0)
+        self.traj_slider.setTickPosition(QSlider.TicksBelow)
+        self.traj_slider.setTickInterval(1)
+        self.traj_slider.valueChanged.connect(self.slider_change)
+        self.layout.addWidget(self.traj_slider)
 
         # ROS stuff
         rospy.init_node("playback", anonymous=True)
-        pub = rospy.Publisher('arm_joint_states', JointState, queue_size=10 )
+        self.joint_state_pub = rospy.Publisher('arm_joint_states', JointState, queue_size=10 )
+        self.model_sdf = pkl.load(open("points_and_sdf.pkl", "rb"))
+        fig, (self.ax1, self.ax2) = plt.subplots(2, 1)
 
     # Callback for file open button press
     def select_log_click(self):
         self.file_selector.exec_()
         filename = self.file_selector.selectedFiles()
-        self.load_result_file(filename)
+        self.load_result_file(str(filename[0]))
+    
+    # Callback for trajectory selection
+    def traj_select(self, i):
+        traj_len = len(self.result['traj'][i]['joint_config'])
+        self.traj_slider.setMinimum(0)
+        self.traj_slider.setMaximum(traj_len-1)
+        self.compute_traj_metrics(i)
+    
+    # Callback for slider change
+    def slider_change(self):
+        self.publish_playback_state(self.traj_choice.currentIndex(), self.traj_slider.value())
 
     # Loads result file
     def load_result_file(self, filename):
         self.result = pkl.load(open(filename, "rb"))
+        self.num_traj = len(self.result['traj'])
+        for i in range(self.num_traj):
+            self.traj_choice.addItem(f"traj {i}")
+    
+    def compute_traj_metrics(self, traj):
+        self.pos_error = []
+        self.rot_error = []
+        res = self.result['traj'][traj]
+        for idx in range(len(res['est_eef_pose'])):
+            # Publish TF from world to camera 
+            world_to_camera = res['camera_to_world']
+
+            # Publish TF from world to estimated EEF
+            est_eef_pose = res['est_eef_pose'][idx]
+            gt_eef_pose = res['gt_eef_pose'][idx]
+
+            # Compute error and plot
+            self.pos_error.append(np.linalg.norm(est_eef_pose[0:3, 3] - gt_eef_pose[0:3, 3]))
+            link_rod, _ = cv2.Rodrigues(est_eef_pose[0:3, 0:3] @ gt_eef_pose[0:3, 0:3].T)
+            self.rot_error.append(np.linalg.norm(link_rod))
+
+        self.ax1.plot(self.pos_error)
+        self.ax2.plot(self.rot_error)
+        plt.show()
+
+    def publish_playback_state(self, traj, idx):
+        res = self.result['traj'][traj]
+        # Publish joint configs
+        for key in res['joint_config'][idx]:
+            msg = JointState()
+            msg.name.append(key)
+            msg.position.append(res['joint_config'][idx][key])
+            self.joint_state_pub.publish(msg)
+
+        # Publish TF from world to camera 
+        world_to_camera = res['camera_to_world']
+        publish_tf(world_to_camera, "world", "camera", True)
+
+        # Publish TF from world to estimated EEF
+        est_eef_pose = res['est_eef_pose'][idx]
+        gt_eef_pose = res['gt_eef_pose'][idx]
+        publish_tf(est_eef_pose, "world", "est_eef_pose")
 
 
 if __name__ == "__main__":
@@ -64,43 +134,3 @@ if __name__ == "__main__":
     gui = GUI()
     gui.show()
     app.exec()
-
-
-rate = rospy.Rate(10)
-
-fig, (ax1, ax2) = plt.subplots(2, 1)
-iterations = len(result["traj0"]["joint_config"])
-pos_error = []
-rot_error = []
-
-for i, joint_config in enumerate(result["traj0"]["joint_config"]):
-    #plt.clf()
-    # Publish joint configs
-    for key in joint_config:
-        msg = JointState()
-        msg.name.append(key)
-        msg.position.append(joint_config[key])
-        pub.publish(msg)
-
-    # Publish TF from world to camera 
-    world_to_camera = result["traj0"]['camera_to_world']
-    publish_tf(world_to_camera, "world", "camera", True)
-
-    # Publish TF from world to estimated EEF
-    est_eef_pose = result["traj0"]['est_eef_pose'][i]
-    gt_eef_pose = result["traj0"]['gt_eef_pose'][i]
-    publish_tf(est_eef_pose, "world", "est_eef_pose")
-
-    # Compute error and plot
-    pos_error.append(np.linalg.norm(est_eef_pose[0:3, 3] - gt_eef_pose[0:3, 3]))
-    link_rod, _ = cv2.Rodrigues(est_eef_pose[0:3, 0:3] @ gt_eef_pose[0:3, 0:3].T)
-    rot_error.append(np.linalg.norm(link_rod))
-    #ax1.plot(pos_error)
-    #ax2.plot(rot_error)
-    ax1.scatter(i, pos_error[-1], c='g')
-    ax2.scatter(i, rot_error[-1], c='r')
-    #plt.show()
-    plt.pause(0.01)
-
-    # Publish estimated EEF TF 
-    rate.sleep()

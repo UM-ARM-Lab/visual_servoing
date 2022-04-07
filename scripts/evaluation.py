@@ -58,11 +58,9 @@ def run_servoing(pbvs, camera, victor, target, config, result_dict):
         eef_gt = get_eef_gt_tf(victor, camera, True)
         pos_error = np.linalg.norm(eef_gt[0:3, 3] -  target[0:3, 3])
         rot_error = np.linalg.norm(cv2.Rodrigues(eef_gt[0:3, 0:3].T @ target[0:3, 0:3])[0])
-        #print(f"{pos_error} ---- {rot_error}")
         if(pos_error < config['max_pos_error'] and rot_error < config['max_rot_error']):
             return 0
         
-
         # get camera image
         rgb, depth, seg = camera.get_image(True)
         rgb_edit = rgb[..., [2, 1, 0]].copy()
@@ -73,11 +71,6 @@ def run_servoing(pbvs, camera, victor, target, config, result_dict):
                                 victor.get_jacobian_pinv('left'), 1/config['pbvs_hz'])
         victor.psuedoinv_ik_controller("left", ctrl)
 
-        #print(ctrl)
-        #_, _, _, _, _, _, lin, ang = p.getLinkState(victor.urdf, victor.eef_idx, 1)
-        #print(lin + ang)
-        #print(" ")
-
         # draw debug stuff
         if(config['vis']):
             erase_pos(pose_est_uids)
@@ -85,19 +78,15 @@ def run_servoing(pbvs, camera, victor, target, config, result_dict):
             cv2.imshow("Camera", cv2.resize(rgb_edit, (1280 // 5, 800 // 5)))  
             cv2.waitKey(1)
 
+        # populate results
+        result_dict["seg_cloud"].append(np.asarray(pbvs.pcl.points))
         result_dict["est_eef_pose"].append(Twe)
         result_dict["gt_eef_pose"].append(eef_gt)
         result_dict["joint_config"].append(victor.get_arm_joint_configs())
-
         
         # step simulation
         for _ in range(sim_steps_per_pbvs):
             p.stepSimulation()
-
-        _, _, _, _, _, _, lin, ang = p.getLinkState(victor.urdf, victor.eef_idx, 1)
-        print(np.linalg.norm(ctrl[0:3] - lin)/np.linalg.norm(ctrl[0:3]))
-        print(np.linalg.norm(ctrl[3:6] - ang)/np.linalg.norm(ctrl[3:6]))
-        print(" ")
 
 def main():
     # Loads hjson config to do visual servoing with
@@ -105,34 +94,51 @@ def main():
     config_text = config_file.read()
     config = hjson.loads(config_text)
 
-    result_dict = {}
+    result_dict = {"traj" : []}
 
     # Executes servoing for all the servo configs provided
     servo_configs = config['servo_configs']
     for i, servo_config in enumerate(servo_configs):
+        # Create objects for visual servoing
         client = p.connect(p.GUI)
         victor = Victor(servo_config["arm_states"])
         camera = PyBulletCamera(np.array(servo_config['camera_pos']), np.array(servo_config['camera_look']))
         target = create_target_tf(np.array(servo_config['target_pos']), np.array(servo_config['target_rot'])) 
         pbvs = ICPPBVS(camera, 1, 1, get_eef_gt_tf(victor, camera), 
             config['pbvs_settings']['max_joint_velo'], config['pbvs_settings']['seg_range'], debug=True) 
-        result_dict[f"traj{i}"] = {"joint_config": [], "est_eef_pose": [], "gt_eef_pose": [],
-             "camera_to_world" : np.linalg.inv(camera.get_view()), "victor_to_world": np.eye(4)}
-        run_servoing(pbvs, camera, victor, target, config, result_dict[f'traj{i}'])
+        
+        # Create entry for this trajectory in result
+        result_dict[f"traj"].append(
+            {
+                "joint_config": [], 
+                "est_eef_pose": [],
+                "gt_eef_pose": [],
+                "seg_cloud": [],
+                "camera_to_world" : np.linalg.inv(camera.get_view()), 
+                "victor_to_world": np.eye(4)
+            }
+        )
+        
+        # Do visual servoing and record results
+        run_servoing(pbvs, camera, victor, target, config, result_dict[f'traj'][-1])
+
+        # Destroy GUI when done
         p.disconnect()
     
+    # Create folder for storing result
     now = datetime.now()
     dirname = now.strftime("test-results/%Y%m%d-%H%M%S")
     if not os.path.exists(dirname):
         os.makedirs(dirname)
 
-
+    # Dump result pkl into folder
     result_file = open(f'{dirname}/result.pkl', 'wb')
     pickle.dump(result_dict, result_file)
     result_file.close()
 
-    # Copy config to result
+    # Copy config to result folder
     shutil.copyfile('config.hjson', f'{dirname}/config.hjson')
         
 
-main()
+if __name__ == "__main__":
+    main()
