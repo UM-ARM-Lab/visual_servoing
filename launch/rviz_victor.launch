@@ -1,6 +1,7 @@
 <launch>
     <arg name="update_description" default="true"/>
     <arg name="launch_fake_dual_arm_bridge" default="false"/>
+    <arg name="rvizconfig" default="$(find visual_servoing)/default.rviz" />
 
     <group if="$(arg launch_fake_dual_arm_bridge)">
         <include file="$(find victor_fake_hardware_interface)/launch/fake_dual_arm_lcm_bridge.launch"/>
@@ -27,5 +28,6 @@
         <rosparam param="source_list">["arm_joint_states"]</rosparam>
     </node>
     <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" args="" />
+    <node name="rviz" pkg="rviz" type="rviz" args="-d $(arg rvizconfig)" required="true" />
 
 </launch>

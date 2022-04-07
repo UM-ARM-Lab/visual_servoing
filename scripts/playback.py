@@ -13,7 +13,7 @@ from PyQt5.QtCore import *
 
 # publishes a homogenous TF to the TF2 tree
 def publish_tf(tf, ref_frame, frame, static=False):
-    if(static):
+    if(not static):
         br = tf2_ros.TransformBroadcaster()
     else:
         br = tf2_ros.StaticTransformBroadcaster()
@@ -63,7 +63,6 @@ class GUI(QWidget):
         rospy.init_node("playback", anonymous=True)
         self.joint_state_pub = rospy.Publisher('arm_joint_states', JointState, queue_size=10 )
         self.model_sdf = pkl.load(open("points_and_sdf.pkl", "rb"))
-        fig, (self.ax1, self.ax2) = plt.subplots(2, 1)
 
     # Callback for file open button press
     def select_log_click(self):
@@ -90,6 +89,8 @@ class GUI(QWidget):
             self.traj_choice.addItem(f"traj {i}")
     
     def compute_traj_metrics(self, traj):
+        plt.close("all")
+        fig, (self.ax1, self.ax2) = plt.subplots(2, 1)
         self.pos_error = []
         self.rot_error = []
         res = self.result['traj'][traj]
@@ -123,10 +124,14 @@ class GUI(QWidget):
         world_to_camera = res['camera_to_world']
         publish_tf(world_to_camera, "world", "camera", True)
 
+        # Publish TF from world to target 
+        world_to_target = res['target_pose']
+        publish_tf(world_to_target, "world", "target", True)
+
         # Publish TF from world to estimated EEF
         est_eef_pose = res['est_eef_pose'][idx]
         gt_eef_pose = res['gt_eef_pose'][idx]
-        publish_tf(est_eef_pose, "world", "est_eef_pose")
+        publish_tf(est_eef_pose, "world", "est_eef_pose", True)
 
 
 if __name__ == "__main__":

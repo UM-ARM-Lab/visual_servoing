@@ -115,7 +115,8 @@ def main():
                 "gt_eef_pose": [],
                 "seg_cloud": [],
                 "camera_to_world" : np.linalg.inv(camera.get_view()), 
-                "victor_to_world": np.eye(4)
+                "victor_to_world": np.eye(4),
+                "target_pose" : target
             }
         )
         
