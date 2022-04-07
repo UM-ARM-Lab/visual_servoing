@@ -75,7 +75,9 @@ class GUI(QWidget):
         traj_len = len(self.result['traj'][i]['joint_config'])
         self.traj_slider.setMinimum(0)
         self.traj_slider.setMaximum(traj_len-1)
+        self.traj_slider.setValue(0)
         self.compute_traj_metrics(i)
+        self.publish_playback_state(i, 0)
     
     # Callback for slider change
     def slider_change(self):
@@ -91,6 +93,10 @@ class GUI(QWidget):
     def compute_traj_metrics(self, traj):
         plt.close("all")
         fig, (self.ax1, self.ax2) = plt.subplots(2, 1)
+        self.ax1.set_xlabel("iteration")
+        self.ax2.set_xlabel("iteration")
+        self.ax1.set_ylabel("error (m)")
+        self.ax2.set_ylabel("error (rad)")
         self.pos_error = []
         self.rot_error = []
         res = self.result['traj'][traj]
@@ -107,9 +113,9 @@ class GUI(QWidget):
             link_rod, _ = cv2.Rodrigues(est_eef_pose[0:3, 0:3] @ gt_eef_pose[0:3, 0:3].T)
             self.rot_error.append(np.linalg.norm(link_rod))
 
-        self.ax1.plot(self.pos_error)
-        self.ax2.plot(self.rot_error)
-        plt.show()
+        #self.ax1.plot(self.pos_error)
+        #self.ax2.plot(self.rot_error)
+        #plt.show()
 
     def publish_playback_state(self, traj, idx):
         res = self.result['traj'][traj]
@@ -132,6 +138,12 @@ class GUI(QWidget):
         est_eef_pose = res['est_eef_pose'][idx]
         gt_eef_pose = res['gt_eef_pose'][idx]
         publish_tf(est_eef_pose, "world", "est_eef_pose", True)
+
+        #self.ax1.clear()
+        #self.ax2.clear()
+        self.ax1.plot(self.pos_error[0:idx], "r")
+        self.ax2.plot(self.rot_error[0:idx], "b")
+        plt.pause(0.01)
 
 
 if __name__ == "__main__":
