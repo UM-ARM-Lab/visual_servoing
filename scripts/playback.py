@@ -7,7 +7,10 @@ import geometry_msgs.msg
 import matplotlib.pyplot as plt
 import numpy as np
 import cv2
+from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QVBoxLayout, QFileDialog
 
+
+# publishes a homogenous TF to the TF2 tree
 def publish_tf(tf, ref_frame, frame, static=False):
     if(static):
         br = tf2_ros.TransformBroadcaster()
@@ -27,10 +30,43 @@ def publish_tf(tf, ref_frame, frame, static=False):
     t.transform.rotation.w = quat[3]
     br.sendTransform(t)
 
-rospy.init_node("playback", anonymous=True)
-pub = rospy.Publisher('arm_joint_states', JointState, queue_size=10 )
+class GUI(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.layout = QVBoxLayout(self)
+
+        # Log file select button
+        self.select_log_button = QPushButton("Select Log")
+        self.select_log_button.clicked.connect(self.select_log_click)
+        self.layout.addWidget(self.select_log_button)
+        
+        # File select dialog
+        self.file_selector = QFileDialog()
+        self.file_selector.setFileMode(QFileDialog.AnyFile)
+
+        # ROS stuff
+        rospy.init_node("playback", anonymous=True)
+        pub = rospy.Publisher('arm_joint_states', JointState, queue_size=10 )
+
+    # Callback for file open button press
+    def select_log_click(self):
+        self.file_selector.exec_()
+        filename = self.file_selector.selectedFiles()
+        self.load_result_file(filename)
+
+    # Loads result file
+    def load_result_file(self, filename):
+        self.result = pkl.load(open(filename, "rb"))
+
+
+if __name__ == "__main__":
+    app = QApplication([])
+    gui = GUI()
+    gui.show()
+    app.exec()
+
+
 rate = rospy.Rate(10)
-result = pkl.load(open("test-results/20220404-122502/result.pkl", "rb"))
 
 fig, (ax1, ax2) = plt.subplots(2, 1)
 iterations = len(result["traj0"]["joint_config"])
