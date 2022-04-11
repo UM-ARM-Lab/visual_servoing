@@ -157,6 +157,20 @@ class PyBulletCamera(Camera):
         cam_coords = self.T @ img_coords
         cam_coords = cam_coords[0:3, :] / cam_coords[3, :]
         return cam_coords
+    
+    def get_true_depth(self, depth):
+        depth_mod = 2 * depth - 1
+        true_depth = self.T[2:4, 2:4] @ np.vstack((depth_mod.reshape(-1), self.ones))
+        true_depth /= true_depth[1, :]
+        return true_depth[0, :]
+
+    def get_depth_buffer(self, true_depth):
+        true_depth = np.vstack((true_depth.reshape(-1), self.ones))
+        depth_mod = self.projectionMatrix[2:4, 2:4] @ true_depth
+        depth_mod /= depth_mod[1, :]
+        depth = (depth_mod[0, :] + 1)/2
+        return depth 
+
 
     def get_pointcloud(self, depth):
         depth_mod = 2 * depth - 1
@@ -167,6 +181,7 @@ class PyBulletCamera(Camera):
         cam_coords = self.T @ img_coords
         cam_coords = cam_coords[0:3, :] / cam_coords[3, :]
         return cam_coords
+
 
     def get_xyz(self, u, v, depth):
         # This code querys the depth buffer returned from the simulated camera and gets the <x,y,z> 

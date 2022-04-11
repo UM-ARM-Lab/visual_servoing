@@ -11,6 +11,7 @@ from datetime import datetime
 import pickle
 import os
 import shutil
+import open3d as o3d
 
 def create_target_tf(target_pos, target_rot):
     H = np.eye(4)
@@ -35,6 +36,52 @@ def get_eef_gt_tf(victor, camera, world_relative=False):
     else:
         Tce = Tcw @ Twe
         return Tce
+
+def image_augmentation(numpy_depth):
+    # Get to btween 0 and 255
+    #depth = numpy_depth + np.min(numpy_depth)
+    synthetic_data = True
+    if synthetic_data:
+        #depth /= np.max(depth)
+        depth = 255.0 * numpy_depth
+        depth = depth.astype(np.uint8)
+        edges = cv2.Canny(depth, 100, 200)
+        ex, ey = np.where(edges == 255)
+        num_edge = len(ex)
+        min_edge = int(0.5 * num_edge)
+        num_disturbances = np.random.randint(min_edge, num_edge)
+        perm = np.random.permutation(np.arange(0, num_edge))
+        pixels_to_disturb = perm[:num_disturbances]
+        idx = (ex[pixels_to_disturb], ey[pixels_to_disturb])
+        eones = np.ones(depth.shape)
+        eones[idx] = 0.0
+
+        # Add edge noise
+        numpy_depth *= eones
+
+    # Get area where depth beyond threshold (background)
+    background_idx = np.where(np.logical_or(numpy_depth > 2/2.6, numpy_depth == 0))
+    bones = np.ones(numpy_depth.shape)
+    bones[background_idx] = 0.0
+
+    # Salt and pepper noise to background
+    bx, by = background_idx
+    max_disturbances = int(0.2 * len(bx))
+    min_disturbances = int(0.1 * len(bx))
+    num_snp = np.random.randint(min_disturbances, max_disturbances)
+    b_permutation = np.random.permutation(len(bx))
+    snp_idx = (bx[b_permutation[:num_snp]], by[b_permutation[:num_snp]])
+    snp_noise_depth = 1.0 + 0.1 * np.random.randn(num_snp)
+
+    # Subtract background
+    numpy_depth *= bones
+
+    # Add snp noise
+    if synthetic_data:
+        numpy_depth[snp_idx] = snp_noise_depth
+
+    numpy_depth += 0.05 * np.random.normal(size=numpy_depth.shape)
+    return numpy_depth 
 
 def run_servoing(pbvs, camera, victor, target, config, result_dict):
     pose_est_uids = None
@@ -64,6 +111,14 @@ def run_servoing(pbvs, camera, victor, target, config, result_dict):
         # get camera image
         rgb, depth, seg = camera.get_image(True)
         rgb_edit = rgb[..., [2, 1, 0]].copy()
+
+        pcl_raw = camera.get_pointcloud(camera.get_depth_buffer(camera.get_true_depth(depth)))
+        pcl_raw = camera.get_pointcloud(depth)
+        print(np.linalg.norm(camera.get_depth_buffer(camera.get_true_depth(depth)) - depth.reshape(-1)))
+        pcl = o3d.geometry.PointCloud() 
+        pcl.points = o3d.utility.Vector3dVector(pcl_raw.T)
+        pcl.colors = o3d.utility.Vector3dVector(rgb_edit.reshape(-1, 3)/255.0)
+        o3d.visualization.draw_geometries([pcl])
         
         # do visual servo
         #pbvs.cheat(get_eef_gt_tf(victor, camera, False))
