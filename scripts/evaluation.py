@@ -69,6 +69,9 @@ def run_servoing(pbvs, camera, victor, target, config, result_dict):
         #pbvs.cheat(get_eef_gt_tf(victor, camera, False))
         ctrl, Twe = pbvs.do_pbvs(depth, target, victor.get_arm_jacobian('left'),
                                 victor.get_jacobian_pinv('left'), 1/config['pbvs_hz'])
+        # noise injection
+        ctrl[0:3] += np.random.normal(scale=config['twist_execution_noise_linear'], size=(3))
+        ctrl[3:6] += np.random.normal(scale=config['twist_execution_noise_angular'], size=(3))
         victor.psuedoinv_ik_controller("left", ctrl)
 
         # draw debug stuff
