@@ -19,6 +19,10 @@
     pbvs_hz: 10
     sim_hz: 240
 
+    # std dev of noise in executed eef twist linear (m/s)
+    twist_execution_noise_linear: 0.01
+    # std dev of noise in executed eef twist angular (rad/s)
+    twist_execution_noise_angular: 0.01
     
     servo_configs: [
         {

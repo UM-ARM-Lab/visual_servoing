@@ -89,6 +89,26 @@ class GUI(QWidget):
         self.num_traj = len(self.result['traj'])
         for i in range(self.num_traj):
             self.traj_choice.addItem(f"traj {i}")
+        self.compute_global_metrics()
+    
+    def compute_global_metrics(self):
+        pos_error = []
+        rot_error = []
+        for traj in range(self.num_traj):
+            res = self.result['traj'][traj]
+            for idx in range(len(res['est_eef_pose'])):
+                est_eef_pose = res['est_eef_pose'][idx]
+                gt_eef_pose = res['gt_eef_pose'][idx]
+
+                # Compute error and plot
+                pos_error.append(np.linalg.norm(est_eef_pose[0:3, 3] - gt_eef_pose[0:3, 3]))
+                link_rod, _ = cv2.Rodrigues(est_eef_pose[0:3, 0:3] @ gt_eef_pose[0:3, 0:3].T)
+                rot_error.append(np.linalg.norm(link_rod))
+        print(f"mean position error: {np.mean(pos_error)}")
+        print(f"std dev position error: {np.sqrt(np.cov(pos_error))}")
+        print(f"mean rotation error: {np.mean(rot_error)}")
+        print(f"std dev rotation error: {np.sqrt(np.cov(rot_error))}")
+        
     
     def compute_traj_metrics(self, traj):
         plt.close("all")
