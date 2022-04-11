@@ -141,5 +141,60 @@ def main():
     shutil.copyfile('config.hjson', f'{dirname}/config.hjson')
         
 
+'''
+### Example abstraction
+class PBVSLoop:
+
+    def __init__(self, pbvs: PBVS):
+        self.pbvs = pbvs
+        self.sim_steps_per_pbvs = None
+
+    def run(self):
+        Two = self.pbvs.get_target_pose(rgb_edit, depth, Tao)
+
+        while True:
+
+            self.on_before_step_sim(Two)
+
+            self.step_simulation()
+
+            t0 = time.time()
+            self.on_after_step_sim()
+            pbvs_dt = time.time() - t0
+
+            ctrl, Twe = self.step_pbvs()
+
+            self.on_step_pbvs_end(ctrl, Twe, pbvs_dt)
+
+    def step_simulation(self):
+        for _ in range(self.sim_steps_per_pbvs):
+            p.stepSimulation()
+
+    def step_pbvs(self):
+        tool_idx = val.left_tag[0]
+        result = p.getLinkState(val.urdf, tool_idx, computeLinkVelocity=1, computeForwardKinematics=1)
+
+        link_trn, link_rot, com_trn, com_rot, frame_pos, frame_rot, link_vt, link_vr = result
+
+        rgb, depth = camera.get_image()
+        rgb_edit = rgb[..., [2, 1, 0]].copy()
+
+        ctrl, Twe = self.pbvs.do_pbvs(rgb_edit, depth, Two, Tae, val.get_arm_jacobian("left"), val.get_jacobian_pinv("left"), sim_dt)
+
+        val.set_velo(val.get_jacobian_pinv("left") @ ctrl)
+
+        return ctrl, Twe
+
+
+    def on_before_step_sim(self, Two):
+        pass
+
+    def on_after_step_sim(self):
+        pass
+
+    def on_step_pbvs_end(self, ctrl, Twe, pbvs_dt):
+        pass
+'''
+
 if __name__ == "__main__":
     main()
