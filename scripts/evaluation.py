@@ -12,6 +12,7 @@ import pickle
 import os
 import shutil
 import open3d as o3d
+from visual_servoing.kinectnoise import add_noise
 
 def create_target_tf(target_pos, target_rot):
     H = np.eye(4)
@@ -112,17 +113,18 @@ def run_servoing(pbvs, camera, victor, target, config, result_dict):
         rgb, depth, seg = camera.get_image(True)
         rgb_edit = rgb[..., [2, 1, 0]].copy()
 
-        pcl_raw = camera.get_pointcloud(camera.get_depth_buffer(camera.get_true_depth(depth)))
-        pcl_raw = camera.get_pointcloud(depth)
-        print(np.linalg.norm(camera.get_depth_buffer(camera.get_true_depth(depth)) - depth.reshape(-1)))
-        pcl = o3d.geometry.PointCloud() 
-        pcl.points = o3d.utility.Vector3dVector(pcl_raw.T)
-        pcl.colors = o3d.utility.Vector3dVector(rgb_edit.reshape(-1, 3)/255.0)
-        o3d.visualization.draw_geometries([pcl])
+        true_depth = camera.get_true_depth(depth).reshape(depth.shape)
+        noisy_depth = image_augmentation(true_depth)#add_noise(true_depth)/100.0
+        noisy_depth_buffer = camera.get_depth_buffer(noisy_depth).reshape(depth.shape)
+        #pcl_raw = camera.get_pointcloud(noisy_depth_buffer)
+        #pcl = o3d.geometry.PointCloud() 
+        #pcl.points = o3d.utility.Vector3dVector(pcl_raw.T)
+        #pcl.colors = o3d.utility.Vector3dVector(rgb_edit.reshape(-1, 3)/255.0)
+        #o3d.visualization.draw_geometries([pcl])
         
         # do visual servo
         #pbvs.cheat(get_eef_gt_tf(victor, camera, False))
-        ctrl, Twe = pbvs.do_pbvs(depth, target, victor.get_arm_jacobian('left'),
+        ctrl, Twe = pbvs.do_pbvs(noisy_depth_buffer, target, victor.get_arm_jacobian('left'),
                                 victor.get_jacobian_pinv('left'), 1/config['pbvs_hz'])
         # noise injection
         ctrl[0:3] += np.random.normal(scale=config['twist_execution_noise_linear'], size=(3))

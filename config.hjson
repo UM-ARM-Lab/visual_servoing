@@ -9,7 +9,7 @@
     # max position error before terminating (m)
     max_pos_error: 0.03
     # max rotation error before terminating (radian)
-    max_rot_error: 0.03
+    max_rot_error: 0.02
     # timeout if the desired position and rotation error are never achieved
     timeout: 100
 
@@ -20,9 +20,9 @@
     sim_hz: 240
 
     # std dev of noise in executed eef twist linear (m/s)
-    twist_execution_noise_linear: 0.03
+    twist_execution_noise_linear: 0.00
     # std dev of noise in executed eef twist angular (rad/s)
-    twist_execution_noise_angular: 0.01
+    twist_execution_noise_angular: 0.00
     
     servo_configs: [
         {
