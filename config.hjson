@@ -11,7 +11,7 @@
     # max rotation error before terminating (radian)
     max_rot_error: 0.02
     # timeout if the desired position and rotation error are never achieved
-    timeout: 100
+    timeout: 30
 
     # do debug visualizations
     vis: true
@@ -23,6 +23,8 @@
     twist_execution_noise_linear: 0.00
     # std dev of noise in executed eef twist angular (rad/s)
     twist_execution_noise_angular: 0.00
+    # point cloud noise
+    use_depth_noise: false
     
     servo_configs: [
         {

@@ -107,14 +107,17 @@ def run_servoing(pbvs, camera, victor, target, config, result_dict):
         pos_error = np.linalg.norm(eef_gt[0:3, 3] -  target[0:3, 3])
         rot_error = np.linalg.norm(cv2.Rodrigues(eef_gt[0:3, 0:3].T @ target[0:3, 0:3])[0])
         if(pos_error < config['max_pos_error'] and rot_error < config['max_rot_error']):
+            result_dict['finished'] = True
             return 0
         
         # get camera image
         rgb, depth, seg = camera.get_image(True)
         rgb_edit = rgb[..., [2, 1, 0]].copy()
-
         true_depth = camera.get_true_depth(depth).reshape(depth.shape)
-        noisy_depth = image_augmentation(true_depth)#add_noise(true_depth)/100.0
+        if(config['use_depth_noise']):
+            noisy_depth = image_augmentation(true_depth)
+        else:
+            noisy_depth = true_depth
         noisy_depth_buffer = camera.get_depth_buffer(noisy_depth).reshape(depth.shape)
         #pcl_raw = camera.get_pointcloud(noisy_depth_buffer)
         #pcl = o3d.geometry.PointCloud() 
@@ -176,7 +179,8 @@ def main():
                 "seg_cloud": [],
                 "camera_to_world" : np.linalg.inv(camera.get_view()), 
                 "victor_to_world": np.eye(4),
-                "target_pose" : target
+                "target_pose" : target,
+                "finished" : False
             }
         )
         
