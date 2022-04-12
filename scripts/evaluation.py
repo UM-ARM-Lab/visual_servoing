@@ -12,7 +12,6 @@ import pickle
 import os
 import shutil
 import open3d as o3d
-from visual_servoing.kinectnoise import add_noise
 
 def create_target_tf(target_pos, target_rot):
     H = np.eye(4)
@@ -132,7 +131,7 @@ def run_servoing(pbvs, camera, victor, target, config, result_dict):
         
         # do visual servo
         #pbvs.cheat(get_eef_gt_tf(victor, camera, False))
-        ctrl, Twe = pbvs.do_pbvs(noisy_depth_buffer, target, victor.get_arm_jacobian('left'),
+        ctrl, Twe = pbvs.do_pbvs(rgb, noisy_depth_buffer, target, np.eye(4), victor.get_arm_jacobian('left'),
                                 victor.get_jacobian_pinv('left'), 1/config['pbvs_hz'])
         # noise injection
         ctrl[0:3] += np.random.normal(scale=config['twist_execution_noise_linear'], size=(3))
@@ -172,8 +171,8 @@ def main():
         victor = Victor(servo_config["arm_states"])
         camera = PyBulletCamera(np.array(servo_config['camera_pos']), np.array(servo_config['camera_look']))
         target = create_target_tf(np.array(servo_config['target_pos']), np.array(servo_config['target_rot'])) 
-        pbvs = ICPPBVS(camera, 1, 1, get_eef_gt_tf(victor, camera), 
-            config['pbvs_settings']['max_joint_velo'], config['pbvs_settings']['seg_range'], debug=True) 
+        pbvs = ICPPBVS(camera, 1, 1,  
+            config['pbvs_settings']['max_joint_velo'], get_eef_gt_tf(victor, camera), config['pbvs_settings']['seg_range'], debug=True) 
         
         # Create entry for this trajectory in result
         result_dict[f"traj"].append(
@@ -209,61 +208,6 @@ def main():
     # Copy config to result folder
     shutil.copyfile('config.hjson', f'{dirname}/config.hjson')
         
-
-'''
-### Example abstraction
-class PBVSLoop:
-
-    def __init__(self, pbvs: PBVS):
-        self.pbvs = pbvs
-        self.sim_steps_per_pbvs = None
-
-    def run(self):
-        Two = self.pbvs.get_target_pose(rgb_edit, depth, Tao)
-
-        while True:
-
-            self.on_before_step_sim(Two)
-
-            self.step_simulation()
-
-            t0 = time.time()
-            self.on_after_step_sim()
-            pbvs_dt = time.time() - t0
-
-            ctrl, Twe = self.step_pbvs()
-
-            self.on_step_pbvs_end(ctrl, Twe, pbvs_dt)
-
-    def step_simulation(self):
-        for _ in range(self.sim_steps_per_pbvs):
-            p.stepSimulation()
-
-    def step_pbvs(self):
-        tool_idx = val.left_tag[0]
-        result = p.getLinkState(val.urdf, tool_idx, computeLinkVelocity=1, computeForwardKinematics=1)
-
-        link_trn, link_rot, com_trn, com_rot, frame_pos, frame_rot, link_vt, link_vr = result
-
-        rgb, depth = camera.get_image()
-        rgb_edit = rgb[..., [2, 1, 0]].copy()
-
-        ctrl, Twe = self.pbvs.do_pbvs(rgb_edit, depth, Two, Tae, val.get_arm_jacobian("left"), val.get_jacobian_pinv("left"), sim_dt)
-
-        val.set_velo(val.get_jacobian_pinv("left") @ ctrl)
-
-        return ctrl, Twe
-
-
-    def on_before_step_sim(self, Two):
-        pass
-
-    def on_after_step_sim(self):
-        pass
-
-    def on_step_pbvs_end(self, ctrl, Twe, pbvs_dt):
-        pass
-'''
 
 if __name__ == "__main__":
     main()

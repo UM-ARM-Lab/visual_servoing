@@ -2,6 +2,7 @@ import numpy as np
 import pybullet as p
 import pybullet_data
 from visual_servoing.utils import get_link_tf
+from visual_servoing.arm_robot import ArmRobot
 import pickle
 # Joint names
 right_arm_joints = [
@@ -24,7 +25,7 @@ left_arm_joints = [
     'victor_left_arm_joint_7',
 ]
 
-class Victor:
+class Victor(ArmRobot):
     def __init__(self, arm_states=None, start_pos=None, start_orientation=None):
         # Set up simulation 
         # Load Victor URDF

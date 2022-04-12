@@ -1,4 +1,3 @@
-from tkinter import W
 import cv2
 import numpy as np
 import open3d as o3d
@@ -9,7 +8,7 @@ import copy
 from scipy.spatial.distance import cdist
 import tensorflow as tf
 from visual_servoing.utils import draw_pose, erase_pos
-
+from visual_servoing.pbvs import PBVS
 
 def SE3(se3):
     """
@@ -35,7 +34,7 @@ def SE3(se3):
         return np.hstack((tvec, rvec.squeeze()))
 
 
-class ICPPBVS:
+class ICPPBVS(PBVS):
     """
     ​
     Args:
@@ -48,11 +47,9 @@ class ICPPBVS:
         debug: do debugging visualizations or not
     ​
     """
-    def __init__(self, camera, k_v, k_omega, start_eef_pose, max_joint_velo=0, seg_range=0.04, debug=False):
+    def __init__(self, camera : Camera, k_v : float, k_omega : float, max_joint_velo : float, start_eef_pose, seg_range=0.04, debug=True):
+        super().__init__( camera, k_v, k_omega, max_joint_velo, debug)
         self.seg_range = seg_range
-        self.k_v = k_v
-        self.k_omega = k_omega
-        self.camera = camera
 
         self.model_sdf = pkl.load(open("points_and_sdf.pkl", "rb"))
         self.model = o3d.geometry.PointCloud()
@@ -60,19 +57,13 @@ class ICPPBVS:
         self.model.points = o3d.utility.Vector3dVector(self.model_raw)
         self.model.paint_uniform_color([0, 0.651, 0.929])
 
-        self.seg_range = seg_range
-
         self.prev_pose = start_eef_pose
         self.prev_twist = np.zeros(6)
-        self.prev_time = time.time()
         self.max_joint_velo = max_joint_velo
 
         self.pcl = o3d.geometry.PointCloud()
-        
-        #self.model.estimate_normals()
 
         if(debug):
-            #pass
             self.vis = o3d.visualization.Visualizer()
             self.vis.create_window()
             self.vis.add_geometry(self.pcl)
@@ -94,10 +85,6 @@ class ICPPBVS:
             del control
             del self.vis
         print('destroyed')
-    
-    # REMOVE ME
-    def cheat(self, gt_pose):
-        self.cheat_pose = gt_pose
 
     def draw_registration_result(self):
         #o3d.visualization.draw_geometries([self.pcl, self.model])
@@ -172,17 +159,6 @@ class ICPPBVS:
         pose_predict = self.prev_pose#action_tf @ self.prev_pose#np.linalg.inv(action_tf) @ self.prev_pose #action_tf @ self.prev_pose  
         pose_predict[0:3, 3] = pose_predict[0:3, 3] + action_trans[0:3]
         pose_predict[0:3, 0:3] = action_tf[0:3, 0:3] @ pose_predict[0:3, 0:3]
-        #if(self.debug):
-        #    cheat_pose_vis = np.linalg.inv(self.camera.get_view()) @ self.cheat_pose  
-        #    erase_pos(self.cheat_pose_uids)
-        #    self.cheat_pose_uids = draw_pose(cheat_pose_vis[0:3, 3], cheat_pose_vis[0:3, 0:3], mat=True)
-        #    pose_predict_vis = np.linalg.inv(self.camera.get_view()) @ pose_predict  
-        #    erase_pos(self.pose_predict_uids)
-        #    self.pose_predict_uids = draw_pose(pose_predict_vis[0:3, 3], pose_predict_vis[0:3, 0:3], axis_len=0.2, alpha=0.5, mat=True)
-        #    erase_pos(self.prev_pose_predict_uids)
-        #    prev_pose_vis = np.linalg.inv(self.camera.get_view()) @ self.prev_pose  
-        #    #self.prev_pose_predict_uids = draw_pose(prev_pose_vis[0:3, 3], prev_pose_vis[0:3, 0:3], axis_len=0.1, alpha=0.8, mat=True)
-
 
         # transform point cloud into eef link frame using predicted pose
         pcl_raw_linkfrm = np.linalg.inv(pose_predict)@np.vstack((pcl_raw,np.ones( (1, pcl_raw.shape[1] ) )))
@@ -218,7 +194,7 @@ class ICPPBVS:
         return Tcl
         
 
-    def do_pbvs(self, depth, Two, jac, jac_inv, dt=1/240, Tle=np.eye(4), debug=True):
+    def do_pbvs(self, rgb, depth, Two, Tle, jac, jac_inv, dt):
         """
         Computes a twist command for one iteration of PBVS control
     ​
@@ -245,65 +221,8 @@ class ICPPBVS:
         # compute control using state estimate + target position
         ctrl = self.get_control(Twe, Two)
         
-        # compute the joint velocities this eef velocity would result in 
-        q_prime = jac_inv @ ctrl 
-
-        # rescale joint velocities to self.max_joint_velo if the largest exceeds the limit 
-        if(np.max(np.abs(q_prime)) > self.max_joint_velo):
-            q_prime /= np.max(np.abs(q_prime))
-            q_prime *= self.max_joint_velo
-
-        # compute the actual end effector velocity given the limit
-        ctrl = jac @ q_prime
+        ctrl = self.limit_twist(jac, jac_inv, ctrl)
 
         # store results and return eef twist command + pose estimate
-        self.prev_time = time.time()
         self.prev_twist = ctrl
         return ctrl, Twe
-
-    def get_v(self, object_pos, eef_pos):
-        """
-        Get PBVS linear velocity command 
-    ​
-        Args:
-            object_pos: position of the target object in PBVS world
-            eef_pos: position of end effector in PBVS world
-    ​
-        Returns:
-            v: end effector linear velocity in arbitrary unit
-    ​
-        """
-        return (object_pos - eef_pos) * self.k_v
-
-    def get_omega(self, Rwa, Rwo):
-        """
-        Get PBVS angular velocity command 
-    ​
-        Args:
-            Rwa: rotation of end effector in PBVS world
-            Rwo: rotation of the target object in PBVS world
-    ​
-        Returns:
-            omega: end effector angular velocity rodrigues vector with arbitrary scale
-    ​
-        """
-        Rao = np.matmul(Rwa, Rwo.T).T
-        Rao_rod, _ = cv2.Rodrigues(Rao)
-        return Rao_rod * self.k_omega
-
-    def get_control(self, Twe, Two):
-        """
-        Get PBVS twist command
-    ​
-        Args:
-            Twe: pose of end effector in PBVS world
-            Two: pose of the target object in PBVS world
-    ​
-        Returns:
-            ctrl: end effector twist command
-    ​
-        """
-        ctrl = np.zeros(6)
-        ctrl[0:3] = self.get_v(Two[0:3, 3], Twe[0:3, 3])
-        ctrl[3:6] = np.squeeze(self.get_omega(Twe[0:3, 0:3], Two[0:3, 0:3]))
-        return ctrl

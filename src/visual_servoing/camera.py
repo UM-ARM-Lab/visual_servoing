@@ -22,14 +22,18 @@ class Camera:
 
     def get_intrinsics(self):
         """Return OpenCV style intrinsics 3x3"""
-        pass
+        raise NotImplementedError()
 
     def get_distortion(self):
-        pass
+        raise NotImplementedError()
 
     def get_extrinsics(self):
-        """Get homogenous extrisnic transform from world to camera Tcw 4x4"""
-        pass
+        """Get homogenous opencv extrisnic transform from world to camera Tcw 4x4"""
+        raise NotImplementedError()
+
+    def get_view(self):
+        """Get OpenGL style view matrix 4x4"""
+        raise NotImplementedError()
 
     def get_image(self):
         """Return RGB image and depth image"""
@@ -37,7 +41,11 @@ class Camera:
 
     def get_xyz(self, u, v, depth):
         """ Retrieve pointcloud point from depth and image pt """
-        pass
+        raise NotImplementedError()
+
+    def get_pointcloud(self, depth):
+        """ Retrieve pointcloud from depth """
+        raise NotImplementedError()
 
 
 #####################################

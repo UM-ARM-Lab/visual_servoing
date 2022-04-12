@@ -1,6 +1,7 @@
 import numpy as np
 import pybullet as p
 import pybullet_data
+from visual_servoing.arm_robot import ArmRobot
 
 # Joint names
 right_arm_joints = [
@@ -24,7 +25,7 @@ left_arm_joints = [
 ]
 
 
-class Val:
+class Val(ArmRobot):
     def __init__(self, start_pos=None, start_orientation=None):
         # Set up simulation 
         if start_orientation is None:
