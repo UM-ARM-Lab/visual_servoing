@@ -2,6 +2,7 @@ from visual_servoing.pbvs import PBVS
 from visual_servoing.camera import Camera
 from visual_servoing.arm_robot import ArmRobot
 import pybullet as p
+import numpy as np
 import time
 
 class PBVSLoop:
@@ -12,17 +13,18 @@ class PBVSLoop:
         p.setTimeStep(1/sim_hz)
         self.sim_steps_per_pbvs = int(sim_hz/pbvs_hz) 
         self.pbvs_dt = 1/pbvs_hz
+        self.sim_dt = 1/sim_hz
         self.robot = robot
         self.side = side
 
     def run(self, target):
         while True:
             self.on_before_step_pbvs()
-            ctrl, Twe = self.step_pbvs()
-            self.on_after_step_pbvs(ctrl, Twe)
+            self.step_pbvs()
+            self.on_after_step_pbvs()
             self.step_simulation()
             self.on_after_step_sim()
-            if(self.terminating_condition(ctrl, Twe)):
+            if(self.terminating_condition()):
                 break
 
     def step_simulation(self):
@@ -30,27 +32,16 @@ class PBVSLoop:
             p.stepSimulation()
 
     def step_pbvs(self):
-        rgb, depth = camera.get_image()
-        rgb_edit = rgb[..., [2, 1, 0]].copy()
-
-        ctrl, Twe = self.pbvs.do_pbvs(rgb_edit, depth, Two, Tae, val.get_arm_jacobian("left"), val.get_jacobian_pinv("left"), sim_dt)
-
-        val.set_velo(val.get_jacobian_pinv("left") @ ctrl)
-
-        return ctrl, Twe
-
-
-    def on_before_step_sim(self, Two):
-        pass
+        self.ctrl, self.Twe = self.pbvs.do_pbvs(self.rgb, self.depth, self.target, np.eye(4), self.robot.get_arm_jacobian(self.side), self.robot.get_jacobian_pinv(self.side), self.pbvs_dt)
 
     def on_after_step_sim(self):
         pass
 
     def on_before_step_pbvs(self):
-        pass
+        self.rgb, self.depth = self.camera.get_image()
 
-    def on_after_step_pbvs(self, ctrl, Twe):
-        self.robot.psuedoinverse_ik_controller(ctrl)
+    def on_after_step_pbvs(self):
+        self.robot.psuedoinverse_ik_controller(self.ctrl)
 
-    def terminating_condition(self, ctrl, Twe):
+    def terminating_condition(self):
         pass
