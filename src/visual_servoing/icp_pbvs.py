@@ -84,6 +84,17 @@ class ICPPBVS:
         self.debug = debug
         self.cheat_pose = None
     
+    def __del__(self):
+        if(False):
+            control = self.vis.get_view_control()
+
+            self.vis.remove_geometry(self.pcl)
+            self.vis.remove_geometry(self.model)
+            self.vis.destroy_window()
+            del control
+            del self.vis
+        print('destroyed')
+    
     # REMOVE ME
     def cheat(self, gt_pose):
         self.cheat_pose = gt_pose

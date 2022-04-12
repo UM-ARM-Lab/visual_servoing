@@ -53,7 +53,7 @@ class PyBulletCamera(Camera):
             fov=45.0,
             aspect=self.image_dim[0] / self.image_dim[1],
             nearVal=0.1,
-            farVal=3.1,
+            farVal=2.6,
         )
 
         # This is a column major order of the extrinsics

@@ -115,7 +115,12 @@ def run_servoing(pbvs, camera, victor, target, config, result_dict):
         rgb_edit = rgb[..., [2, 1, 0]].copy()
         true_depth = camera.get_true_depth(depth).reshape(depth.shape)
         if(config['use_depth_noise']):
+            min_val = np.min(true_depth)
+            max_val = np.max(true_depth)
+            rng = max_val - min_val
+            #noisy_depth = image_augmentation((true_depth - min_val)/rng)
             noisy_depth = image_augmentation(true_depth)
+            #noisy_depth = (noisy_depth * rng + min_val)
         else:
             noisy_depth = true_depth
         noisy_depth_buffer = camera.get_depth_buffer(noisy_depth).reshape(depth.shape)
@@ -140,16 +145,16 @@ def run_servoing(pbvs, camera, victor, target, config, result_dict):
             pose_est_uids = draw_pose(Twe[0:3, 3], Twe[0:3, 0:3], mat=True) 
             cv2.imshow("Camera", cv2.resize(rgb_edit, (1280 // 5, 800 // 5)))  
             cv2.waitKey(1)
+        
+        # step simulation
+        for _ in range(sim_steps_per_pbvs):
+            p.stepSimulation()
 
         # populate results
         result_dict["seg_cloud"].append(np.asarray(pbvs.pcl.points))
         result_dict["est_eef_pose"].append(Twe)
         result_dict["gt_eef_pose"].append(eef_gt)
         result_dict["joint_config"].append(victor.get_arm_joint_configs())
-        
-        # step simulation
-        for _ in range(sim_steps_per_pbvs):
-            p.stepSimulation()
 
 def main():
     # Loads hjson config to do visual servoing with

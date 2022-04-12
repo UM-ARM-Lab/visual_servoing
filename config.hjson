@@ -9,7 +9,7 @@
     # max position error before terminating (m)
     max_pos_error: 0.03
     # max rotation error before terminating (radian)
-    max_rot_error: 0.02
+    max_rot_error: 0.1
     # timeout if the desired position and rotation error are never achieved
     timeout: 30
 

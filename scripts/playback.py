@@ -94,6 +94,8 @@ class GUI(QWidget):
     def compute_global_metrics(self):
         pos_error = []
         rot_error = []
+        completed = 0
+        incomplete = []
         for traj in range(self.num_traj):
             res = self.result['traj'][traj]
             for idx in range(len(res['est_eef_pose'])):
@@ -104,10 +106,32 @@ class GUI(QWidget):
                 pos_error.append(np.linalg.norm(est_eef_pose[0:3, 3] - gt_eef_pose[0:3, 3]))
                 link_rod, _ = cv2.Rodrigues(est_eef_pose[0:3, 0:3] @ gt_eef_pose[0:3, 0:3].T)
                 rot_error.append(np.linalg.norm(link_rod))
+            completed += 1 if self.result['traj'][traj]['finished'] else 0
+            if(not self.result['traj'][traj]['finished']):
+                incomplete.append(traj)
+
+        print("---- Global metrics across all time stamps ----")
         print(f"mean position error: {np.mean(pos_error)}")
         print(f"std dev position error: {np.sqrt(np.cov(pos_error))}")
         print(f"mean rotation error: {np.mean(rot_error)}")
         print(f"std dev rotation error: {np.sqrt(np.cov(rot_error))}")
+        print(f"{completed}/{self.num_traj} trajectories completed")
+        print(incomplete)
+
+        final_pos_error = []
+        final_rot_error = []
+        for traj in range(self.num_traj):
+            res = self.result['traj'][traj]
+            est_eef_pose = res['est_eef_pose'][-1]
+            gt_eef_pose = res['gt_eef_pose'][-1]
+            final_pos_error.append(np.linalg.norm(est_eef_pose[0:3, 3] - gt_eef_pose[0:3, 3]))
+            link_rod, _ = cv2.Rodrigues(est_eef_pose[0:3, 0:3] @ gt_eef_pose[0:3, 0:3].T)
+            final_rot_error.append(np.linalg.norm(link_rod))
+        print("---- Global metrics across final time ----")
+        print(f"mean position error: {np.mean(final_pos_error)}")
+        print(f"std dev position error: {np.sqrt(np.cov(final_pos_error))}")
+        print(f"mean rotation error: {np.mean(final_rot_error)}")
+        print(f"std dev rotation error: {np.sqrt(np.cov(final_rot_error))}")
         
     
     def compute_traj_metrics(self, traj):
