@@ -19,10 +19,8 @@
     pbvs_hz: 10
     sim_hz: 240
 
-    # std dev of noise in executed eef twist linear (m/s)
-    twist_execution_noise_linear: 0.00
-    # std dev of noise in executed eef twist angular (rad/s)
-    twist_execution_noise_angular: 0.00
+    # std dev of noise in executed joint velocities (rad/s)
+    execution_noise: 0.00
     # point cloud noise
     use_depth_noise: true
     
