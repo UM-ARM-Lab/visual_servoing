@@ -24,7 +24,7 @@
     # std dev of noise in executed eef twist angular (rad/s)
     twist_execution_noise_angular: 0.00
     # point cloud noise
-    use_depth_noise: false
+    use_depth_noise: true
     
     servo_configs: [
         {

@@ -18,6 +18,8 @@ class PBVSLoop:
         self.side = side
 
     def run(self, target):
+        self.target = target
+        self.start_time = time.time()
         while True:
             self.on_before_step_pbvs()
             self.step_pbvs()

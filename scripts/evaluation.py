@@ -2,16 +2,19 @@ import hjson
 import time
 import pybullet as p
 import cv2
-from visual_servoing.camera import *
+from visual_servoing.camera import Camera, PyBulletCamera
 import numpy as np
-from visual_servoing.icp_pbvs import *
-from visual_servoing.victor import *
+from visual_servoing.icp_pbvs import ICPPBVS
+from visual_servoing.victor import Victor
 from visual_servoing.utils import *
 from datetime import datetime
 import pickle
 import os
 import shutil
 import open3d as o3d
+from visual_servoing.pbvs_loop import PBVSLoop
+from visual_servoing.arm_robot import ArmRobot
+from visual_servoing.pbvs import PBVS
 
 def create_target_tf(target_pos, target_rot):
     H = np.eye(4)
@@ -117,20 +120,19 @@ def run_servoing(pbvs, camera, victor, target, config, result_dict):
             min_val = np.min(true_depth)
             max_val = np.max(true_depth)
             rng = max_val - min_val
-            #noisy_depth = image_augmentation((true_depth - min_val)/rng)
+            noisy_depth = image_augmentation((true_depth - min_val)/rng)
             noisy_depth = image_augmentation(true_depth)
-            #noisy_depth = (noisy_depth * rng + min_val)
+            noisy_depth = (noisy_depth * rng + min_val)
         else:
             noisy_depth = true_depth
         noisy_depth_buffer = camera.get_depth_buffer(noisy_depth).reshape(depth.shape)
-        #pcl_raw = camera.get_pointcloud(noisy_depth_buffer)
-        #pcl = o3d.geometry.PointCloud() 
-        #pcl.points = o3d.utility.Vector3dVector(pcl_raw.T)
-        #pcl.colors = o3d.utility.Vector3dVector(rgb_edit.reshape(-1, 3)/255.0)
-        #o3d.visualization.draw_geometries([pcl])
+        pcl_raw = camera.get_pointcloud(noisy_depth_buffer)
+        pcl = o3d.geometry.PointCloud() 
+        pcl.points = o3d.utility.Vector3dVector(pcl_raw.T)
+        pcl.colors = o3d.utility.Vector3dVector(rgb_edit.reshape(-1, 3)/255.0)
+        o3d.visualization.draw_geometries([pcl])
         
         # do visual servo
-        #pbvs.cheat(get_eef_gt_tf(victor, camera, False))
         ctrl, Twe = pbvs.do_pbvs(rgb, noisy_depth_buffer, target, np.eye(4), victor.get_arm_jacobian('left'),
                                 victor.get_jacobian_pinv('left'), 1/config['pbvs_hz'])
         # noise injection
@@ -211,3 +213,52 @@ def main():
 
 if __name__ == "__main__":
     main()
+'''
+
+class EvalPBVSLoop(PBVSLoop):
+    def __init__(self, pbvs: PBVS, camera : Camera, robot : ArmRobot, side : str, pbvs_hz : float, sim_hz : float, config, result_dict):
+        self.config = config
+        self.result_dict = result_dict
+
+    def terminating_condition(self):
+        # check if timeout exceeded
+        if(time.time() - self.start_time > self.config['timeout']):
+            return True
+
+        # check if error is low enough to terminate
+        eef_gt = get_eef_gt_tf(self.robot, self.camera, True)
+        pos_error = np.linalg.norm(eef_gt[0:3, 3] -  self.target[0:3, 3])
+        rot_error = np.linalg.norm(cv2.Rodrigues(eef_gt[0:3, 0:3].T @ self.target[0:3, 0:3])[0])
+        if(pos_error < self.config['max_pos_error'] and rot_error < self.config['max_rot_error']):
+            self.result_dict['finished'] = True
+            return True
+
+
+    def on_before_step_pbvs(self):
+        rgb, depth, seg = self.camera.get_image(True)
+        rgb_edit = rgb[..., [2, 1, 0]].copy()
+        true_depth = self.camera.get_true_depth(depth).reshape(depth.shape)
+        if(self.config['use_depth_noise']):
+            min_val = np.min(true_depth)
+            max_val = np.max(true_depth)
+            rng = max_val - min_val
+            #noisy_depth = image_augmentation((true_depth - min_val)/rng)
+            noisy_depth = image_augmentation(true_depth)
+            #noisy_depth = (noisy_depth * rng + min_val)
+        else:
+            noisy_depth = true_depth
+        noisy_depth_buffer = self.camera.get_depth_buffer(noisy_depth).reshape(depth.shape)
+
+    def on_after_step_pbvs(self):
+        # noise injection
+        self.ctrl[0:3] += np.random.normal(scale=self.config['twist_execution_noise_linear'], size=(3))
+        self.ctrl[3:6] += np.random.normal(scale=self.config['twist_execution_noise_angular'], size=(3))
+        self.robot.psuedoinv_ik_controller("left", self.ctrl)
+
+        # draw debug stuff
+        if(self.config['vis']):
+            erase_pos(pose_est_uids)
+            pose_est_uids = draw_pose(Twe[0:3, 3], Twe[0:3, 0:3], mat=True) 
+            cv2.imshow("Camera", cv2.resize(rgb_edit, (1280 // 5, 800 // 5)))  
+            cv2.waitKey(1)
+            '''
