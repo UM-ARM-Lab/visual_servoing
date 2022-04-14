@@ -121,9 +121,9 @@ def run_servoing(pbvs, camera, victor, target, config, result_dict):
             min_val = np.min(true_depth)
             max_val = np.max(true_depth)
             rng = max_val - min_val
-            noisy_depth = image_augmentation((true_depth - min_val)/rng)
+            #noisy_depth = image_augmentation((true_depth - min_val)/rng)
             noisy_depth = image_augmentation(true_depth)
-            noisy_depth = (noisy_depth * rng + min_val)
+            #noisy_depth = (noisy_depth * rng + min_val)
         else:
             noisy_depth = true_depth
         noisy_depth_buffer = camera.get_depth_buffer(noisy_depth).reshape(depth.shape)
@@ -137,9 +137,9 @@ def run_servoing(pbvs, camera, victor, target, config, result_dict):
         ctrl, Twe = pbvs.do_pbvs(rgb, noisy_depth_buffer, target, np.eye(4), victor.get_arm_jacobian('left'),
                                 victor.get_jacobian_pinv('left'), 1/config['pbvs_hz'])
         # noise injection
-        ctrl[0:3] += np.random.normal(scale=config['twist_execution_noise_linear'], size=(3))
-        ctrl[3:6] += np.random.normal(scale=config['twist_execution_noise_angular'], size=(3))
-        victor.psuedoinv_ik_controller("left", ctrl)
+        #ctrl[0:3] += np.random.normal(scale=config['twist_execution_noise_linear'], size=(3))
+        #ctrl[3:6] += np.random.normal(scale=config['twist_execution_noise_angular'], size=(3))
+        victor.psuedoinv_ik_controller("left", ctrl, config['twist_execution_noise'])
 
         # draw debug stuff
         if(config['vis']):

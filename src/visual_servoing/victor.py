@@ -159,11 +159,12 @@ class Victor(ArmRobot):
         J_pinv = np.dot(np.linalg.inv(np.dot(J.T, J) + lmda * np.eye(7)), J.T)
         return J_pinv
 
-    def psuedoinv_ik_controller(self, side, x_prime):
+    def psuedoinv_ik_controller(self, side, x_prime, noise=0):
         J = self.get_arm_jacobian(side)
         lmda = 0.0000001
         J_pinv = np.linalg.inv(J.T @ J + lmda * np.eye(7)) @ J.T
         q_prime = J_pinv @ x_prime
+        q_prime += np.random.normal(scale=noise, size=q_prime.shape)
 
         # control
         joint_list = self.left_arm_joints if (side == "left") else right_arm_joints
