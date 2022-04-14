@@ -99,6 +99,7 @@ def run_servoing(pbvs, camera, victor, target, config, result_dict):
         draw_pose(target[0:3, 3], target[0:3, 0:3], mat=True, uids=target_uids)
         draw_pose(cam_inv[0:3, 3], cam_inv[0:3, 0:3], mat=True)
 
+    Twe = get_eef_gt_tf(victor, camera, True)
     while(True):
         # check if timeout exceeded
         if(time.time() - start_time > config['timeout']):
@@ -106,8 +107,8 @@ def run_servoing(pbvs, camera, victor, target, config, result_dict):
 
         # check if error is low enough to terminate
         eef_gt = get_eef_gt_tf(victor, camera, True)
-        pos_error = np.linalg.norm(eef_gt[0:3, 3] -  target[0:3, 3])
-        rot_error = np.linalg.norm(cv2.Rodrigues(eef_gt[0:3, 0:3].T @ target[0:3, 0:3])[0])
+        pos_error = np.linalg.norm(Twe[0:3, 3] -  target[0:3, 3])
+        rot_error = np.linalg.norm(cv2.Rodrigues(Twe[0:3, 0:3].T @ target[0:3, 0:3])[0])
         if(pos_error < config['max_pos_error'] and rot_error < config['max_rot_error']):
             result_dict['finished'] = True
             return 0
@@ -165,6 +166,9 @@ def main():
 
     result_dict = {"traj" : []}
 
+    vis = o3d.visualization.Visualizer()
+    vis.create_window()
+
     # Executes servoing for all the servo configs provided
     servo_configs = config['servo_configs']
     for i, servo_config in enumerate(servo_configs):
@@ -174,7 +178,7 @@ def main():
         camera = PyBulletCamera(np.array(servo_config['camera_pos']), np.array(servo_config['camera_look']))
         target = create_target_tf(np.array(servo_config['target_pos']), np.array(servo_config['target_rot'])) 
         pbvs = ICPPBVS(camera, 1, 1,  
-            config['pbvs_settings']['max_joint_velo'], get_eef_gt_tf(victor, camera), config['pbvs_settings']['seg_range'], debug=True) 
+            config['pbvs_settings']['max_joint_velo'], get_eef_gt_tf(victor, camera), config['pbvs_settings']['seg_range'], debug=True, vis=vis) 
         
         # Create entry for this trajectory in result
         result_dict[f"traj"].append(

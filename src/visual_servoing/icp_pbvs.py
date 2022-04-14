@@ -47,7 +47,7 @@ class ICPPBVS(PBVS):
         debug: do debugging visualizations or not
     ​
     """
-    def __init__(self, camera : Camera, k_v : float, k_omega : float, max_joint_velo : float, start_eef_pose, seg_range=0.04, debug=True):
+    def __init__(self, camera : Camera, k_v : float, k_omega : float, max_joint_velo : float, start_eef_pose, seg_range=0.04, debug=True, vis=None):
         super().__init__( camera, k_v, k_omega, max_joint_velo, debug)
         self.seg_range = seg_range
 
@@ -64,8 +64,7 @@ class ICPPBVS(PBVS):
         self.pcl = o3d.geometry.PointCloud()
 
         if(debug):
-            self.vis = o3d.visualization.Visualizer()
-            self.vis.create_window()
+            self.vis = vis
             self.vis.add_geometry(self.pcl)
             self.vis.add_geometry(self.model)
 
@@ -76,14 +75,9 @@ class ICPPBVS(PBVS):
         self.cheat_pose = None
     
     def __del__(self):
-        if(False):
-            control = self.vis.get_view_control()
-
+        if(self.debug):
             self.vis.remove_geometry(self.pcl)
             self.vis.remove_geometry(self.model)
-            self.vis.destroy_window()
-            del control
-            del self.vis
         print('destroyed')
 
     def draw_registration_result(self):
