@@ -126,11 +126,11 @@ def run_servoing(pbvs, camera, victor, target, config, result_dict):
         else:
             noisy_depth = true_depth
         noisy_depth_buffer = camera.get_depth_buffer(noisy_depth).reshape(depth.shape)
-        pcl_raw = camera.get_pointcloud(noisy_depth_buffer)
-        pcl = o3d.geometry.PointCloud() 
-        pcl.points = o3d.utility.Vector3dVector(pcl_raw.T)
-        pcl.colors = o3d.utility.Vector3dVector(rgb_edit.reshape(-1, 3)/255.0)
-        o3d.visualization.draw_geometries([pcl])
+        #pcl_raw = camera.get_pointcloud(noisy_depth_buffer)
+        #pcl = o3d.geometry.PointCloud() 
+        #pcl.points = o3d.utility.Vector3dVector(pcl_raw.T)
+        #pcl.colors = o3d.utility.Vector3dVector(rgb_edit.reshape(-1, 3)/255.0)
+        #o3d.visualization.draw_geometries([pcl])
         
         # do visual servo
         ctrl, Twe = pbvs.do_pbvs(rgb, noisy_depth_buffer, target, np.eye(4), victor.get_arm_jacobian('left'),
