@@ -1,7 +1,7 @@
 import numpy as np
 import pybullet as p
 import pybullet_data
-from visual_servoing.utils import get_link_tf
+from visual_servoing.utils import get_link_tf, draw_pose
 from visual_servoing.arm_robot import ArmRobot
 import pickle
 # Joint names
@@ -26,10 +26,14 @@ left_arm_joints = [
 ]
 
 class Victor(ArmRobot):
-    def __init__(self, arm_states=None, start_pos=None, start_orientation=None):
+    def __init__(self, arm_states=None, use_aruco=False, start_pos=None, start_orientation=None):
         # Set up simulation 
         # Load Victor URDF
-        self.urdf = p.loadURDF("models/victor_description/urdf/victor.urdf", [0,0,0], p.getQuaternionFromEuler([0,0,0]))
+        p.setAdditionalSearchPath("models/")
+        if(use_aruco):
+            self.urdf = p.loadURDF("models/victor_description/urdf/victor-with-cuff.urdf", [0,0,0], p.getQuaternionFromEuler([0,0,0]))
+        else:
+            self.urdf = p.loadURDF("models/victor_description/urdf/victor.urdf", [0,0,0], p.getQuaternionFromEuler([0,0,0]))
 
         # Organize joints into a dict from name->info
         self.joints_by_name = {}
@@ -173,4 +177,72 @@ class Victor(ArmRobot):
     def set_velo(self, targetVelo):
         joint_list = self.left_arm_joints
         p.setJointMotorControlArray(self.urdf, joint_list, p.VELOCITY_CONTROL, targetVelocities=targetVelo)
+
+    def get_tag_geometry(self):
+        tag_ids = None
+        # corners go tl -> tr -> br -> bl
+        tag_geometry = [
+            # Tag 1
+            np.array([
+                [0.02559, 0.09058, 0.02154],
+                [-0.02493, 0.09058, 0.02154],
+                [-0.02493, 0.09058, -0.02897],
+                [0.02559, 0.09058, -0.02897],
+            ]),
+            # Tag 2
+            np.array([
+                [0.082, 0.04531, 0.02145],
+                [0.0463, 0.08103, 0.02145],
+                [0.0463, 0.08103, -0.02906],
+                [0.082, 0.04531, -0.02906],
+            ]),
+            # Tag 3
+            np.array([
+                [0.08985, -0.02565, 0.02123], 
+                [0.08985, 0.02486, 0.02123], 
+                [0.08985, 0.02486, -0.02928], 
+                [0.08985, -0.02565, -0.02928], 
+            ]),
+            # Tag 4 
+            np.array([
+                [0.04547, -0.082, 0.02158], 
+                [0.08114, -0.04624, 0.02158], 
+                [0.08114, -0.04624, -0.02894], 
+                [0.04547, -0.082, -0.02894], 
+            ]),
+            np.array([
+                [-0.02653, -0.09164, 0.0224],
+                [0.02394, -0.09164, 0.0224],
+                [0.02394, -0.09164, -0.02827],
+                [-0.02653, -0.09164, -0.02827],
+            ]),
+            np.array([
+                [-0.08257, -0.04674, 0.02168],
+                [-0.04685, -0.08245, 0.02168],
+                [-0.04685, -0.08245, -0.02883],
+                [-0.08257, -0.04674, -0.02883],
+            ]),
+            np.array([
+                [-0.09103, 0.02497, 0.02202], 
+                [-0.09103, -0.02554, 0.02202],
+                [-0.09103, -0.02554, -0.02849],
+                [-0.09103, 0.02497, -0.02849], 
+            ]),
+            np.array([
+                [-0.04628, 0.08114, 0.02149], 
+                [-0.08201, 0.04541, 0.02149],
+                [-0.08201, 0.04541, -0.02902],
+                [-0.04628, 0.08114, -0.02902], 
+            ])
+        ]
+        Twm = get_link_tf(self.urdf, 17)
+        for tag in tag_geometry:
+            for pt in tag:
+                pt_aug = np.array([pt[0], pt[2], -pt[1], 1])
+                Q = Twm @ pt_aug
+                draw_pose(Q[0:3], np.eye(3), mat=True, axis_len=0.02)
+        #p = np.array([-0.02493, 0.02154, -0.09058, 1])
+        #Q = Twm @ p
+        # draw_pose(Q[0:3], np.eye(3), mat=True)
+        return tag_ids, tag_geometry
     

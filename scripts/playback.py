@@ -31,7 +31,7 @@ def publish_tf(tf, ref_frame, frame, static=False):
     t.transform.rotation.w = quat[3]
     br.sendTransform(t)
 
-class GUI(QWidget):
+class TrajectoryPlaybackGUI(QWidget):
     def __init__(self):
         super().__init__()
         self.layout = QVBoxLayout(self)
@@ -132,6 +132,13 @@ class GUI(QWidget):
         print(f"std dev position error: {np.sqrt(np.cov(final_pos_error))}")
         print(f"mean rotation error: {np.mean(final_rot_error)}")
         print(f"std dev rotation error: {np.sqrt(np.cov(final_rot_error))}")
+        plt.figure()
+        data = {"mean pos error at final timestamp" : final_pos_error, "mean pos error over all timestamp": pos_error}
+        plt.violinplot(data.values())
+        #plt.set_xticklabels(data.keys())
+        #plt.boxplot(pos_error)
+        plt.show()
+        plt.figure()
         
     
     def compute_traj_metrics(self, traj):
@@ -189,9 +196,98 @@ class GUI(QWidget):
         self.ax2.plot(self.rot_error[0:idx], "b")
         plt.pause(0.01)
 
+class MetricsGUI(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.layout = QVBoxLayout(self)
+
+        # Log file select button
+        self.select_log_button = QPushButton("Select Log")
+        self.select_log_button.clicked.connect(self.select_log_click)
+        self.layout.addWidget(self.select_log_button)
+        
+        # Log file select button
+        self.generate_button = QPushButton("Generate Plots")
+        self.generate_button.clicked.connect(self.generate_click)
+        self.layout.addWidget(self.generate_button)
+
+        # File select dialog
+        self.file_selector = QFileDialog()
+        self.file_selector.setFileMode(QFileDialog.ExistingFiles)
+        self.file_selector.setDirectory("/home/ashwin/catkin_ws/src/Val-Visual-Servo/test-results")
+
+        self.result = []
+        self.num_traj = []
+        self.names = [ 'mean over all time and trajectories w/ noise' , 'mean over all time and trajectories',
+            'mean over final times in all trajectories w/ noise', 'mean over final times in all trajectories']
+        self.pos_error = []
+        self.rot_error = []
+        self.final_pos_error = []
+        self.final_rot_error = []
+
+    # Callback for file open button press
+    def select_log_click(self):
+        self.file_selector.exec_()
+        filename = self.file_selector.selectedFiles()
+        for file in filename: 
+            self.load_result_file(str(file))
+    
+    def generate_click(self):
+        fig, ax = plt.subplots()
+        plt.violinplot(self.pos_error + self.final_pos_error)
+        plt.xticks(np.array([1,2,3,4]), self.names)
+        plt.ylabel("meters")
+        plt.title("Mean Position Error (m)")
+        plt.show()
+        plt.figure()
+        plt.violinplot(self.rot_error + self.final_rot_error)
+        plt.xticks(np.array([1,2,3,4]), self.names)
+        plt.ylabel("degrees")
+        plt.title("Mean Rotation Error (deg)")
+        plt.show()
+
+
+    # Loads result file
+    def load_result_file(self, filename):
+        self.result.append(pkl.load(open(filename, "rb")))
+        self.num_traj.append(len(self.result[-1]['traj']))
+        self.compute_global_metrics(self.result[-1], self.num_traj[-1])
+    
+    def compute_global_metrics(self, result, num_traj):
+        pos_error = []
+        rot_error = []
+        completed = 0
+        incomplete = []
+        for traj in range(num_traj):
+            res = result['traj'][traj]
+            for idx in range(len(res['est_eef_pose'])):
+                est_eef_pose = res['est_eef_pose'][idx]
+                gt_eef_pose = res['gt_eef_pose'][idx]
+
+                # Compute error and plot
+                pos_error.append(np.linalg.norm(est_eef_pose[0:3, 3] - gt_eef_pose[0:3, 3]))
+                link_rod, _ = cv2.Rodrigues(est_eef_pose[0:3, 0:3] @ gt_eef_pose[0:3, 0:3].T)
+                rot_error.append(np.linalg.norm(link_rod) * 180/3.141592)
+
+        self.pos_error.append(pos_error)
+        self.rot_error.append(rot_error)
+
+        final_pos_error = []
+        final_rot_error = []
+        for traj in range(num_traj):
+            res = result['traj'][traj]
+            est_eef_pose = res['est_eef_pose'][-1]
+            gt_eef_pose = res['gt_eef_pose'][-1]
+            final_pos_error.append(np.linalg.norm(est_eef_pose[0:3, 3] - gt_eef_pose[0:3, 3]))
+            link_rod, _ = cv2.Rodrigues(est_eef_pose[0:3, 0:3] @ gt_eef_pose[0:3, 0:3].T)
+            final_rot_error.append(np.linalg.norm(link_rod) * 180/3.141592)
+
+        self.final_pos_error.append(final_pos_error)
+        self.final_rot_error.append(final_rot_error )
+
 
 if __name__ == "__main__":
     app = QApplication([])
-    gui = GUI()
+    gui = MetricsGUI()
     gui.show()
     app.exec()

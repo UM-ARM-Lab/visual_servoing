@@ -1,6 +1,6 @@
 {
     # type of end effector perception, can be auroco or icp
-    eef_perception_type: icp
+    eef_perception_type: aruco
     pbvs_settings: {
         seg_range: 0.02
         max_joint_velo: 1.5
@@ -20,7 +20,7 @@
     sim_hz: 240
 
     # std dev of noise in executed eef twist angular (rad/s)
-    twist_execution_noise: 0.02
+    twist_execution_noise: 0.0
     # point cloud noise
     use_depth_noise: false
     

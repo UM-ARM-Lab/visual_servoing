@@ -5,6 +5,7 @@ import cv2
 from visual_servoing.camera import Camera, PyBulletCamera
 import numpy as np
 from visual_servoing.icp_pbvs import ICPPBVS
+from visual_servoing.marker_pbvs import MarkerPBVS
 from visual_servoing.victor import Victor
 from visual_servoing.utils import *
 from datetime import datetime
@@ -132,6 +133,8 @@ def run_servoing(pbvs, camera, victor, target, config, result_dict):
         #pcl.points = o3d.utility.Vector3dVector(pcl_raw.T)
         #pcl.colors = o3d.utility.Vector3dVector(rgb_edit.reshape(-1, 3)/255.0)
         #o3d.visualization.draw_geometries([pcl])
+
+        #draw_pose(victor.get_)
         
         # do visual servo
         ctrl, Twe = pbvs.do_pbvs(rgb, noisy_depth_buffer, target, np.eye(4), victor.get_arm_jacobian('left'),
@@ -169,16 +172,28 @@ def main():
     vis = o3d.visualization.Visualizer()
     vis.create_window()
 
+    use_aruco = True if config['eef_perception_type'] == "aruco" else False
+
     # Executes servoing for all the servo configs provided
     servo_configs = config['servo_configs']
     for i, servo_config in enumerate(servo_configs):
         # Create objects for visual servoing
         client = p.connect(p.GUI)
-        victor = Victor(servo_config["arm_states"])
+        victor = Victor(arm_states=servo_config["arm_states"], use_aruco=use_aruco)
         camera = PyBulletCamera(np.array(servo_config['camera_pos']), np.array(servo_config['camera_look']))
         target = create_target_tf(np.array(servo_config['target_pos']), np.array(servo_config['target_rot'])) 
-        pbvs = ICPPBVS(camera, 1, 1,  
-            config['pbvs_settings']['max_joint_velo'], get_eef_gt_tf(victor, camera), config['pbvs_settings']['seg_range'], debug=True, vis=vis) 
+
+        if(False):
+            tag_ids, tag_geometry = victor.get_tag_geometry()
+            pbvs = MarkerPBVS(camera, 1, 1,
+                config['pbvs_settings']['max_joint_velo'], 
+                tag_ids,
+                tag_geometry,
+                None,
+                None)
+        else:
+            pbvs = ICPPBVS(camera, 1, 1,  
+                config['pbvs_settings']['max_joint_velo'], get_eef_gt_tf(victor, camera), config['pbvs_settings']['seg_range'], debug=True, vis=vis) 
         
         # Create entry for this trajectory in result
         result_dict[f"traj"].append(
