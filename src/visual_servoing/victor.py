@@ -30,11 +30,14 @@ class Victor(ArmRobot):
         # Set up simulation 
         # Load Victor URDF
         p.setAdditionalSearchPath("models/")
+        #box_vis = p.createVisualShape(p.GEOM_BOX, halfExtents=[10, 10, 10], rgbaColor=[1, 0, 0, 1])
+        #box_col = p.createCollisionShape(p.GEOM_BOX, halfExtents=[10, 10, 10])
+        #box_multi = p.createMultiBody(baseCollisionShapeIndex = 0, baseVisualShapeIndex=box_vis, basePosition=[0, 0, 0])
         if(use_aruco):
             self.urdf = p.loadURDF("models/victor_description/urdf/victor-with-cuff.urdf", [0,0,0], p.getQuaternionFromEuler([0,0,0]))
         else:
             self.urdf = p.loadURDF("models/victor_description/urdf/victor.urdf", [0,0,0], p.getQuaternionFromEuler([0,0,0]))
-
+        
         # Organize joints into a dict from name->info
         self.joints_by_name = {}
         self.links_by_name = {}
@@ -188,61 +191,65 @@ class Victor(ArmRobot):
                 [-0.02493, 0.09058, 0.02154],
                 [-0.02493, 0.09058, -0.02897],
                 [0.02559, 0.09058, -0.02897],
-            ]),
+            ], dtype=np.float32),
             # Tag 2
             np.array([
                 [0.082, 0.04531, 0.02145],
                 [0.0463, 0.08103, 0.02145],
                 [0.0463, 0.08103, -0.02906],
                 [0.082, 0.04531, -0.02906],
-            ]),
+            ], dtype=np.float32),
             # Tag 3
             np.array([
                 [0.08985, -0.02565, 0.02123], 
                 [0.08985, 0.02486, 0.02123], 
                 [0.08985, 0.02486, -0.02928], 
                 [0.08985, -0.02565, -0.02928], 
-            ]),
+            ], dtype=np.float32),
             # Tag 4 
             np.array([
                 [0.04547, -0.082, 0.02158], 
                 [0.08114, -0.04624, 0.02158], 
                 [0.08114, -0.04624, -0.02894], 
                 [0.04547, -0.082, -0.02894], 
-            ]),
+            ], dtype=np.float32),
             np.array([
                 [-0.02653, -0.09164, 0.0224],
                 [0.02394, -0.09164, 0.0224],
                 [0.02394, -0.09164, -0.02827],
                 [-0.02653, -0.09164, -0.02827],
-            ]),
+            ], dtype=np.float32),
             np.array([
                 [-0.08257, -0.04674, 0.02168],
                 [-0.04685, -0.08245, 0.02168],
                 [-0.04685, -0.08245, -0.02883],
                 [-0.08257, -0.04674, -0.02883],
-            ]),
+            ], dtype=np.float32),
             np.array([
                 [-0.09103, 0.02497, 0.02202], 
                 [-0.09103, -0.02554, 0.02202],
                 [-0.09103, -0.02554, -0.02849],
                 [-0.09103, 0.02497, -0.02849], 
-            ]),
+            ], dtype=np.float32),
             np.array([
                 [-0.04628, 0.08114, 0.02149], 
                 [-0.08201, 0.04541, 0.02149],
                 [-0.08201, 0.04541, -0.02902],
                 [-0.04628, 0.08114, -0.02902], 
-            ])
+            ], dtype=np.float32)
         ]
         Twm = get_link_tf(self.urdf, 17)
-        for tag in tag_geometry:
-            for pt in tag:
-                pt_aug = np.array([pt[0], pt[2], -pt[1], 1])
-                Q = Twm @ pt_aug
-                draw_pose(Q[0:3], np.eye(3), mat=True, axis_len=0.02)
-        #p = np.array([-0.02493, 0.02154, -0.09058, 1])
-        #Q = Twm @ p
-        # draw_pose(Q[0:3], np.eye(3), mat=True)
-        return tag_ids, tag_geometry
+        for t_idx, tag in enumerate(tag_geometry):
+            for p_idx, pt in enumerate(tag):
+                x = pt[0] 
+                y = pt[1] 
+                z = pt[2]
+                tag_geometry[t_idx][p_idx] = np.array([x, z, -y])
+
+        #for tag in tag_geometry:
+        #    for pt in tag:
+        #        pt_aug = np.array([pt[0], pt[1], pt[2], 1])
+        #        Q = Twm @ pt_aug
+        #        draw_pose(Q[0:3], np.eye(3), mat=True, axis_len=0.02)
+        return np.arange(1,9), tag_geometry
     

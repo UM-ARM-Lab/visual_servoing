@@ -1,6 +1,6 @@
 {
     # type of end effector perception, can be auroco or icp
-    eef_perception_type: aruco
+    eef_perception_type: icp
     pbvs_settings: {
         seg_range: 0.02
         max_joint_velo: 1.5
@@ -11,7 +11,7 @@
     # max rotation error before terminating (radian)
     max_rot_error: 0.1
     # timeout if the desired position and rotation error are never achieved
-    timeout: 60
+    timeout: 30
 
     # do debug visualizations
     vis: true

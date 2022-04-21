@@ -117,6 +117,7 @@ def run_servoing(pbvs, camera, victor, target, config, result_dict):
         # get camera image
         rgb, depth, seg = camera.get_image(True)
         rgb_edit = rgb[..., [2, 1, 0]].copy()
+        cv2.imwrite("current.png", rgb_edit)
         true_depth = camera.get_true_depth(depth).reshape(depth.shape)
         if(config['use_depth_noise']):
             min_val = np.min(true_depth)
@@ -137,7 +138,7 @@ def run_servoing(pbvs, camera, victor, target, config, result_dict):
         #draw_pose(victor.get_)
         
         # do visual servo
-        ctrl, Twe = pbvs.do_pbvs(rgb, noisy_depth_buffer, target, np.eye(4), victor.get_arm_jacobian('left'),
+        ctrl, Twe = pbvs.do_pbvs(rgb_edit, noisy_depth_buffer, target, np.eye(4), victor.get_arm_jacobian('left'),
                                 victor.get_jacobian_pinv('left'), 1/config['pbvs_hz'])
         # noise injection
         #ctrl[0:3] += np.random.normal(scale=config['twist_execution_noise_linear'], size=(3))
@@ -156,7 +157,7 @@ def run_servoing(pbvs, camera, victor, target, config, result_dict):
             p.stepSimulation()
 
         # populate results
-        result_dict["seg_cloud"].append(np.asarray(pbvs.pcl.points))
+        #result_dict["seg_cloud"].append(np.asarray(pbvs.pcl.points))
         result_dict["est_eef_pose"].append(Twe)
         result_dict["gt_eef_pose"].append(eef_gt)
         result_dict["joint_config"].append(victor.get_arm_joint_configs())
@@ -183,10 +184,11 @@ def main():
         camera = PyBulletCamera(np.array(servo_config['camera_pos']), np.array(servo_config['camera_look']))
         target = create_target_tf(np.array(servo_config['target_pos']), np.array(servo_config['target_rot'])) 
 
-        if(False):
+        if(use_aruco):
             tag_ids, tag_geometry = victor.get_tag_geometry()
             pbvs = MarkerPBVS(camera, 1, 1,
                 config['pbvs_settings']['max_joint_velo'], 
+                get_eef_gt_tf(victor, camera),
                 tag_ids,
                 tag_geometry,
                 None,

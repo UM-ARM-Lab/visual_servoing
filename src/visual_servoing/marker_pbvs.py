@@ -39,7 +39,8 @@ class Marker:
 
 class MarkerPBVS(PBVS):
 
-    def __init__(self, camera : Camera, k_v : float, k_omega : float, max_joint_velo : float, eef_tag_ids, eef_tag_geometry, target_tag_ids, target_tag_geometry, use_pf=False, debug=True):
+    def __init__(self, camera : Camera, k_v : float, k_omega : float, max_joint_velo : float, 
+        start_eef_pose, eef_tag_ids, eef_tag_geometry, target_tag_ids, target_tag_geometry, use_pf=False, debug=True):
         """
         Args:
             camera: instance of a camera following generic camera interface, must have OpenGL and OpenCV matricies defined
@@ -56,10 +57,14 @@ class MarkerPBVS(PBVS):
         # AR Tag detection parameters
         self.aruco_dict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_6X6_250)
         self.aruco_params = cv2.aruco.DetectorParameters_create()
+        #self.aruco_params.adaptiveThreshWinSizeMax = 10
+        #self.aruco_params.adaptiveThreshWinSizeMin = 3
+        #self.aruco_params.adaptiveThreshConstant = 10
 
         # EEF board
         self.eef_board = cv2.aruco.Board_create(eef_tag_geometry, self.aruco_dict, eef_tag_ids)
-        self.target_board = cv2.aruco.Board_create(target_tag_geometry, self.aruco_dict, target_tag_ids)
+        #self.target_board = cv2.aruco.Board_create(target_tag_geometry, self.aruco_dict, target_tag_ids)
+        self.prev_pose = start_eef_pose
 
         # PF
         self.use_pf = use_pf
@@ -185,20 +190,18 @@ class MarkerPBVS(PBVS):
         # Find the EEF ar tag board 
         markers = self.detect_markers(rgb)
         ref_marker = self.get_board_pose(markers, self.eef_board, rgb)
+        cv2.imshow('frame', rgb)
 
         # If it was found, compute its pose estimate
         ctrl = np.zeros(6)
-        Twe = np.zeros((4,4))
-        Twe_sensor = None
+        Twe = self.prev_pose 
         if ref_marker is not None:
             Twa_sensor = self.compute_board_to_world(ref_marker, depth)
             # compute transform from world to end effector by including rigid transform from
             # eef ar tag to end effector frame
-            Twe_sensor = Twa_sensor @ Tle
+            Twe = Twa_sensor @ Tle
 
         # compute twist command based on state estimate and target
-        self.update_state_estimate(Twe_sensor, dt)
-        Twe = self.get_eef_state_estimate(Twe_sensor)
         if(Twe is not None):
             ctrl = self.get_control(Twe, Two)
         
@@ -206,6 +209,7 @@ class MarkerPBVS(PBVS):
 
         # store results
         self.prev_twist = ctrl
+        self.prev_pose = Twe
 
         return ctrl, Twe
     
