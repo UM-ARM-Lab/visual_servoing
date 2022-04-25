@@ -165,10 +165,10 @@ class ICPPBVS(PBVS):
         pcl_raw_linkfrm = (pcl_raw_linkfrm.T)[:, 0:3]
      
         # segment the point cloud and convert back to camera frame 
-        #pcl_seg = self.segment(pcl_raw_linkfrm, self.model_sdf['sdf'], self.model_sdf['origin_point'], self.model_sdf['res'], self.seg_range)
-        #pcl_raw = pose_predict@np.hstack((pcl_seg,np.ones( (pcl_seg.shape[0], 1) ))).T
-        #pcl_raw = pcl_raw[ 0:3, :]
-        pcl_raw = self.radius_segment(pcl_raw, pose_predict) 
+        pcl_seg = self.segment(pcl_raw_linkfrm, self.model_sdf['sdf'], self.model_sdf['origin_point'], self.model_sdf['res'], self.seg_range)
+        pcl_raw = pose_predict@np.hstack((pcl_seg,np.ones( (pcl_seg.shape[0], 1) ))).T
+        pcl_raw = pcl_raw[ 0:3, :]
+        #pcl_raw = self.radius_segment(pcl_raw, pose_predict) 
 
         # store the segmented point cloud from the camera as a class member for vis
         self.pcl.points = o3d.utility.Vector3dVector(pcl_raw.T)

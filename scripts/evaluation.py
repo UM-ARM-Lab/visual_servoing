@@ -157,7 +157,7 @@ def run_servoing(pbvs, camera, victor, target, config, result_dict):
             p.stepSimulation()
 
         # populate results
-        #result_dict["seg_cloud"].append(np.asarray(pbvs.pcl.points))
+        result_dict["seg_cloud"].append(np.asarray(pbvs.pcl.points))
         result_dict["est_eef_pose"].append(Twe)
         result_dict["gt_eef_pose"].append(eef_gt)
         result_dict["joint_config"].append(victor.get_arm_joint_configs())
@@ -183,6 +183,7 @@ def main():
         victor = Victor(arm_states=servo_config["arm_states"], use_aruco=use_aruco)
         camera = PyBulletCamera(np.array(servo_config['camera_pos']), np.array(servo_config['camera_look']))
         target = create_target_tf(np.array(servo_config['target_pos']), np.array(servo_config['target_rot'])) 
+        pbvs = None
 
         if(use_aruco):
             tag_ids, tag_geometry = victor.get_tag_geometry()

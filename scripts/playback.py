@@ -288,6 +288,7 @@ class MetricsGUI(QWidget):
 
 if __name__ == "__main__":
     app = QApplication([])
-    gui = MetricsGUI()
+    #gui = MetricsGUI()
+    gui = TrajectoryPlaybackGUI()
     gui.show()
     app.exec()
