@@ -7,8 +7,10 @@ from visual_servoing.utils import draw_pose, draw_sphere_marker, erase_pos
 from visual_servoing.val import *
 from visual_servoing.pbvs import *
 from visual_servoing.camera import *
+from visual_servoing.marker_pbvs import *
 import time
 import matplotlib.pyplot as plt
+import numpy as np
 
 # Key bindings
 KEY_U = 117
@@ -23,7 +25,6 @@ val = Val([0.0, 0.0, -0.5])
 # y = -1.3
 camera = PyBulletCamera(camera_eye=np.array([0.7, -0.8, 0.5]), camera_look=np.array([0.7, 0.0, 0.2]))
 
-#camera = PyBulletCamera(camera_eye=np.array([0.7, -0.3, 0.5]), camera_look=np.array([0.7, 0.0, 0.2]))
 # draw the PBVS camera pose
 Tc1c2 = np.array([
     [1.0, 0.0, 0.0, 0.0],
@@ -40,8 +41,8 @@ box_pos = (0.8, 0.3 + 0.2, 0.4)
 #box_orn = [0, 0, np.pi/8]
 box_orn = [np.pi/2, np.pi + np.pi/4, 3*np.pi/2]
 
-box_vis = p.createVisualShape(p.GEOM_MESH,fileName="models/AR Tag Cuff 2/PINCER_HOUSING2_EDIT.obj", meshScale=[1.0,1.0, 1.0])
-box_multi = p.createMultiBody(baseCollisionShapeIndex = 0, baseVisualShapeIndex=box_vis, basePosition=box_pos, baseOrientation=p.getQuaternionFromEuler(box_orn))
+#box_vis = p.createVisualShape(p.GEOM_MESH,fileName="models/AR Tag Cuff 2/PINCER_HOUSING2_EDIT.obj", meshScale=[1.0,1.0, 1.0])
+#box_multi = p.createMultiBody(baseCollisionShapeIndex = 0, baseVisualShapeIndex=box_vis, basePosition=box_pos, baseOrientation=p.getQuaternionFromEuler(box_orn))
 
 
 # Specify the 3D geometry of the end effector marker board 
@@ -75,9 +76,10 @@ tag_geometry = [tag0, tag1, tag2]
 ids = np.array([1, 2, 3])
 ids2 = np.array([4,5,6])
 
-pbvs = MarkerPBVS(camera, 0.9, 0.9, ids, tag_geometry, ids2, tag_geometry, False, 0.55)
-sim_dt = 0.1#1/240
+pbvs = MarkerPBVS(camera, 1, 1, 1.5, np.eye(4), ids, tag_geometry, ids2, tag_geometry)
+sim_dt = 1/240
 p.setTimeStep(sim_dt)
+sim_steps_per_pbvs = 24
 #p.setRealTimeSimulation(1)
 
 Two = None
@@ -106,8 +108,9 @@ initial_arm = val.get_eef_pos("left")[0:3]
 
 #delete me
 Two = np.eye(4) 
-Two[0:3, 3] = np.array([0.8, 0.5, 0.5])
-Two[0:3, 0:3] = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((np.pi/4, np.pi/4, 0)))).reshape(3, 3)
+Two[0:3, 3] = np.array([0.8, 0.24, 0.3])
+#Two[0:3, 0:3] = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((np.pi/4, np.pi/4, 0)))).reshape(3, 3)
+Two[0:3, 0:3] = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((np.pi/2, np.pi/4, 0)))).reshape(3, 3)
 
 position_error = []
 rotation_error = []
@@ -159,6 +162,7 @@ while True:
         uids_target_marker = draw_pose(Two[0:3, 3], Two[0:3, 0:3], mat=True)
         #print(gt_t - Twe[0:3, 3])
 
+
         if(Twe is not None):
             position_error.append( np.linalg.norm(Twe[0:3, 3] - Two[0:3, 3]))
             r, _ = cv2.Rodrigues( (Twe[0:3, 0:3] @ Two[0:3, 0:3].T ).T)
@@ -167,18 +171,6 @@ while True:
             marker_pos_error.append(np.linalg.norm(Twe[0:3, 3] - link_trn))
             link_rod, _ = cv2.Rodrigues(np.array(p.getMatrixFromQuaternion(link_rot)).reshape(3,3) @ Twe[0:3, 0:3].T)
             marker_rot_error.append(np.linalg.norm(link_rod))
-
-
-    # Execute control on Val
-    #val.set_velo(val.get_jacobian_pinv("left") @ ctrl)
-
-    # Do target pose estimation while not armed, but stop once servoing starts so occlusions don't get in the way
-    if(not armed):
-        Two = pbvs.get_target_pose(rgb_edit, depth, Tao)
-        if Two is not None:
-            if (uids_target_marker is not None):
-                erase_pos(uids_target_marker)
-            uids_target_marker = draw_pose(Two[0:3, 3], Two[0:3, 0:3], mat=True)
     
     cv2.waitKey(1)
 
@@ -187,20 +179,6 @@ while True:
     if KEY_N in events:
         armed = True
 
-    if KEY_J in events:
-        armed = True
-        initial_arm = val.get_eef_pos("left")[0:3]
-        perturb = np.zeros((3))
-        perturb[0] = -0.05
-        perturb[1] = 0.0
-        perturb[2] = 0.15
-        target = initial_arm + perturb
-        Rwo = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((np.pi/2, np.pi/4, np.pi)))).reshape(3,3)
-        #Rwo = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((np.pi / 4, 0, -np.pi / 2)))).reshape(3, 3)
-        Two = np.zeros((4, 4))
-        Two[0:3, 0:3] = Rwo
-        Two[0:3, 3] = target
-        Two[3, 3] = 1
     if (KEY_I in events):
         plt.plot(position_error)
         plt.xlabel("iteration")
@@ -217,3 +195,7 @@ while True:
     # p.resetBasePositionAndOrientation(box_multi, posObj=box_pos, ornObj =p.getQuaternionFromEuler(box_orn) )
     # p.stepSimulation()
     print(time.time() - t0)
+
+    # step simulation
+    for _ in range(sim_steps_per_pbvs):
+        p.stepSimulation()
