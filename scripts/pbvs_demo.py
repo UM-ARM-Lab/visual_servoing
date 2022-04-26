@@ -12,6 +12,7 @@ import time
 import matplotlib.pyplot as plt
 import numpy as np
 import cv2
+import pybullet as p
 
 # Key bindings
 KEY_U = 117
@@ -103,10 +104,7 @@ rot_errors = []
 
 armed = False
 
-while True:
-    t0 = time.time()
-
-    p.stepSimulation()
+def get_eef_gt():
     # Visualization ground truth AR link [delete me]
     tool_idx = val.left_tag[0]
     result = p.getLinkState(val.urdf,
@@ -115,6 +113,15 @@ while True:
                             computeForwardKinematics=1)
 
     link_trn, link_rot, com_trn, com_rot, frame_pos, frame_rot, link_vt, link_vr = result
+    Twe = np.eye(4)
+    Twe[0:3, 0:3] = np.array(p.getMatrixFromQuaternion(frame_rot)).reshape(3, 3)
+    Twe[0:3, 3] = frame_pos
+    return Twe
+
+
+while True:
+    t0 = time.time()
+
 
     # Get camera feed and detect markers
     rgb, depth = camera.get_image()
@@ -125,11 +132,15 @@ while True:
     #cv2.imshow("image", rgb_edit)
     ctrl, Twe = pbvs.do_pbvs(rgb_edit, depth, Two, np.eye(4), val.get_arm_jacobian("left"), val.get_jacobian_pinv("left"), sim_dt)
 
-    pos_error = np.linalg.norm(Twe[0:3, 3] -  Two[0:3, 3])
-    rot_error = np.linalg.norm(cv2.Rodrigues(Twe[0:3, 0:3].T @ Two[0:3, 0:3])[0])
-    pos_errors.append(pos_error)
-    rot_errors.append(rot_error)
+    target_pos_error = np.linalg.norm(Twe[0:3, 3] -  Two[0:3, 3])
+    target_rot_error = np.linalg.norm(cv2.Rodrigues(Twe[0:3, 0:3].T @ Two[0:3, 0:3])[0])
+    if(target_pos_error < 0.03 and target_rot_error < 0.1):
+        break
     
+    truth = get_eef_gt()
+    pos_errors.append(np.linalg.norm(Twe[0:3, 3] - truth[0:3, 3]))
+    link_rod, _ = cv2.Rodrigues(Twe[0:3, 0:3] @ truth[0:3, 0:3].T)
+    rot_errors.append(np.linalg.norm(link_rod))
 
     val.set_velo(val.get_jacobian_pinv("left") @ ctrl)
 
@@ -156,3 +167,4 @@ ax1.set_ylabel("error (m)")
 ax2.set_ylabel("error (rad)")
 ax1.plot(pos_errors, "r")
 ax2.plot(rot_errors, "b")
+plt.show()
