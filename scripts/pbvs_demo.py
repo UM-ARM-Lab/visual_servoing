@@ -11,6 +11,7 @@ from visual_servoing.marker_pbvs import *
 import time
 import matplotlib.pyplot as plt
 import numpy as np
+import cv2
 
 # Key bindings
 KEY_U = 117
@@ -89,34 +90,16 @@ Twa = None
 uids_eef_marker = None
 uids_target_marker = None
 uids_eef_gt = None
-# Transform from AR tag EEF frame to EEF frame
-rigid_rotation = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((0, 3*np.pi/2, np.pi)))).reshape(3, 3)
-Tae = np.zeros((4, 4))
-Tae[0:3, 0:3] = rigid_rotation
-Tae[0:3, 3] = np.array([0.14265 - 0.002, 0.03797 -0.0288 - 0.012, -0.008620875 -0.0376])
-Tae[3, 3] = 1
-Tae = np.eye(4)
-
-# Transform from AR tag to target frame
-Tao = np.zeros((4, 4))
-Tao[0:3, 0:3] = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((0, 0, 0)))).reshape(3, 3)
-Tao[0:3, 3] = np.array([0.0, 0.0, 0.1])
-Tao[3, 3] = 1
 
 initial_arm = val.get_eef_pos("left")[0:3]
 
-
-#delete me
 Two = np.eye(4) 
 Two[0:3, 3] = np.array([0.8, 0.24, 0.3])
 #Two[0:3, 0:3] = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((np.pi/4, np.pi/4, 0)))).reshape(3, 3)
 Two[0:3, 0:3] = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((np.pi/2, np.pi/4, 0)))).reshape(3, 3)
 
-position_error = []
-rotation_error = []
-
-marker_pos_error = []
-marker_rot_error = []
+pos_errors = []
+rot_errors = []
 
 armed = False
 
@@ -132,13 +115,7 @@ while True:
                             computeForwardKinematics=1)
 
     link_trn, link_rot, com_trn, com_rot, frame_pos, frame_rot, link_vt, link_vr = result
-#    draw_pose(link_trn, link_rot)
-    #  Visualize eef gripper ground truth 
-    #    if (uids_eef_gt is not None):
-    #        erase_pos(uids_eef_gt)
-    #    gt_t, gt_o = val.get_eef_pos("left") 
-    #    uids_eef_gt = draw_pose(gt_t, gt_o)
-    #
+
     # Get camera feed and detect markers
     rgb, depth = camera.get_image()
     rgb_edit = rgb[..., [2, 1, 0]].copy()
@@ -146,56 +123,36 @@ while True:
     # Do PBVS if there is a target 
     ctrl = np.zeros(6)
     #cv2.imshow("image", rgb_edit)
-    if armed and Two is not None:
-        ctrl, Twe = pbvs.do_pbvs(rgb_edit, depth, Two, Tae, val.get_arm_jacobian("left"), val.get_jacobian_pinv("left"), sim_dt)
+    ctrl, Twe = pbvs.do_pbvs(rgb_edit, depth, Two, np.eye(4), val.get_arm_jacobian("left"), val.get_jacobian_pinv("left"), sim_dt)
 
-        val.set_velo(val.get_jacobian_pinv("left") @ ctrl)
-        # Visualize estimated end effector pose 
-        if (uids_eef_marker is not None):
-            erase_pos(uids_eef_marker)
-        if(Twe is not None):
-            uids_eef_marker = draw_pose(Twe[0:3, 3], Twe[0:3, 0:3], mat=True)
+    pos_error = np.linalg.norm(Twe[0:3, 3] -  Two[0:3, 3])
+    rot_error = np.linalg.norm(cv2.Rodrigues(Twe[0:3, 0:3].T @ Two[0:3, 0:3])[0])
+    pos_errors.append(pos_error)
+    rot_errors.append(rot_error)
+    
 
-        #  Visualize target pose 
-        if (uids_target_marker is not None):
-            erase_pos(uids_target_marker)
-        uids_target_marker = draw_pose(Two[0:3, 3], Two[0:3, 0:3], mat=True)
-        #print(gt_t - Twe[0:3, 3])
+    val.set_velo(val.get_jacobian_pinv("left") @ ctrl)
 
+    # Visualize estimated end effector pose 
+    if (uids_eef_marker is not None):
+        erase_pos(uids_eef_marker)
+    uids_eef_marker = draw_pose(Twe[0:3, 3], Twe[0:3, 0:3], mat=True)
 
-        if(Twe is not None):
-            position_error.append( np.linalg.norm(Twe[0:3, 3] - Two[0:3, 3]))
-            r, _ = cv2.Rodrigues( (Twe[0:3, 0:3] @ Two[0:3, 0:3].T ).T)
-            rotation_error.append(np.linalg.norm(r))
-
-            marker_pos_error.append(np.linalg.norm(Twe[0:3, 3] - link_trn))
-            link_rod, _ = cv2.Rodrigues(np.array(p.getMatrixFromQuaternion(link_rot)).reshape(3,3) @ Twe[0:3, 0:3].T)
-            marker_rot_error.append(np.linalg.norm(link_rod))
+    #  Visualize target pose 
+    if (uids_target_marker is not None):
+        erase_pos(uids_target_marker)
+    uids_target_marker = draw_pose(Two[0:3, 3], Two[0:3, 0:3], mat=True)
     
     cv2.waitKey(1)
-
-    # Process keyboard to change target position
-    events = p.getKeyboardEvents()
-    if KEY_N in events:
-        armed = True
-
-    if (KEY_I in events):
-        plt.plot(position_error)
-        plt.xlabel("iteration")
-        plt.ylabel("meters")
-        plt.title("EEF Position error (m)")
-        plt.figure()
-        plt.xlabel("iteration")
-        plt.ylabel("Rodrigues norm")
-        plt.title("EEF Rotation error")
-        plt.plot(rotation_error)
-        plt.show()
-
-    # Set the orientation of our static AR tag object
-    # p.resetBasePositionAndOrientation(box_multi, posObj=box_pos, ornObj =p.getQuaternionFromEuler(box_orn) )
-    # p.stepSimulation()
-    print(time.time() - t0)
 
     # step simulation
     for _ in range(sim_steps_per_pbvs):
         p.stepSimulation()
+
+fig, (ax1, ax2) = plt.subplots(2, 1)
+ax1.set_xlabel("iteration")
+ax2.set_xlabel("iteration")
+ax1.set_ylabel("error (m)")
+ax2.set_ylabel("error (rad)")
+ax1.plot(pos_errors, "r")
+ax2.plot(rot_errors, "b")
