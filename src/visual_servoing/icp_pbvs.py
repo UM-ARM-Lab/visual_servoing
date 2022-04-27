@@ -9,6 +9,7 @@ from scipy.spatial.distance import cdist
 import tensorflow as tf
 from visual_servoing.utils import draw_pose, erase_pos
 from visual_servoing.pbvs import PBVS
+import pygicp
 
 def SE3(se3):
     """
@@ -132,7 +133,7 @@ class ICPPBVS(PBVS):
     def radius_segment(self,pcl, pose_predict):
         c = (pose_predict[0:3, 3]).reshape(-1, 1)
         dist = np.sqrt(np.sum((pcl - c)**2, axis=0))
-        return pcl[:, dist < self.seg_range]
+        return pcl[:,  dist < self.seg_range]
 
     def get_eef_state_estimate(self, depth, dt):
         """
@@ -165,11 +166,11 @@ class ICPPBVS(PBVS):
         pcl_raw_linkfrm = (pcl_raw_linkfrm.T)[:, 0:3]
      
         # segment the point cloud and convert back to camera frame 
-        pcl_seg = self.segment(pcl_raw_linkfrm, self.model_sdf['sdf'], self.model_sdf['origin_point'], self.model_sdf['res'], self.seg_range)
-        pcl_raw = pose_predict@np.hstack((pcl_seg,np.ones( (pcl_seg.shape[0], 1) ))).T
-        pcl_raw = pcl_raw[ 0:3, :]
-        #pcl_raw = self.radius_segment(pcl_raw, pose_predict) 
-
+        #pcl_seg = self.segment(pcl_raw_linkfrm, self.model_sdf['sdf'], self.model_sdf['origin_point'], self.model_sdf['res'], self.seg_range)
+        #pcl_raw = pose_predict@np.hstack((pcl_seg,np.ones( (pcl_seg.shape[0], 1) ))).T
+        #pcl_raw = pcl_raw[ 0:3, :]
+        pcl_raw = self.radius_segment(pcl_raw, pose_predict) 
+        
         # store the segmented point cloud from the camera as a class member for vis
         self.pcl.points = o3d.utility.Vector3dVector(pcl_raw.T)
         self.pcl.paint_uniform_color([1, 0.706, 0])
@@ -180,7 +181,8 @@ class ICPPBVS(PBVS):
             self.pcl, self.model, 0.1, np.linalg.inv(pose_predict), o3d.pipelines.registration.TransformationEstimationPointToPoint()
         )
         # for visualization purposes, PCL can be translated into link frame
-        self.pcl.transform(reg.transformation)
+        matrix = pygicp.align_points(self.model_raw, pcl_raw.T)
+        #self.pcl.transform(reg.transformation)
 
         # compute the thing we care about, the transform of the end effector in camera frame
         Tcl = np.linalg.inv(reg.transformation)

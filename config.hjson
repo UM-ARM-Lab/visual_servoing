@@ -2,7 +2,7 @@
     # type of end effector perception, can be auroco or icp
     eef_perception_type: icp
     pbvs_settings: {
-        seg_range: 0.02
+        seg_range: 0.2
         max_joint_velo: 1.5
     }
 

@@ -107,11 +107,11 @@ def run_servoing(pbvs, camera, victor, target, config, result_dict):
     while(True):
 
         events = p.getKeyboardEvents()
-        if(KEY_I in events):
-            start = True
-            start_time = time.time()
-        if(not start):
-            continue
+        #if(KEY_I in events):
+        #    start = True
+        #    start_time = time.time()
+        #if(not start):
+        #    continue
 
         # check if timeout exceeded
         if(time.time() - start_time > config['timeout']):
