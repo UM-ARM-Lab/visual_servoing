@@ -105,7 +105,6 @@ rot_errors = []
 armed = False
 
 def get_eef_gt():
-    # Visualization ground truth AR link [delete me]
     tool_idx = val.left_tag[0]
     result = p.getLinkState(val.urdf,
                             tool_idx,
@@ -118,8 +117,16 @@ def get_eef_gt():
     Twe[0:3, 3] = frame_pos
     return Twe
 
+cv2.imshow("Camera", np.zeros((1280//3, 720//3)))  
 
+start = False
 while True:
+    events = p.getKeyboardEvents()
+    if(KEY_I in events):
+        start = True
+    if(not start):
+        continue
+
     t0 = time.time()
 
 
@@ -134,7 +141,7 @@ while True:
 
     target_pos_error = np.linalg.norm(Twe[0:3, 3] -  Two[0:3, 3])
     target_rot_error = np.linalg.norm(cv2.Rodrigues(Twe[0:3, 0:3].T @ Two[0:3, 0:3])[0])
-    if(target_pos_error < 0.03 and target_rot_error < 0.1):
+    if(target_pos_error < 0.03 and target_rot_error < 0.02):
         break
     
     truth = get_eef_gt()

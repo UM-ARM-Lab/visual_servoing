@@ -190,7 +190,8 @@ class MarkerPBVS(PBVS):
         # Find the EEF ar tag board 
         markers = self.detect_markers(rgb)
         ref_marker = self.get_board_pose(markers, self.eef_board, rgb)
-        cv2.imshow('frame', rgb)
+        #cv2.imshow('frame', rgb)
+        cv2.imshow("Camera", cv2.resize(rgb, (1280 // 3, 800 // 3)))  
 
         # If it was found, compute its pose estimate
         ctrl = np.zeros(6)

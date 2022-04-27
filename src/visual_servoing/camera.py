@@ -124,7 +124,7 @@ class PyBulletCamera(Camera):
             #lightColor = (1.0, 0.0, 0.0)
             #lightAmbientCoeff=0.6,
             #flags=p.ER_SEGMENTATION_MASK_OBJECT_AND_LINKINDEX,
-            #renderer=p.ER_BULLET_HARDWARE_OPENGL
+            renderer=p.ER_BULLET_HARDWARE_OPENGL
         )
 
         rgb_img = np.array(rgbImg)[:, :, :3]

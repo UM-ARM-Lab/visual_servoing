@@ -17,6 +17,8 @@ from visual_servoing.pbvs_loop import PBVSLoop
 from visual_servoing.arm_robot import ArmRobot
 from visual_servoing.pbvs import PBVS
 
+KEY_I = 105
+
 def create_target_tf(target_pos, target_rot):
     H = np.eye(4)
     H[0:3, 0:3] = np.array(p.getMatrixFromQuaternion(target_rot)).reshape(3, 3)
@@ -94,6 +96,7 @@ def run_servoing(pbvs, camera, victor, target, config, result_dict):
     p.setTimeStep(1/config['sim_hz'])
     sim_steps_per_pbvs = int(config['sim_hz']/config['pbvs_hz']) 
     start_time = time.time()
+    start = False
 
     if(config['vis']):
         cam_inv = np.linalg.inv(camera.get_view())
@@ -102,6 +105,14 @@ def run_servoing(pbvs, camera, victor, target, config, result_dict):
 
     Twe = get_eef_gt_tf(victor, camera, True)
     while(True):
+
+        events = p.getKeyboardEvents()
+        if(KEY_I in events):
+            start = True
+            start_time = time.time()
+        if(not start):
+            continue
+
         # check if timeout exceeded
         if(time.time() - start_time > config['timeout']):
             return 1
@@ -117,7 +128,7 @@ def run_servoing(pbvs, camera, victor, target, config, result_dict):
         # get camera image
         rgb, depth, seg = camera.get_image(True)
         rgb_edit = rgb[..., [2, 1, 0]].copy()
-        cv2.imwrite("current.png", rgb_edit)
+        #cv2.imwrite("current.png", rgb_edit)
         true_depth = camera.get_true_depth(depth).reshape(depth.shape)
         if(config['use_depth_noise']):
             min_val = np.min(true_depth)
