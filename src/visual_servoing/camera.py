@@ -1,18 +1,14 @@
-from xml.etree.ElementInclude import include
-from grpc import FutureCancelledError
 import numpy as np
 import pybullet as p
 
 import ros_numpy
-import rospy
-
 #############################################
 # Interface for OpenCV style pinhole camera #
 #############################################
 from arc_utilities.listener import Listener
-from sensor_msgs.msg import Image
 from sensor_msgs.msg import CameraInfo
-import functools
+from sensor_msgs.msg import Image
+
 
 class Camera:
     def __init__(self, camera_eye, camera_look, image_dim):
@@ -72,13 +68,13 @@ class PyBulletCamera(Camera):
 
         self.projectionMatrix = np.asarray(self.ogl_projection_matrix).reshape([4, 4], order='F')
         self.viewMatrix = np.asarray(self.ogl_view_matrix).reshape([4, 4], order='F')
-        #self.T = np.linalg.inv(self.projectionMatrix)
+        # self.T = np.linalg.inv(self.projectionMatrix)
         intrinsic = np.eye(4)
         intrinsic[0:3, 0:3] = self.get_intrinsics()
         intrinsic[3, 3] = 1
-        #self.T = np.linalg.inv(intrinsic)
+        # self.T = np.linalg.inv(intrinsic)
         self.T = np.linalg.inv(self.projectionMatrix)
-        #self.T = np.linalg.inv(np.matmul(self.projectionMatrix, self.viewMatrix))
+        # self.T = np.linalg.inv(np.matmul(self.projectionMatrix, self.viewMatrix))
         u, v = np.meshgrid(np.arange(start=0, stop=self.image_dim[0]), np.arange(start=0, stop=self.image_dim[1]))
         self.u = ((2 * u - self.image_dim[0]) / self.image_dim[0]).reshape(-1)
         self.v = -((2 * v - self.image_dim[1]) / self.image_dim[1]).reshape(-1)
@@ -129,7 +125,7 @@ class PyBulletCamera(Camera):
 
         rgb_img = np.array(rgbImg)[:, :, :3]
         depth_img = np.array(depthImg)
-        if(include_seg):
+        if (include_seg):
             return rgb_img, depth_img, np.array(segImg)
         return rgb_img, depth_img
 
@@ -137,8 +133,8 @@ class PyBulletCamera(Camera):
         keep = []
         for y in range(seg_img.shape[0]):
             for x in range(seg_img.shape[1]):
-                if(seg_img[y][x] in classes):
-                    keep.append(y*seg_img.shape[1] + x)
+                if (seg_img[y][x] in classes):
+                    keep.append(y * seg_img.shape[1] + x)
         print(len(keep))
         return cloud[:, keep]
 
@@ -149,13 +145,13 @@ class PyBulletCamera(Camera):
         mask = np.zeros(seg_reshape.shape, dtype=bool)
 
         for c in classes:
-            mask = mask | (seg_reshape == c )
+            mask = mask | (seg_reshape == c)
 
         keep_pix = np.argwhere(mask)
-        u = self.u[keep_pix] 
+        u = self.u[keep_pix]
         v = self.v[keep_pix]
         depth = depth_reshape[keep_pix]
-        return u, v, depth, np.ones((len(u),1))
+        return u, v, depth, np.ones((len(u), 1))
 
     def get_pointcloud_seg(self, depth, u, v, ones):
         depth_mod = 2 * depth - 1
@@ -167,7 +163,7 @@ class PyBulletCamera(Camera):
         cam_coords = self.T @ img_coords
         cam_coords = cam_coords[0:3, :] / cam_coords[3, :]
         return cam_coords
-    
+
     def get_true_depth(self, depth):
         depth_mod = 2 * depth - 1
         true_depth = self.T[2:4, 2:4] @ np.vstack((depth_mod.reshape(-1), self.ones))
@@ -178,9 +174,8 @@ class PyBulletCamera(Camera):
         true_depth = np.vstack((true_depth.reshape(-1), self.ones))
         depth_mod = self.projectionMatrix[2:4, 2:4] @ true_depth
         depth_mod /= depth_mod[1, :]
-        depth = (depth_mod[0, :] + 1)/2
-        return depth 
-
+        depth = (depth_mod[0, :] + 1) / 2
+        return depth
 
     def get_pointcloud(self, depth):
         depth_mod = 2 * depth - 1
@@ -191,7 +186,6 @@ class PyBulletCamera(Camera):
         cam_coords = self.T @ img_coords
         cam_coords = cam_coords[0:3, :] / cam_coords[3, :]
         return cam_coords
-
 
     def get_xyz(self, u, v, depth):
         # This code querys the depth buffer returned from the simulated camera and gets the <x,y,z> 

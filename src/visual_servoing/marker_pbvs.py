@@ -169,28 +169,10 @@ class MarkerPBVS(PBVS):
         Twm[0:3, 3] = pos_unstable #pos[0:3]
         return Twm
 
-    # Get eef -> world transform Twe 
-    def get_eef_state_estimate(self, Twe_sensor):
-        if(self.use_pf):
-            if(self.pf.is_setup):
-                return self.pf.get_state()
-            elif(Twe_sensor is not None):
-                self.pf.setup(Twe_sensor)
-            else:
-                return None 
-        else:
-            return Twe_sensor  
-
-
-    def update_state_estimate(self, Twe_sensor, dt):
-        # call PF update
-        self.pf.update_particles(self.prev_twist, dt, Twe_sensor)  
-
     def do_pbvs(self, rgb, depth, Two, Tle, jac, jac_inv, dt):
-        # Find the EEF ar tag board 
+        # Find the EEF ar tag board
         markers = self.detect_markers(rgb)
         ref_marker = self.get_board_pose(markers, self.eef_board, rgb)
-        #cv2.imshow('frame', rgb)
         cv2.imshow("Camera", cv2.resize(rgb, (1280 // 3, 800 // 3)))  
 
         # If it was found, compute its pose estimate
@@ -203,9 +185,7 @@ class MarkerPBVS(PBVS):
             Twe = Twa_sensor @ Tle
 
         # compute twist command based on state estimate and target
-        if(Twe is not None):
-            ctrl = self.get_control(Twe, Two)
-        
+        ctrl = self.get_control(Twe, Two)
         ctrl = self.limit_twist(jac, jac_inv, ctrl)
 
         # store results

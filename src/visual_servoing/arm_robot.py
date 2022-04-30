@@ -7,3 +7,6 @@ class ArmRobot:
 
     def psuedoinv_ik_controller(self, side, twist):
         raise NotImplementedError
+
+    def velocity_control(self, side, q_dot):
+        raise NotImplementedError

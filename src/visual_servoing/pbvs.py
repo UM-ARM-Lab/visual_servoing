@@ -26,7 +26,7 @@ class PBVS:
     def do_pbvs(self, rgb, depth, Two, Tle, jac, jac_inv, dt):
         """
         Does one iteration of PBVS and returns a twist
-    ​
+
         Args:
             rgb: current camera image
             depth: current depth image
@@ -34,16 +34,16 @@ class PBVS:
             Tle: transform from the link we are estimating the pose of to the end effector 
             jac: jacobian of the end effector
             jac_inv: inverse jacobian of the end effector
-    ​
+
         Returns:
             twist: end effector linear and angular velocity
 
         """
-        pass
+        raise NotImplementedError()
 
     def limit_twist(self, jac, jac_inv, ctrl):
         # compute the joint velocities using jac_inv and PBVS twist cmd
-        q_prime = jac_inv @ ctrl 
+        q_prime = jac_inv @ ctrl
         # rescale joint velocities to self.max_joint_velo if the largest exceeds the limit 
         if(np.max(np.abs(q_prime)) > self.max_joint_velo):
             q_prime /= np.max(np.abs(q_prime))
