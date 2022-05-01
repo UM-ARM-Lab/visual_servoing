@@ -74,8 +74,8 @@ class MarkerValLoop(PybulletPBVSLoop):
 
         link_trn, link_rot, com_trn, com_rot, frame_pos, frame_rot, link_vt, link_vr = result
         Twe = np.eye(4)
-        Twe[0:3, 0:3] = np.array(p.getMatrixFromQuaternion(frame_rot)).reshape(3, 3)
-        Twe[0:3, 3] = frame_pos
+        Twe[0:3, 0:3] = np.array(p.getMatrixFromQuaternion(link_rot)).reshape(3, 3)
+        Twe[0:3, 3] = link_trn
         return Twe
     
     def on_after_step_pbvs(self, Twe):
@@ -94,6 +94,7 @@ class MarkerValLoop(PybulletPBVSLoop):
 
         # Errors 
         truth = self.get_eef_gt()
+        #draw_pose(truth[0:3, 3], truth[0:3, 0:3], mat=True)
         self.pos_errors.append(np.linalg.norm(Twe[0:3, 3] - truth[0:3, 3]))
         link_rod, _ = cv2.Rodrigues(Twe[0:3, 0:3] @ truth[0:3, 0:3].T)
         self.rot_errors.append(np.linalg.norm(link_rod))

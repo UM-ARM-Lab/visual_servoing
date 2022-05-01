@@ -3,27 +3,6 @@ import pybullet as p
 import pybullet_data
 from visual_servoing.arm_robot import ArmRobot
 
-# Joint names
-right_arm_joints = [
-    'joint1',
-    'joint2',
-    'joint3',
-    'joint4',
-    'joint5',
-    'joint6',
-    'joint7',
-]
-
-left_arm_joints = [
-    'joint41',
-    'joint42',
-    'joint43',
-    'joint44',
-    'joint45',
-    'joint46',
-    'joint47',
-]
-
 
 class Val(ArmRobot):
     def __init__(self, start_pos=None, start_orientation=None):
@@ -112,25 +91,6 @@ class Val(ArmRobot):
         lmda = 0.0000001
         J_pinv = np.dot(np.linalg.inv(np.dot(J.T, J) + lmda * np.eye(7)), J.T)
         return J_pinv
-
-    def psuedoinv_ik_controller(self, side, target, current=None):
-        x_prime = target
-        if current is not None:
-            x_prime = target - current
-
-        J = self.get_arm_jacobian(side)
-        lmda = 0.0000001
-
-        J_pinv = np.dot(np.linalg.inv(np.dot(J.T, J) + lmda * np.eye(7)), J.T)
-
-        q_prime = np.dot(J_pinv, x_prime)
-
-        # joint limits 
-
-        # control
-        joint_list = self.left_arm_joints if (side == "left") else right_arm_joints
-
-        p.setJointMotorControlArray(self.urdf, joint_list, p.VELOCITY_CONTROL, targetVelocities=q_prime)
 
     def velocity_control(self, side, targetVelo):
         joint_list = self.left_arm_joints

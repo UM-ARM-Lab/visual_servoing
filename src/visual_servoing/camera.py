@@ -49,8 +49,9 @@ class Camera:
 #####################################
 class PyBulletCamera(Camera):
 
-    def __init__(self, camera_eye, camera_look, image_dim=(1280, 800), camera_up=[0, 0, 1]):
+    def __init__(self, camera_eye, camera_look, renderer=p.ER_TINY_RENDERER, image_dim=(1280, 800), camera_up=[0, 0, 1]):
         super().__init__(camera_eye, camera_look, image_dim)
+        self.renderer = renderer
 
         # This is a column major order of the projection
         self.ogl_projection_matrix = p.computeProjectionMatrixFOV(
@@ -120,7 +121,7 @@ class PyBulletCamera(Camera):
             #lightColor = (1.0, 0.0, 0.0)
             #lightAmbientCoeff=0.6,
             #flags=p.ER_SEGMENTATION_MASK_OBJECT_AND_LINKINDEX,
-            #renderer=p.ER_BULLET_HARDWARE_OPENGL
+            renderer=self.renderer
         )
 
         rgb_img = np.array(rgbImg)[:, :, :3]
