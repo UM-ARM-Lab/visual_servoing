@@ -6,6 +6,7 @@ import numpy as np
 import pybullet as p
 
 import rospy
+import time 
 from visual_servoing.arm_robot import ArmRobot
 from visual_servoing.camera import Camera
 from visual_servoing.pbvs import PBVS
@@ -46,7 +47,7 @@ class AbstractPBVSLoop:
             last_t = current_t
 
             total_time = self.get_time() - start_time
-            is_timed_out = total_time < self.config['timeout']
+            is_timed_out = total_time > self.config['timeout']
             # check if error is low enough to terminate
             pos_error = np.linalg.norm(Twe[0:3, 3] - target[0:3, 3])
             rot_error = np.linalg.norm(cv2.Rodrigues(Twe[0:3, 0:3].T @ target[0:3, 0:3])[0])
@@ -64,7 +65,7 @@ class AbstractPBVSLoop:
         pass
 
     def get_time(self):
-        return rospy.Time.now()
+        return time.time()
 
     def on_before_run(self):
         pass

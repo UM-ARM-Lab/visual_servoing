@@ -120,14 +120,15 @@ class PyBulletCamera(Camera):
             #lightColor = (1.0, 0.0, 0.0)
             #lightAmbientCoeff=0.6,
             #flags=p.ER_SEGMENTATION_MASK_OBJECT_AND_LINKINDEX,
-            renderer=p.ER_BULLET_HARDWARE_OPENGL
+            #renderer=p.ER_BULLET_HARDWARE_OPENGL
         )
 
         rgb_img = np.array(rgbImg)[:, :, :3]
+        rgb_edit = rgb_img[..., [2, 1, 0]].copy()
         depth_img = np.array(depthImg)
         if (include_seg):
             return rgb_img, depth_img, np.array(segImg)
-        return rgb_img, depth_img
+        return rgb_edit, depth_img
 
     def segmented_pointcloud(self, cloud, classes, seg_img):
         keep = []

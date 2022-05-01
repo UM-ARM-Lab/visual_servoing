@@ -132,7 +132,7 @@ class Val(ArmRobot):
 
         p.setJointMotorControlArray(self.urdf, joint_list, p.VELOCITY_CONTROL, targetVelocities=q_prime)
 
-    def set_velo(self, targetVelo):
+    def velocity_control(self, side, targetVelo):
         joint_list = self.left_arm_joints
         p.setJointMotorControlArray(self.urdf, joint_list, p.VELOCITY_CONTROL, targetVelocities=targetVelo)
     
