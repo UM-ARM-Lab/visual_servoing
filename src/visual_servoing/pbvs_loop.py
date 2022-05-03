@@ -29,7 +29,7 @@ class AbstractPBVSLoop:
         while True:
             rgb, depth = self.get_camera_image()
 
-            self.on_before_step_pbvs()
+            self.on_before_step_pbvs(rgb, depth)
 
             current_t = self.get_time()
             pbvs_dt = self.get_pbvs_dt(current_t, last_t)
@@ -83,7 +83,7 @@ class AbstractPBVSLoop:
                                        self.robot.get_jacobian_pinv(self.side), pbvs_dt)
         return twist, Twe
 
-    def on_before_step_pbvs(self):
+    def on_before_step_pbvs(self, rgb, depth):
         pass
 
     def on_after_step_pbvs(self, Twe):

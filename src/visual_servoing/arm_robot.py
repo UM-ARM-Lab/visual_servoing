@@ -10,3 +10,6 @@ class ArmRobot:
 
     def velocity_control(self, side, q_dot):
         raise NotImplementedError
+
+    def get_arm_joint_configs(self):
+        raise NotImplementedError

@@ -20,9 +20,10 @@ from visual_servoing.utils import *
 from visual_servoing.victor import Victor
 
 
-KEY_I = 105
-
 def create_target_tf(target_pos, target_rot):
+    '''
+    Creates a 4x4 homogenous TF given an input position and quaternion 
+    '''
     H = np.eye(4)
     H[0:3, 0:3] = np.array(p.getMatrixFromQuaternion(target_rot)).reshape(3, 3)
     H[0:3, 3] = target_pos
@@ -30,6 +31,9 @@ def create_target_tf(target_pos, target_rot):
 
 
 def get_eef_gt_tf(victor, camera, world_relative=False):
+    '''
+    Gets the ground truth position of the eef link
+    '''
     # Get EEF Link GT 
     tool_idx = victor.eef_idx
     result = p.getLinkState(victor.urdf,
@@ -49,6 +53,9 @@ def get_eef_gt_tf(victor, camera, world_relative=False):
 
 
 def image_augmentation(numpy_depth):
+    '''
+    Adds depth noise (TODO needs work!!!!)
+    '''
     # Get to btween 0 and 255
     # depth = numpy_depth + np.min(numpy_depth)
     synthetic_data = True
@@ -94,90 +101,68 @@ def image_augmentation(numpy_depth):
     numpy_depth += 0.05 * np.random.normal(size=numpy_depth.shape)
     return numpy_depth
 
+class EvalPBVSLoop(PybulletPBVSLoop):
+    def __init__(self,
+                 pbvs: PBVS,
+                 camera: Camera,
+                 robot: ArmRobot,
+                 side: str,
+                 pbvs_hz: float,
+                 sim_hz: float,
+                 config,
+                 result_dict):
+        super().__init__(pbvs, camera, robot, side, pbvs_hz, sim_hz, config)
+        self.result_dict = result_dict
+        self.pose_est_uids = None
+        self.target_uids = None
 
-def run_servoing(pbvs, camera, victor, target, config, result_dict):
-    pose_est_uids = None
-    target_uids = None
+    def on_check_is_done(self, is_timed_out, target_reached):
+        if(self.is_done(is_timed_out, target_reached)):
+            self.result_dict['finished'] = True
 
-    p.setTimeStep(1 / config['sim_hz'])
-    sim_steps_per_pbvs = int(config['sim_hz'] / config['pbvs_hz'])
-    start_time = time.time()
-    start = True
-
-    if (config['vis']):
-        cam_inv = np.linalg.inv(camera.get_view())
-        draw_pose(target[0:3, 3], target[0:3, 0:3], mat=True, uids=target_uids)
-        draw_pose(cam_inv[0:3, 3], cam_inv[0:3, 0:3], mat=True)
-
-    Twe = get_eef_gt_tf(victor, camera, True)
-    while(True):
-
-        events = p.getKeyboardEvents()
-        if(KEY_I in events):
-            start = True
-            start_time = time.time()
-        if(not start):
-            continue
-
-        # check if timeout exceeded
-        if (time.time() - start_time > config['timeout']):
-            return 1
-
-        # check if error is low enough to terminate
-        eef_gt = get_eef_gt_tf(victor, camera, True)
-        pos_error = np.linalg.norm(Twe[0:3, 3] -  target[0:3, 3])
-        rot_error = np.linalg.norm(cv2.Rodrigues(Twe[0:3, 0:3].T @ target[0:3, 0:3])[0])
-        if(pos_error < config['max_pos_error'] and rot_error < config['max_rot_error']):
-            result_dict['finished'] = True
-            return 0
-
-        # get camera image
-        rgb, depth, seg = camera.get_image(True)
-        rgb_edit = rgb[..., [2, 1, 0]].copy()
-        #cv2.imwrite("current.png", rgb_edit)
-        true_depth = camera.get_true_depth(depth).reshape(depth.shape)
-        if (config['use_depth_noise']):
+    def get_camera_image(self):
+        rgb, depth = super().get_camera_image()
+        true_depth = self.camera.get_true_depth(depth).reshape(depth.shape)
+        if (self.config['use_depth_noise']):
             min_val = np.min(true_depth)
             max_val = np.max(true_depth)
             rng = max_val - min_val
-            #noisy_depth = image_augmentation((true_depth - min_val)/rng)
+            # noisy_depth = image_augmentation((true_depth - min_val)/rng)
             noisy_depth = image_augmentation(true_depth)
-            #noisy_depth = (noisy_depth * rng + min_val)
+            # noisy_depth = (noisy_depth * rng + min_val)
         else:
             noisy_depth = true_depth
-        noisy_depth_buffer = camera.get_depth_buffer(noisy_depth).reshape(depth.shape)
-        #pcl_raw = camera.get_pointcloud(noisy_depth_buffer)
-        #pcl = o3d.geometry.PointCloud() 
-        #pcl.points = o3d.utility.Vector3dVector(pcl_raw.T)
-        #pcl.colors = o3d.utility.Vector3dVector(rgb_edit.reshape(-1, 3)/255.0)
-        #o3d.visualization.draw_geometries([pcl])
+        noisy_depth_buffer = self.camera.get_depth_buffer(noisy_depth).reshape(depth.shape)
 
-        #draw_pose(victor.get_)
-        
-        # do visual servo
-        ctrl, Twe = pbvs.do_pbvs(rgb_edit, noisy_depth_buffer, target, np.eye(4), victor.get_arm_jacobian('left'),
-                                victor.get_jacobian_pinv('left'), 1/config['pbvs_hz'])
-        # noise injection
-        #ctrl[0:3] += np.random.normal(scale=config['twist_execution_noise_linear'], size=(3))
-        #ctrl[3:6] += np.random.normal(scale=config['twist_execution_noise_angular'], size=(3))
-        victor.psuedoinv_ik_controller("left", ctrl, config['twist_execution_noise'])
-
-        # draw debug stuff
-        if (config['vis']):
-            erase_pos(pose_est_uids)
-            pose_est_uids = draw_pose(Twe[0:3, 3], Twe[0:3, 0:3], mat=True)
-            cv2.imshow("Camera", cv2.resize(rgb_edit, (1280 // 5, 800 // 5)))
+        if self.config['vis']:
+            cv2.imshow("Camera", cv2.resize(rgb, (1280 // 5, 800 // 5)))
             cv2.waitKey(1)
 
-        # step simulation
-        for _ in range(sim_steps_per_pbvs):
-            p.stepSimulation()
+        return rgb, noisy_depth_buffer
+
+    def on_after_step_pbvs(self, Twe):
+        super().on_after_step_pbvs(Twe)
+
+        # draw debug stuff
+        if self.config['vis']:
+            erase_pos(self.pose_est_uids)
+            self.pose_est_uids = draw_pose(Twe[0:3, 3], Twe[0:3, 0:3], mat=True)
 
         # populate results
-        result_dict["seg_cloud"].append(np.asarray(pbvs.pcl.points))
-        result_dict["est_eef_pose"].append(Twe)
-        result_dict["gt_eef_pose"].append(eef_gt)
-        result_dict["joint_config"].append(victor.get_arm_joint_configs())
+        self.result_dict["seg_cloud"].append(np.asarray(self.pbvs.pcl.points))
+        self.result_dict["est_eef_pose"].append(Twe)
+        eef_gt = get_eef_gt_tf(self.robot, self.camera, True)
+        self.result_dict["gt_eef_pose"].append(eef_gt)
+        self.result_dict["joint_config"].append(self.robot.get_arm_joint_configs())
+
+
+def run_servoing(pbvs, camera, victor, target, config, result_dict):
+    loop = EvalPBVSLoop(pbvs, camera, victor, "left", config['pbvs_hz'], config['sim_hz'], config, result_dict) 
+    if (config['vis']):
+        cam_inv = np.linalg.inv(camera.get_view())
+        draw_pose(target[0:3, 3], target[0:3, 0:3], mat=True)
+        draw_pose(cam_inv[0:3, 3], cam_inv[0:3, 0:3], mat=True)
+    loop.run(target)
 
 
 def main():
@@ -198,8 +183,8 @@ def main():
     for i, servo_config in enumerate(servo_configs):
         # Create objects for visual servoing
         client = p.connect(p.GUI)
-        victor = Victor(servo_config)
-        camera = PyBulletCamera(np.array(servo_config['camera_pos']), np.array(servo_config['camera_look']))
+        victor = Victor(servo_config, config['twist_execution_noise'])
+        camera = PyBulletCamera(np.array(servo_config['camera_pos']), np.array(servo_config['camera_look']), p.ER_BULLET_HARDWARE_OPENGL)
         target = create_target_tf(np.array(servo_config['target_pos']), np.array(servo_config['target_rot'])) 
         pbvs = None
 
@@ -253,51 +238,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-class EvalPBVSLoop(PybulletPBVSLoop):
-    def __init__(self,
-                 pbvs: PBVS,
-                 camera: Camera,
-                 robot: ArmRobot,
-                 side: str,
-                 pbvs_hz: float,
-                 sim_hz: float,
-                 config,
-                 result_dict):
-        super().__init__(pbvs, camera, robot, side, pbvs_hz, sim_hz, config)
-        self.result_dict = result_dict
-        self.pose_est_uids = None
-
-    def on_check_is_done(self, is_timed_out, target_reached):
-        self.result_dict['target_reached'] = target_reached
-        self.result_dict['is_timed_out'] = is_timed_out
-
-    def get_camera_image(self):
-        rgb, depth, seg = self.camera.get_image(True)
-        rgb_edit = rgb[..., [2, 1, 0]].copy()
-        true_depth = self.camera.get_true_depth(depth).reshape(depth.shape)
-        if (self.config['use_depth_noise']):
-            min_val = np.min(true_depth)
-            max_val = np.max(true_depth)
-            rng = max_val - min_val
-            # noisy_depth = image_augmentation((true_depth - min_val)/rng)
-            noisy_depth = image_augmentation(true_depth)
-            # noisy_depth = (noisy_depth * rng + min_val)
-        else:
-            noisy_depth = true_depth
-        noisy_depth_buffer = self.camera.get_depth_buffer(noisy_depth).reshape(depth.shape)
-
-        if self.config['vis']:
-            cv2.imshow("Camera", cv2.resize(rgb_edit, (1280 // 5, 800 // 5)))
-            cv2.waitKey(1)
-
-        return rgb, depth
-
-    def on_after_step_pbvs(self, Twe):
-        super().on_after_step_pbvs()
-
-        # draw debug stuff
-        if self.config['vis']:
-            erase_pos(self.pose_est_uids)
-            self.pose_est_uids = draw_pose(Twe[0:3, 3], Twe[0:3, 0:3], mat=True)

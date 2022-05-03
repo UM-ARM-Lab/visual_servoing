@@ -28,9 +28,10 @@ left_arm_joints = [
 
 
 class Victor(ArmRobot):
-    def __init__(self, config):
+    def __init__(self, config, twist_execution_noise=0):
         self.config = config
         arm_states = config["arm_states"]
+        self.twist_execution_noise = twist_execution_noise
 
         # Set up simulation 
         # Load Victor URDF
@@ -162,19 +163,7 @@ class Victor(ArmRobot):
         J = self.get_arm_jacobian(side)
         lmda = 0.0000001
         J_pinv = np.dot(np.linalg.inv(np.dot(J.T, J) + lmda * np.eye(7)), J.T)
-        # BOOO
         return J_pinv
-
-    def psuedoinv_ik_controller(self, side, x_prime, noise=0):
-        J = self.get_arm_jacobian(side)
-        lmda = 0.0000001
-        J_pinv = np.linalg.inv(J.T @ J + lmda * np.eye(7)) @ J.T
-        q_prime = J_pinv @ x_prime
-        q_prime += np.random.normal(scale=noise, size=q_prime.shape)
-
-        # control
-        joint_list = self.left_arm_joints if (side == "left") else right_arm_joints
-        p.setJointMotorControlArray(self.urdf, joint_list, p.VELOCITY_CONTROL, targetVelocities=q_prime)
 
     def get_tag_geometry(self):
         tag_ids = None
@@ -250,5 +239,5 @@ class Victor(ArmRobot):
     
     def velocity_control(self, side, q_dot):
         joint_list = self.left_arm_joints if (side == "left") else right_arm_joints
-        q_dot += np.random.normal(scale=self.config['execution_noise'], size=(7))  # noise injection
+        q_dot += np.random.normal(scale=self.twist_execution_noise, size=(7))  # noise injection
         p.setJointMotorControlArray(self.urdf, joint_list, p.VELOCITY_CONTROL, targetVelocities=q_dot)
