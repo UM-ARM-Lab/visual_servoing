@@ -110,7 +110,12 @@ class CheaterPBVS(PBVS):
         Twe = self.cheater()
 
         ctrl = self.get_control(Twe, Two)
-        ctrl = self.limit_twist(jac, jac_inv, ctrl)
+
+        # QP form
+        Q = np.eye(6)
+        P = 2 * dt * jac @ Q @ jac
+        q = ()
+        #ctrl = self.limit_twist(jac, jac_inv, ctrl)
 
         # store results
         self.prev_twist = ctrl
