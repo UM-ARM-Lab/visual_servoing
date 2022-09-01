@@ -5,7 +5,7 @@ import ros_numpy
 #############################################
 # Interface for OpenCV style pinhole camera #
 #############################################
-from arc_utilities.listener import Listener
+#from arc_utilities.listener import Listener
 from sensor_msgs.msg import CameraInfo
 from sensor_msgs.msg import Image
 

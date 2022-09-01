@@ -1,3 +1,4 @@
+from typing import Callable
 from xmlrpc.client import Boolean
 from visual_servoing.camera import Camera
 import numpy as np
@@ -98,3 +99,24 @@ class PBVS:
         ctrl[0:3] = self.get_v(Two[0:3, 3], Twe[0:3, 3])
         ctrl[3:6] = np.squeeze(self.get_omega(Twe[0:3, 0:3], Two[0:3, 0:3]))
         return ctrl
+
+class CheaterPBVS(PBVS):
+    def __init__(self, camera : Camera, k_v : float, k_omega : float, max_joint_velo : float, cheater : Callable[[None], np.ndarray]):
+        super().__init__(camera, k_v, k_omega, max_joint_velo)
+        self.cheater = cheater
+
+
+    def do_pbvs(self, rgb, depth, Two, Tle, jac, jac_inv, dt):
+        Twe = self.cheater()
+
+        ctrl = self.get_control(Twe, Two)
+        ctrl = self.limit_twist(jac, jac_inv, ctrl)
+
+        # store results
+        self.prev_twist = ctrl
+        self.prev_pose = Twe
+
+        return ctrl, Twe
+
+
+#class QPPBVS(PBVS):
