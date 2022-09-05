@@ -4,6 +4,7 @@ from visual_servoing.camera import Camera
 import numpy as np
 import cv2
 import pybullet
+from qpsolvers import solve_qp
 
 class PBVS:
     def __init__(self, camera : Camera, k_v : float, k_omega : float, max_joint_velo : float, debug : bool=True):
@@ -113,13 +114,14 @@ class CheaterPBVS(PBVS):
 
         # QP form
         Q = np.eye(6)
-        P = 2 * dt * jac @ Q @ jac
-        q = ()
-        #ctrl = self.limit_twist(jac, jac_inv, ctrl)
+        P = 2 * jac.T @ Q @ jac
+        q = (-ctrl @ Q @ jac - ctrl @ Q.T @ jac)
+        num_joints = jac.shape[1]
+        G = np.vstack((np.eye(num_joints), -np.eye(num_joints)))
+        h = np.ones(num_joints * 2) * self.max_joint_velo
+        ctrl = solve_qp(P, q, G, h, None, None, solver="cvxopt")
 
-        # store results
-        self.prev_twist = ctrl
-        self.prev_pose = Twe
+        #ctrl = self.limit_twist(jac, jac_inv, ctrl)
 
         return ctrl, Twe
 

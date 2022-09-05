@@ -73,6 +73,8 @@ class GtValLoop(PybulletPBVSLoop):
         if (self.uids_target_marker is not None):
             erase_pos(self.uids_target_marker)
         self.uids_target_marker = draw_pose(Two[0:3, 3], Two[0:3, 0:3], mat=True)
+
+        draw_sphere_marker(Twe[0:3, 3], 0.01, (1, 0, 0, 1))
         cv2.waitKey(1)
 
         # Errors 
@@ -83,6 +85,11 @@ class GtValLoop(PybulletPBVSLoop):
         self.rot_errors.append(np.linalg.norm(link_rod))
 
         super().on_after_step_pbvs(Twe)
+
+    def servoing_controller(self, twist):
+        # Note, this is a hack since we are working in joint
+        # space directly
+        return twist
 
 def main():
     # Objects needed to do PBVS
@@ -95,6 +102,7 @@ def main():
         "max_pos_error": 0.03, 
         "max_rot_error": 0.1, 
     }) 
+    input()
     loop.run(Two)
 
     # Plot ground truth vs predicted poses at each iteration of the loop
