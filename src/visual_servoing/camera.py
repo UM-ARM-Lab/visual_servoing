@@ -55,7 +55,7 @@ class PyBulletCamera(Camera):
 
         # This is a column major order of the projection
         self.ogl_projection_matrix = p.computeProjectionMatrixFOV(
-            fov=45.0,
+            fov=65.0,
             aspect=self.image_dim[0] / self.image_dim[1],
             nearVal=0.1,
             farVal=2.6,

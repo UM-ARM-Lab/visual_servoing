@@ -38,29 +38,14 @@ def get_eef_gt(robot):
 
 class GtValLoop(PybulletPBVSLoop):
 
-    def __init__(self, pbvs: PBVS, camera: Camera, robot: ArmRobot, side: str, pbvs_hz: float, sim_hz: float,
+    def __init__(self, pbvs: PBVS, camera: PyBulletCamera, robot: ArmRobot, side: str, pbvs_hz: float, sim_hz: float,
                  config ):
         super().__init__(pbvs, camera, robot, side, pbvs_hz, sim_hz, config)
         self.uids_eef_marker = None
         self.uids_target_marker = None
+        self.uids_camera_marker = None
         self.pos_errors = []
         self.rot_errors = []
-
-    def get_eef_gt(self):
-        '''
-        Gets the ground truth pose of the end effector from the simulator
-        '''
-        tool_idx = self.robot.left_tag[0]
-        result = p.getLinkState(self.robot.urdf,
-                                tool_idx,
-                                computeLinkVelocity=1,
-                                computeForwardKinematics=1)
-
-        link_trn, link_rot, com_trn, com_rot, frame_pos, frame_rot, link_vt, link_vr = result
-        Twe = np.eye(4)
-        Twe[0:3, 0:3] = np.array(p.getMatrixFromQuaternion(link_rot)).reshape(3, 3)
-        Twe[0:3, 3] = link_trn
-        return Twe
     
     def on_after_step_pbvs(self, Twe):
 
@@ -74,11 +59,16 @@ class GtValLoop(PybulletPBVSLoop):
             erase_pos(self.uids_target_marker)
         self.uids_target_marker = draw_pose(Two[0:3, 3], Two[0:3, 0:3], mat=True)
 
+        # Visualize camera pose 
+        if (self.uids_camera_marker is not None):
+            erase_pos(self.uids_camera_marker)
+        Twc = np.linalg.inv(self.camera.get_extrinsics())
+        self.uids_camera_marker = draw_pose(Twc[0:3, 3], Twc[0:3, 0:3], mat=True)
+
         draw_sphere_marker(Twe[0:3, 3], 0.01, (1, 0, 0, 1))
-        cv2.waitKey(1)
 
         # Errors 
-        truth = self.get_eef_gt()
+        truth = get_eef_gt(self.robot)
         #draw_pose(truth[0:3, 3], truth[0:3, 0:3], mat=True)
         self.pos_errors.append(np.linalg.norm(Twe[0:3, 3] - truth[0:3, 3]))
         link_rod, _ = cv2.Rodrigues(Twe[0:3, 0:3] @ truth[0:3, 0:3].T)
@@ -91,9 +81,15 @@ class GtValLoop(PybulletPBVSLoop):
         # space directly
         return twist
 
+    def on_before_step_pbvs(self, rgb, depth):
+        cv2.imshow("test", rgb)
+        cv2.waitKey(1)
+        return super().on_before_step_pbvs(rgb, depth)
+
 def main():
     # Objects needed to do PBVS
-    camera = PyBulletCamera(camera_eye=np.array([0.7, -0.8, 0.5]), camera_look=np.array([0.7, 0.0, 0.2]))
+    #camera = PyBulletCamera(camera_eye=np.array([0.7, -0.8, 0.5]), camera_look=np.array([0.7, 0.0, 0.2]))
+    camera = PyBulletCamera(camera_eye=np.array([0.4, 0.0, 0.4]), camera_look=np.array([0.7, 0.0, 0.3]))
     val = Val([0.0, 0.0, -0.5])
     pbvs = CheaterPBVS(camera, 1, 1, 1.5, lambda : get_eef_gt(val))
     print(pbvs)
@@ -102,7 +98,6 @@ def main():
         "max_pos_error": 0.03, 
         "max_rot_error": 0.1, 
     }) 
-    input()
     loop.run(Two)
 
     # Plot ground truth vs predicted poses at each iteration of the loop
