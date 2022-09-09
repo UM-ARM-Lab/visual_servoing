@@ -17,7 +17,8 @@ import pybullet as p
 
 # Target 
 Two = np.eye(4) 
-Two[0:3, 3] = np.array([0.8, 0.24, 0.3])
+#Two[0:3, 3] = np.array([0.8, 0.24, 0.3])
+Two[0:3, 3] = np.array([0.8, 0.0, 0.2])
 Two[0:3, 0:3] = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((np.pi/2, np.pi/4, 0)))).reshape(3, 3)
 
 def get_eef_gt(robot):
@@ -76,10 +77,10 @@ class GtValLoop(PybulletPBVSLoop):
 
         super().on_after_step_pbvs(Twe)
 
-    def servoing_controller(self, twist):
-        # Note, this is a hack since we are working in joint
-        # space directly
-        return twist
+    #def servoing_controller(self, twist):
+    #    # Note, this is a hack since we are working in joint
+    #    # space directly
+    #    return twist
 
     def on_before_step_pbvs(self, rgb, depth):
         cv2.imshow("test", rgb)

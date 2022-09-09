@@ -101,7 +101,8 @@ class MarkerValLoop(PybulletPBVSLoop):
 
 def main():
     # Objects needed to do PBVS
-    camera = PyBulletCamera(camera_eye=np.array([0.7, -0.8, 0.5]), camera_look=np.array([0.7, 0.0, 0.2]))
+    #camera = PyBulletCamera(camera_eye=np.array([0.7, -0.8, 0.5]), camera_look=np.array([0.7, 0.0, 0.2]))
+    camera = PyBulletCamera(camera_eye=np.array([0.4, 0.0, 0.4]), camera_look=np.array([0.7, 0.0, 0.3]))
     pbvs = MarkerPBVS(camera, 1, 1, 1.5, np.eye(4), ids, tag_geometry, ids2, tag_geometry)
     val = Val([0.0, 0.0, -0.5])
     loop = MarkerValLoop(pbvs, camera, val, "left", 10, 240, {
