@@ -396,6 +396,32 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSI
       <inertia ixx="0.00762375" ixy="0" ixz="0" iyy="0.01156795" iyz="0" izz="0.00440141"/>
     </inertial>
   </link>
+
+  <link name = "cam">
+    <collision>
+      <origin rpy="0 0 0" xyz="0.0625 0 0.045"/>
+      <geometry>
+        <box size="0.03 0.10 0.10"/>
+      </geometry>
+    </collision>
+    <visual>
+      <origin rpy="-1.570796 -1.5707 0.0" xyz="0.05 0.0 0.05"/>
+      <geometry>
+        <box size="0.03 0.10 0.10"/>
+      </geometry>
+    </visual>
+    <inertial>
+      <origin rpy="3.14159 -1.570796 0" xyz="0.05 0.0 0.05"/>
+      <mass value="0.27265869"/>
+      <inertia ixx="0.00009278" ixy="0.0" ixz="0.00000608" iyy="0.00010001" iyz="0.0" izz="0.00007523"/>
+    </inertial>
+  </link>
+  <joint name="torso_to_cam" type="fixed">
+    <origin rpy="-1.570796 0 0" xyz="0 0 .44399"/>
+    <parent link="torso"/>
+    <child link="cam"/>
+  </joint>
+
   <!-- Drive 41 -->
   <joint name="left0" type="fixed">
     <origin rpy="-1.5707963267948966 0 -1.5707963267948966" xyz="-.092094 0 .44399"/>

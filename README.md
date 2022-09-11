@@ -15,14 +15,6 @@ Dependencies:
 - PyBullet
 - OpenCV + OpenCV extra modules 
 - rospy
-- arm_robots
-- arc_utilities 
-- link_bot 
-- robotiq
-- bio_ik
-- hdt_robot
-- kuka-iiwa-interface
-- pyromsg
 - Tensorflow (working on removing this)
 
 You will need to run: `rosdep install -y -r --from-paths . --ignore-src`

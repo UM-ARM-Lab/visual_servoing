@@ -38,6 +38,8 @@ class Val(ArmRobot):
 
         self.left_arm_joints = []
         self.right_arm_joints = []
+        self.camera_link = self.joints_by_name["torso_to_cam"]
+        self.camera_joints = [self.joints_by_name["joint56"], self.joints_by_name["joint57"]]
         for i in range(1, 8):
             #print(self.joints_by_name["joint4" + str(i)][0])
             self.left_arm_joints.append(self.joints_by_name["joint4" + str(i)][0])
@@ -55,6 +57,27 @@ class Val(ArmRobot):
 
         link_trn, link_rot, com_trn, com_rot, frame_pos, frame_rot, link_vt, link_vr = result
         return link_trn, link_rot 
+    
+    def get_camera_jacobian(self):
+        """
+        return 6 by 2 jacobian of the 2 dof camera on the torso
+        """
+        # query joint positions
+        joint_states = p.getJointStates(self.urdf, range(p.getNumJoints(self.urdf)))
+        joint_infos = [p.getJointInfo(self.urdf, i) for i in range(p.getNumJoints(self.urdf))]
+        joint_states = [j for j, i in zip(joint_states, joint_infos) if i[3] > -1]
+        joint_positions = [state[0] for state in joint_states]
+
+        tool = self.camera_link[0]
+
+        zero_vec = [0.0] * len(joint_positions)
+        # offset from the CoM of the end effector to get the Jacobian relative to 
+        loc_pos = [0.0] * 3
+
+        jac_t, jac_r = p.calculateJacobian(self.urdf, tool, loc_pos, joint_positions, zero_vec, zero_vec)
+        jac_t = np.array(jac_t)
+        jac_r = np.array(jac_r)
+        return np.vstack((jac_t[:, 6+4:6+6], jac_r[:, 6+4:6+6]))  # Jacobian is 6 (end effector dof) x 7 (joints)
 
     def get_arm_jacobian(self, side):
         """

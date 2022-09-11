@@ -77,10 +77,10 @@ class GtValLoop(PybulletPBVSLoop):
 
         super().on_after_step_pbvs(Twe)
 
-    #def servoing_controller(self, twist):
-    #    # Note, this is a hack since we are working in joint
-    #    # space directly
-    #    return twist
+    def servoing_controller(self, twist):
+        # Note, this is a hack since we are working in joint
+        # space directly
+        return twist
 
     def on_before_step_pbvs(self, rgb, depth):
         cv2.imshow("test", rgb)

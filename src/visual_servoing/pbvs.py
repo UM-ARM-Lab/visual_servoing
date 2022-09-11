@@ -114,36 +114,21 @@ class CheaterPBVS(PBVS):
 
         # QP form
         Q = np.eye(6)
-        #P = 2 * jac.T @ Q @ jac
-        #q = (-ctrl @ Q @ jac - ctrl @ Q.T @ jac)
-        #G = np.vstack((np.eye(num_joints), -np.eye(num_joints)))
-        #h = np.ones(num_joints * 2) * self.max_joint_velo
+        #Q[:3, np.arange(3)] *= 5; 
+        #Q[3:, 3+np.arange(3)] *= 0.1; 
+        P = 2 * jac.T @ Q @ jac
         num_joints = jac.shape[1]
-        P = Q
-        q = -ctrl @ Q
-        ctrl = solve_qp(P, q, None, None, None, None, solver="cvxopt")
+        q = (-ctrl @ Q @ jac - ctrl @ Q.T @ jac)
+        G = np.vstack((np.eye(num_joints), -np.eye(num_joints)))
+        h = np.ones(num_joints * 2) * self.max_joint_velo
+        num_joints = jac.shape[1]
+        #P = Q
+        #q = -ctrl @ Q
+        ctrl = solve_qp(P, q, G, h, None, None, solver="cvxopt")
+        cost = 0.5 * ctrl @ P @ ctrl + q.T @ ctrl
+        print(q)
 
-        # Do flatness thing
-        #Tcw = self.camera.get_extrinsics()
-        #Twc = np.linalg.inv(Tcw) 
-        ##Twc[0:3, 0] *= -1
-        ##Twc[0:3, 2] *= -1
-        #omega = np.squeeze(self.get_omega(Twe[0:3, 0:3], Twc[0:3, 0:3])) # align to cam z
-
-        #omega_world = np.linalg.inv(Twe[0:3, 0:3]) @ omega
-        #ctrl_world = np.linalg.inv(Twe[0:3, 0:3]) @ np.squeeze(ctrl[3:6])
-        #omega_world[2] = ctrl_world[2]
-        #omega = Twe[0:3, 0:3] @ omega_world
-        #omega_camera = Tcw[0:3, 0:3] @ omega
-        #omega_camera[2] = 0
-        #omega = Twc[0:3, 0:3] @ omega_camera
-
-
-        #ctrl[0:3] = np.zeros(3)
-        #ctrl[3:6] = omega
-        
-
-        ctrl = self.limit_twist(jac, jac_inv, ctrl)
+        #ctrl = self.limit_twist(jac, jac_inv, ctrl)
 
         return ctrl, Twe
 #class QPPBVS(PBVS):
