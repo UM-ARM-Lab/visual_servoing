@@ -50,13 +50,14 @@ class Val(ArmRobot):
         Returns ground truth end effector position in world frame
         """
         tool_idx = self.left_tool[0] if side == "left" else self.right_tool[0]
+        tool_idx = self.camera_link[0] if side == "camera" else tool_idx
         result = p.getLinkState(self.urdf,
                                 tool_idx,
                                 computeLinkVelocity=1,
                                 computeForwardKinematics=1)
 
         link_trn, link_rot, com_trn, com_rot, frame_pos, frame_rot, link_vt, link_vr = result
-        return link_trn, link_rot 
+        return frame_pos, frame_rot 
     
     def get_camera_jacobian(self):
         """

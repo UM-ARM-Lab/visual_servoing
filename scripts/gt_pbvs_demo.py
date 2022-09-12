@@ -39,7 +39,7 @@ def get_eef_gt(robot):
 
 class GtValLoop(PybulletPBVSLoop):
 
-    def __init__(self, pbvs: PBVS, camera: PyBulletCamera, robot: ArmRobot, side: str, pbvs_hz: float, sim_hz: float,
+    def __init__(self, pbvs: PBVS, camera: PyBulletCamera, robot: Val, side: str, pbvs_hz: float, sim_hz: float,
                  config ):
         super().__init__(pbvs, camera, robot, side, pbvs_hz, sim_hz, config)
         self.uids_eef_marker = None
@@ -64,9 +64,9 @@ class GtValLoop(PybulletPBVSLoop):
         if (self.uids_camera_marker is not None):
             erase_pos(self.uids_camera_marker)
         Twc = np.linalg.inv(self.camera.get_extrinsics())
-        self.uids_camera_marker = draw_pose(Twc[0:3, 3], Twc[0:3, 0:3], mat=True)
 
-        draw_sphere_marker(Twe[0:3, 3], 0.01, (1, 0, 0, 1))
+        self.uids_camera_marker = draw_pose(Twc[0:3, 3], Twc[0:3, 0:3], mat=True)
+        #draw_sphere_marker(Twe[0:3, 3], 0.01, (1, 0, 0, 1))
 
         # Errors 
         truth = get_eef_gt(self.robot)
@@ -85,15 +85,21 @@ class GtValLoop(PybulletPBVSLoop):
     def on_before_step_pbvs(self, rgb, depth):
         cv2.imshow("test", rgb)
         cv2.waitKey(1)
+
+        # Update camera GT
+        link_pos, link_rot = self.robot.get_eef_pos("camera")
+        camera_rot = np.array(p.getMatrixFromQuaternion(link_rot)).reshape(3,3)
+        self.camera.upate_from_pose(link_pos, camera_rot)
+
         return super().on_before_step_pbvs(rgb, depth)
 
 def main():
     # Objects needed to do PBVS
-    #camera = PyBulletCamera(camera_eye=np.array([0.7, -0.8, 0.5]), camera_look=np.array([0.7, 0.0, 0.2]))
-    camera = PyBulletCamera(camera_eye=np.array([0.4, 0.0, 0.4]), camera_look=np.array([0.7, 0.0, 0.3]))
+    camera = PyBulletCamera(camera_eye=np.array([0.7, -0.8, 0.5]), camera_look=np.array([0.7, 0.0, 0.2]))
+    #camera = PyBulletCamera(camera_eye=np.array([0.4, 0.0, 0.4]), camera_look=np.array([0.7, 0.0, 0.3]))
+
     val = Val([0.0, 0.0, -0.5])
     pbvs = CheaterPBVS(camera, 1, 1, 1.5, lambda : get_eef_gt(val))
-    print(pbvs)
     loop = GtValLoop(pbvs, camera, val, "left", 10, 240, {
         "timeout": 60,
         "max_pos_error": 0.03, 

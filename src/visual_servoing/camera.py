@@ -80,6 +80,24 @@ class PyBulletCamera(Camera):
         self.u = ((2 * u - self.image_dim[0]) / self.image_dim[0]).reshape(-1)
         self.v = -((2 * v - self.image_dim[1]) / self.image_dim[1]).reshape(-1)
         self.ones = np.ones(self.image_dim[0] * self.image_dim[1])
+    
+    def upate_from_pose(self, pos, rot):
+        """
+        Updates the camera position and rotation. +Z is the look direction
+
+        Args:
+            pos: 3-vec
+
+        """
+        # This is a column major order of the extrinsics
+
+        self.ogl_view_matrix = p.computeViewMatrix(
+            cameraEyePosition=pos,
+            cameraTargetPosition=(pos + rot[:, 2]),
+            cameraUpVector=(-rot[:, 1])
+        )
+
+        self.viewMatrix = np.asarray(self.ogl_view_matrix).reshape([4, 4], order='F')
 
     def get_intrinsics(self):
         proj_4x4 = np.array(self.ogl_projection_matrix).reshape(4, 4)
