@@ -14,6 +14,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import cv2
 import pybullet as p
+from qpsolvers import solve_qp
+
 
 # Target 
 Two = np.eye(4) 
@@ -49,7 +51,6 @@ class GtValLoop(PybulletPBVSLoop):
         self.rot_errors = []
     
     def on_after_step_pbvs(self, Twe):
-
         # Visualize estimated end effector pose 
         if (self.uids_eef_marker is not None):
             erase_pos(self.uids_eef_marker)
@@ -90,6 +91,7 @@ class GtValLoop(PybulletPBVSLoop):
         link_pos, link_rot = self.robot.get_eef_pos("camera")
         camera_rot = np.array(p.getMatrixFromQuaternion(link_rot)).reshape(3,3)
         self.camera.upate_from_pose(link_pos, camera_rot)
+        draw_sphere_marker(link_pos, 0.01, (1, 0, 0, 1))
 
         return super().on_before_step_pbvs(rgb, depth)
 

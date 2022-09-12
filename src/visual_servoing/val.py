@@ -39,7 +39,7 @@ class Val(ArmRobot):
         self.left_arm_joints = []
         self.right_arm_joints = []
         self.camera_link = self.joints_by_name["torso_to_cam"]
-        self.camera_joints = [self.joints_by_name["joint56"], self.joints_by_name["joint57"]]
+        self.camera_joints = [self.joints_by_name["joint56"][0], self.joints_by_name["joint57"][0]]
         for i in range(1, 8):
             #print(self.joints_by_name["joint4" + str(i)][0])
             self.left_arm_joints.append(self.joints_by_name["joint4" + str(i)][0])
@@ -120,3 +120,13 @@ class Val(ArmRobot):
         joint_list = self.left_arm_joints
         p.setJointMotorControlArray(self.urdf, joint_list, p.VELOCITY_CONTROL, targetVelocities=targetVelo)
     
+    def torso_control(self, torso_vel):
+        joint_list = self.camera_joints
+        p.setJointMotorControlArray(self.urdf, joint_list, p.VELOCITY_CONTROL, targetVelocities=torso_vel)
+
+    def torso_vel_control(self, torso_twist):
+        J = self.get_camera_jacobian()
+        lmda = 0.0000001
+        #J_pinv = np.dot(np.linalg.inv(np.dot(J.T, J) + lmda * np.eye(2)), J.T)
+        J_pinv = J.T @ np.linalg.inv(J @ J.T + lmda * np.eye(6))
+        self.torso_control(J_pinv @ torso_twist)

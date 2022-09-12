@@ -27,6 +27,17 @@
             }
         },
         {
+            "name": "sandbox",
+            "type": "python",
+            "request": "launch",
+            "program": "scripts/sandbox.py",
+            "console": "integratedTerminal",
+            "cwd": "/home/ashwin/source/lab/catkin_ws/src/Position-Based-Visual-Servoing",
+            "env" : {
+                "PYTHONPATH" : "/home/ashwin/source/lab/catkin_ws/devel/lib/python3/dist-packages:/opt/ros/noetic/lib/python3/dist-packages"
+            }
+        },
+        {
             "name": "evaluation",
             "type": "python",
             "request": "launch",
