@@ -10,7 +10,7 @@
             "request": "launch",
             "program": "scripts/marker_pbvs_demo.py",
             "console": "integratedTerminal",
-            "cwd": "/home/ashwin/source/lab/catkin_ws/src/Position-Based-Visual-Servoing",
+            "cwd": "/home/ashwin/source/lab/catkin_ws/src/visual_servoing",
             "env" : {
                 "PYTHONPATH" : "/home/ashwin/source/lab/catkin_ws/devel/lib/python3/dist-packages:/opt/ros/noetic/lib/python3/dist-packages"
             }
@@ -21,7 +21,7 @@
             "request": "launch",
             "program": "scripts/gt_pbvs_demo.py",
             "console": "integratedTerminal",
-            "cwd": "/home/ashwin/source/lab/catkin_ws/src/Position-Based-Visual-Servoing",
+            "cwd": "/home/ashwin/source/lab/catkin_ws/src/visual_servoing",
             "env" : {
                 "PYTHONPATH" : "/home/ashwin/source/lab/catkin_ws/devel/lib/python3/dist-packages:/opt/ros/noetic/lib/python3/dist-packages"
             }
@@ -32,7 +32,7 @@
             "request": "launch",
             "program": "scripts/sandbox.py",
             "console": "integratedTerminal",
-            "cwd": "/home/ashwin/source/lab/catkin_ws/src/Position-Based-Visual-Servoing",
+            "cwd": "/home/ashwin/source/lab/catkin_ws/src/visual_servoing",
             "env" : {
                 "PYTHONPATH" : "/home/ashwin/source/lab/catkin_ws/devel/lib/python3/dist-packages:/opt/ros/noetic/lib/python3/dist-packages"
             }

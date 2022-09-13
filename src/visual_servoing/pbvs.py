@@ -118,7 +118,7 @@ class CheaterPBVS(PBVS):
         #Q[3:, 3+np.arange(3)] *= 0.1; 
         P = jac.T @ Q @ jac
         num_joints = jac.shape[1]
-        q = (-ctrl @ Q @ jac - ctrl @ Q.T @ jac)
+        q = (-ctrl @ Q @ jac)
         G = np.vstack((np.eye(num_joints), -np.eye(num_joints)))
         h = np.ones(num_joints * 2) * self.max_joint_velo
         num_joints = jac.shape[1]
