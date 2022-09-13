@@ -74,7 +74,8 @@ while(True):
     # Servo
     Two = np.eye(4) 
     Two[0:3, 3] = np.array([0.8, 0.0, 0.2])
-    Two[0:3, 0:3] = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((np.pi/2, np.pi/4, 0)))).reshape(3, 3)
+    #Two[0:3, 0:3] = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((np.pi/2, np.pi/4, 0)))).reshape(3, 3)
+    Two[0:3, 0:3] = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((np.pi/2, 0, -np.pi/4)))).reshape(3, 3)
     twist, Twe = pbvs.do_pbvs(rgb, depth, Two, np.eye(4), val.get_arm_jacobian("left"), val.get_jacobian_pinv("left"), 24)
 
     # Torso control
@@ -91,14 +92,19 @@ while(True):
     L1 = get_interaction_mat(ref_marker.c_x, ref_marker.c_y, Tcm[2, 3])
     L2 = get_interaction_mat(px2[0], px2[1], pt2_cam[2])
     L = np.vstack((L1, L2))
+    #ctrl = np.array([
+    #    -(ref_marker.c_x - camera.image_dim[0]/2), -(ref_marker.c_y - camera.image_dim[1]/2),
+    #    -(px2[0] - camera.image_dim[0]/2), -(px2[1] - camera.image_dim[1]/2),
+    #]
+    #)
     ctrl = np.array([
-        -(ref_marker.c_x - camera.image_dim[0]/2), -(ref_marker.c_y - camera.image_dim[1]/2),
-        -(px2[0] - camera.image_dim[0]/2), -(px2[1] - camera.image_dim[1]/2),
+        0, 0, #-(ref_marker.c_x - camera.image_dim[0]/2), -(ref_marker.c_y - camera.image_dim[1]/2),
+        -(px2[0] - ref_marker.c_x), -(px2[1] - ref_marker.c_y),
     ]
     )
 
     jac = val.get_camera_jacobian()
-    Q = np.eye(4) * 100
+    Q = np.eye(4) * 1000
     P = jac.T @ L.T @ Q @ L @ jac
     q = (-ctrl @ Q @ L @ jac)
     num_joints = jac.shape[1]
