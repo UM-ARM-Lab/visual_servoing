@@ -35,7 +35,7 @@ class Victor(ArmRobot):
 
         # Set up simulation 
         # Load Victor URDF
-        self.urdf = p.loadURDF("models/victor_description/urdf/victor.urdf", [0,0,0], p.getQuaternionFromEuler([0,0,0]))
+        self.urdf = p.loadURDF("models/victor/victor_description/urdf/victor.urdf", [0,0,0], p.getQuaternionFromEuler([0,0,0]))
 
         # Organize joints into a dict from name->info
         self.joints_by_name = {}

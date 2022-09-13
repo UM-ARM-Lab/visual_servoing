@@ -116,7 +116,7 @@ class CheaterPBVS(PBVS):
         Q = np.eye(6)
         #Q[:3, np.arange(3)] *= 5; 
         #Q[3:, 3+np.arange(3)] *= 0.1; 
-        P = 2 * jac.T @ Q @ jac
+        P = jac.T @ Q @ jac
         num_joints = jac.shape[1]
         q = (-ctrl @ Q @ jac - ctrl @ Q.T @ jac)
         G = np.vstack((np.eye(num_joints), -np.eye(num_joints)))
@@ -131,4 +131,3 @@ class CheaterPBVS(PBVS):
         #ctrl = self.limit_twist(jac, jac_inv, ctrl)
 
         return ctrl, Twe
-#class QPPBVS(PBVS):

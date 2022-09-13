@@ -10,9 +10,9 @@
             "request": "launch",
             "program": "scripts/marker_pbvs_demo.py",
             "console": "integratedTerminal",
-            "cwd": "/home/ashwin/catkin_ws/src/Val-Visual-Servo",
+            "cwd": "/home/ashwin/source/lab/catkin_ws/src/Position-Based-Visual-Servoing",
             "env" : {
-                "PYTHONPATH" : "/home/ashwin/catkin_ws/devel/lib/python3/dist-packages:/opt/ros/noetic/lib/python3/dist-packages"
+                "PYTHONPATH" : "/home/ashwin/source/lab/catkin_ws/devel/lib/python3/dist-packages:/opt/ros/noetic/lib/python3/dist-packages"
             }
         },
         {
