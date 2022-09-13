@@ -1,4 +1,5 @@
 from dis import get_instructions
+from tkinter import W
 import cv2
 from visual_servoing.marker_pbvs import MarkerPBVS
 from visual_servoing.val import Val
@@ -74,13 +75,16 @@ while(True):
     # Servo
     Two = np.eye(4) 
     Two[0:3, 3] = np.array([0.8, 0.0, 0.2])
-    #Two[0:3, 0:3] = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((np.pi/2, np.pi/4, 0)))).reshape(3, 3)
-    Two[0:3, 0:3] = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((np.pi/2, 0, -np.pi/4)))).reshape(3, 3)
+    Two[0:3, 0:3] = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((np.pi/2, np.pi/4, 0)))).reshape(3, 3)
+    #Two[0:3, 0:3] = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((np.pi/2, 0, -np.pi/4)))).reshape(3, 3)
     twist, Twe = pbvs.do_pbvs(rgb, depth, Two, np.eye(4), val.get_arm_jacobian("left"), val.get_jacobian_pinv("left"), 24)
 
     # Torso control
     ref_marker = pbvs.ref_marker
-    Tcm = ref_marker.Tcm
+    try:
+        Tcm = ref_marker.Tcm
+    except:
+        continue
 
     # Get another pt
     pt2_cam = Tcm @ np.array([0, 0, 0.1, 1])
@@ -98,20 +102,26 @@ while(True):
     #]
     #)
     ctrl = np.array([
-        0, 0, #-(ref_marker.c_x - camera.image_dim[0]/2), -(ref_marker.c_y - camera.image_dim[1]/2),
+        (px2[0] - ref_marker.c_x), (px2[1] - ref_marker.c_y),
+        #-(ref_marker.c_x - camera.image_dim[0]/2), -(ref_marker.c_y - camera.image_dim[1]/2),
         -(px2[0] - ref_marker.c_x), -(px2[1] - ref_marker.c_y),
     ]
     )
 
     jac = val.get_camera_jacobian()
-    Q = np.eye(4) * 1000
-    P = jac.T @ L.T @ Q @ L @ jac
-    q = (-ctrl @ Q @ L @ jac)
-    num_joints = jac.shape[1]
-    G = np.vstack((np.eye(num_joints), -np.eye(num_joints)))
-    h = np.ones(num_joints * 2) * 3.5
-    num_joints = jac.shape[1]
-    ctrl = solve_qp(P, q, G, h, None, None, solver="cvxopt")
+    
+    A = L @ jac
+    lmda = 0.0000001
+    A_pinv = np.linalg.inv(A.T @ A + lmda * np.eye(2)) @ A.T
+    ctrl = 2 * A_pinv @ ctrl
+    #Q = np.eye(4) * 1000
+    #P = jac.T @ L.T @ Q @ L @ jac
+    #q = (-ctrl @ Q @ L @ jac)
+    #num_joints = jac.shape[1]
+    #G = np.vstack((np.eye(num_joints), -np.eye(num_joints)))
+    #h = np.ones(num_joints * 2) * 3.5
+    #num_joints = jac.shape[1]
+    #ctrl = solve_qp(P, q, G, h, None, None, solver="cvxopt")
     val.torso_control(ctrl)
 
     # Servo
