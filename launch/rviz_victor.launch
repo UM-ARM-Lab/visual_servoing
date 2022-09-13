@@ -1,7 +1,7 @@
 <launch>
     <arg name="update_description" default="true"/>
     <arg name="launch_fake_dual_arm_bridge" default="false"/>
-    <arg name="rvizconfig" default="$(find visual_servoing)/default.rviz" />
+    <arg name="rvizconfig" default="$(find visual_servoing)/launch/victor.rviz" />
 
     <group if="$(arg launch_fake_dual_arm_bridge)">
         <include file="$(find victor_fake_hardware_interface)/launch/fake_dual_arm_lcm_bridge.launch"/>
