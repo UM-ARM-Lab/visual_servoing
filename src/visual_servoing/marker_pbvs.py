@@ -144,7 +144,8 @@ class MarkerPBVS(PBVS):
 
         # Draw debug pose visualization if a frame is passed in
         if frame is not None:
-            cv2.aruco.drawAxis(frame, self.camera.get_intrinsics(), 0, rvec, tvec, 0.4)
+            #cv2.aruco.drawAxis(frame, self.camera.get_intrinsics(), 0, rvec, tvec, 0.4)
+            cv2.drawFrameAxes(frame, self.camera.get_intrinsics(), 0, rvec, tvec, 0.4)
 
         return ref_marker
 
@@ -174,7 +175,7 @@ class MarkerPBVS(PBVS):
         markers = self.detect_markers(rgb)
         ref_marker = self.get_board_pose(markers, self.eef_board, rgb)
         self.ref_marker = ref_marker # TODO delete
-        cv2.imshow("Camera", cv2.resize(rgb, (1280 // 3, 800 // 3)))  
+        #cv2.imshow("Camera", cv2.resize(rgb, (1280 // 3, 800 // 3)))  
 
         # If it was found, compute its pose estimate
         ctrl = np.zeros(6)

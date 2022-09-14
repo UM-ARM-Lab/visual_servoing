@@ -71,6 +71,10 @@ def reproject(Tcm, point_marker, camera):
     px2 = pt2_im[0:2].astype(int)
     return px2, pt2_cam
 
+rgb, depth = camera.get_image()
+cv2.imshow("Im", rgb)
+cv2.waitKey(1)
+input()
 while(True):
 
     # Step sim
@@ -93,20 +97,24 @@ while(True):
     # Servo
     Two = np.eye(4) 
     Two[0:3, 3] = np.array([0.8, 0.0, 0.2])
-    #Two[0:3, 0:3] = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((np.pi/2, np.pi/4, 0)))).reshape(3, 3)
-    Two[0:3, 0:3] = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((np.pi/2, 0, -np.pi/4)))).reshape(3, 3)
+    #Two[0:3, 0:3] = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((np.pi/2, np.pi/4, 0)))).reshape(3, 3) # really hard
+    Two[0:3, 3] = np.array([0.75, 0.2, 0.2])
+    Two[0:3, 0:3] = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((np.pi/2, 0, np.pi/10)))).reshape(3, 3) # hard
+    #Two[0:3, 0:3] = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((np.pi/2, 0, -np.pi/4)))).reshape(3, 3) # really easy
     twist, Twe = pbvs.do_pbvs(rgb, depth, Two, np.eye(4), val.get_arm_jacobian("left"), val.get_jacobian_pinv("left"), 24)
-    dt = 0.1
+    dt = 0.1  + 0.3
     pose_pred = add_global_twist(twist, Twe, dt)
 
     # Visualize estimated end effector pose 
     if (uids_eef_marker is not None):
         erase_pos(uids_eef_marker)
     uids_eef_marker = draw_pose(Twe[0:3, 3], Twe[0:3, 0:3], mat=True)
-    if (uids_pred_eef_marker is not None):
-        erase_pos(uids_pred_eef_marker)
-    uids_pred_eef_marker = draw_pose(pose_pred[0:3, 3], pose_pred[0:3, 0:3], mat=True)
+    #if (uids_pred_eef_marker is not None):
+    #    erase_pos(uids_pred_eef_marker)
+    #uids_pred_eef_marker = draw_pose(pose_pred[0:3, 3], pose_pred[0:3, 0:3], mat=True)
 
+    cv2.imshow("Im", rgb)
+    cv2.waitKey(1)
 
     # Torso control
     ref_marker = pbvs.ref_marker
@@ -147,6 +155,7 @@ while(True):
     #h = np.ones(num_joints * 2) * 3.5
     #num_joints = jac.shape[1]
     #ctrl = solve_qp(P, q, G, h, None, None, solver="cvxopt")
+
     val.torso_control(ctrl)
 
     # Servo
@@ -157,15 +166,13 @@ while(True):
     val.velocity_control("left", q_dot)
 
     # Visualize camera pose  
-    if (uids_camera_marker is not None):
-        erase_pos(uids_camera_marker)
-    Twc = np.linalg.inv(camera.get_extrinsics())
-    uids_camera_marker = draw_pose(Twc[0:3, 3], Twc[0:3, 0:3], mat=True)
+    #if (uids_camera_marker is not None):
+    #    erase_pos(uids_camera_marker)
+    #Twc = np.linalg.inv(camera.get_extrinsics())
+    #uids_camera_marker = draw_pose(Twc[0:3, 3], Twc[0:3, 0:3], mat=True)
 
 
     # Visualize target pose 
     if (uids_target_marker is not None):
         erase_pos(uids_target_marker)
     uids_target_marker = draw_pose(Two[0:3, 3], Two[0:3, 0:3], mat=True)
-    cv2.imshow("Im", rgb)
-    cv2.waitKey(1)
