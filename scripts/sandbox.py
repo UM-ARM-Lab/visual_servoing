@@ -94,8 +94,8 @@ Two = np.eye(4)
 Two[0:3, 3] = np.array([0.8, 0.0, 0.2])
 #Two[0:3, 0:3] = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((np.pi/2, np.pi/4, 0)))).reshape(3, 3) # really hard
 Two[0:3, 3] = np.array([0.75, 0.2, 0.2])
-#Two[0:3, 0:3] = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((np.pi/2, 0, np.pi/10)))).reshape(3, 3) # hard
-Two[0:3, 0:3] = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((np.pi/2, 0, -np.pi/4)))).reshape(3, 3) # really easy
+Two[0:3, 0:3] = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((np.pi/2, 0, np.pi/10)))).reshape(3, 3) # hard
+#Two[0:3, 0:3] = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((np.pi/2, 0, -np.pi/4)))).reshape(3, 3) # really easy
 
 rgb, depth = camera.get_image()
 cv2.imshow("Im", rgb)
@@ -119,7 +119,7 @@ while(True):
     Twc = np.linalg.inv(camera.get_extrinsics())
     camera_look = -Twc[0:3, 2]
     tag_normal = Twe[0:3, 2]
-    dir =  np.cross(tag_normal, camera_look)
+    camera_rot_cmd =  np.cross(camera_look, tag_normal)
     #twist[3:] = dir
 
     # Visualize estimated end effector pose 
@@ -130,25 +130,32 @@ while(True):
     cv2.imshow("Im", rgb)
     cv2.waitKey(1)
 
-    # control
-    k = 40 # control gain on target
-    jac = val.get_arm_jacobian("left", True)
-    max_joint_vel = 1.5
-    num_joints = jac.shape[1]
+    k = 40 # control gain on target for PBVS
+
+    full_jac = val.get_arm_jacobian("left", True)
+    num_joints = full_jac.shape[1]
+
+    # augmented torso jacobian ignoring the arm only joints, 6 x 9, but sparse
+    torso_twist = np.zeros(6)
+    torso_twist[3:] = camera_rot_cmd
+    torso_jac = np.hstack((val.get_camera_jacobian(), np.zeros((6, 7))))
+
     Q = np.eye(6)
-    P = jac.T @ Q @ jac
-    q = (-k*eef_twist @ Q @ jac)
+    R = np.eye(6) * 0.01
+    # Don't care about position control of camrea
+    R[[0, 1, 2], [0, 1, 2]] = 0
+
+    P = full_jac.T @ Q @ full_jac + torso_jac.T @ R @ torso_jac
+    q = (-k*eef_twist @ Q @ full_jac - k * torso_twist @ R @ torso_jac)
+
+    # Inequality for joint vel limits
+    max_joint_vel = 1.5 # max joint for limit
     G = np.vstack((np.eye(num_joints), -np.eye(num_joints)))
     h = np.ones(num_joints * 2) * max_joint_vel
     ctrl = solve_qp(P, q, G, h, None, None, solver="cvxopt")
     print(ctrl)
-    #val.torso_control(ctrl)
 
-    # Servo
-    #J = val.get_arm_jacobian("left",  True)
-    #lmda = 0.0000001
-    #J_pinv = np.linalg.inv(J.T @ J + lmda * np.eye(9)) @ J.T
-    #q_dot = J_pinv @ twist
+    # Send command to val
     val.velocity_control("left", ctrl)
 
     # Visualize camera pose  
