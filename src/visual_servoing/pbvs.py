@@ -110,28 +110,27 @@ class CheaterPBVS(PBVS):
     def do_pbvs(self, rgb, depth, Two, Tle, jac, jac_inv, dt):
         Twe = self.cheater()
 
-        ctrl = self.get_control(Twe, Two)
+        ctrl = self.get_control(Twe, Two)/dt
         # normalize both vectors to unit mag
-        #ctrl[:3] = ctrl[:3] / np.linalg.norm(ctrl[:3]) * 100
-        #ctrl[3:] = ctrl[3:] / np.linalg.norm(ctrl[3:]) * 100
+        #ctrl[:3] = ctrl[:3] / np.linalg.norm(ctrl[:3]) #* 100
+        #ctrl[3:] = ctrl[3:] / np.linalg.norm(ctrl[3:]) #* 100
 
         # QP form
-        Q = np.eye(6)
-        #K = np.eye(7) * 100# regularization
-        Q[:3, np.arange(3)] *= 50; 
-        #Q[3:, 3+np.arange(3)] *= 0.1; 
-        P = jac.T @ Q @ jac
-        num_joints = jac.shape[1]
-        q = (-ctrl @ Q @ jac)
-        G = np.vstack((np.eye(num_joints), -np.eye(num_joints)))
-        h = np.ones(num_joints * 2) * self.max_joint_velo
-        num_joints = jac.shape[1]
-        #P = Q
-        #q = -ctrl @ Q
-        ctrl = solve_qp(P, q, G, h, None, None, solver="cvxopt")
-        cost = 0.5 * ctrl @ P @ ctrl + q.T @ ctrl
-        print(q)
+        #Q = np.eye(6)
+        ##K = np.eye(7) * 100# regularization
+        #Q[:3, np.arange(3)] *= 50; 
+        ##Q[3:, 3+np.arange(3)] *= 0.1; 
+        #P = jac.T @ Q @ jac
+        #num_joints = jac.shape[1]
+        #q = (-ctrl @ Q @ jac)
+        #G = np.vstack((np.eye(num_joints), -np.eye(num_joints)))
+        #h = np.ones(num_joints * 2) * self.max_joint_velo
+        #num_joints = jac.shape[1]
+        #ctrl = solve_qp(P, q, G, h, None, None, solver="cvxopt")
+        #cost = 0.5 * ctrl @ P @ ctrl + q.T @ ctrl
+        #print(q)
 
         #ctrl = self.limit_twist(jac, jac_inv, ctrl)
+        
 
         return ctrl, Twe

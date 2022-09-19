@@ -1,6 +1,7 @@
 from dis import get_instructions
 from tkinter import W
 import cv2
+from visual_servoing.pbvs import CheaterPBVS
 from visual_servoing.marker_pbvs import MarkerPBVS
 from visual_servoing.val import Val
 from visual_servoing.utils import *
@@ -53,7 +54,24 @@ tag2 = np.array([tag2_tl, tag2_tr, tag2_br, tag2_bl])
 tag_geometry = [tag0, tag1, tag2]
 ids = np.array([1, 2, 3])
 ids2 = np.array([4,5,6])
-pbvs = MarkerPBVS(camera, 1, 1, 1.5, np.eye(4), ids, tag_geometry, ids2, tag_geometry)
+
+#pbvs = MarkerPBVS(camera, 1, 1, 1.5, np.eye(4), ids, tag_geometry, ids2, tag_geometry)
+def get_eef_gt(robot):
+    '''
+    Gets the ground truth pose of the end effector from the simulator
+    '''
+    tool_idx = robot.left_tag[0]
+    result = p.getLinkState(robot.urdf,
+                            tool_idx,
+                            computeLinkVelocity=1,
+                            computeForwardKinematics=1)
+
+    link_trn, link_rot, com_trn, com_rot, frame_pos, frame_rot, link_vt, link_vr = result
+    Twe = np.eye(4)
+    Twe[0:3, 0:3] = np.array(p.getMatrixFromQuaternion(link_rot)).reshape(3, 3)
+    Twe[0:3, 3] = link_trn
+    return Twe
+pbvs = CheaterPBVS(camera, 1, 1, 1.5, lambda : get_eef_gt(val))
 
 def add_global_twist(twist, pose, dt):
     r3 = dt * twist[:3]
@@ -95,7 +113,14 @@ while(True):
     rgb, depth = camera.get_image()
 
     # Get the PBVS twist for the eef
-    twist, Twe = pbvs.do_pbvs(rgb, depth, Two, np.eye(4), val.get_arm_jacobian("left", True), val.get_jacobian_pinv("left", True), 24)
+    eef_twist, Twe = pbvs.do_pbvs(rgb, depth, Two, np.eye(4), val.get_arm_jacobian("left", True), val.get_jacobian_pinv("left", True), 24)
+
+    # Compute the rotation to algin tag normal to cam look
+    Twc = np.linalg.inv(camera.get_extrinsics())
+    camera_look = -Twc[0:3, 2]
+    tag_normal = Twe[0:3, 2]
+    dir =  np.cross(tag_normal, camera_look)
+    #twist[3:] = dir
 
     # Visualize estimated end effector pose 
     if (uids_eef_marker is not None):
@@ -105,26 +130,26 @@ while(True):
     cv2.imshow("Im", rgb)
     cv2.waitKey(1)
 
-    # Torso control
-
-    #jac = val.get_camera_jacobian()
-    #Q = np.eye(4) * 1000
-    #P = jac.T @ L.T @ Q @ L @ jac
-    #q = (-ctrl @ Q @ L @ jac)
-    #num_joints = jac.shape[1]
-    #G = np.vstack((np.eye(num_joints), -np.eye(num_joints)))
-    #h = np.ones(num_joints * 2) * 3.5
-    #num_joints = jac.shape[1]
-    #ctrl = solve_qp(P, q, G, h, None, None, solver="cvxopt")
-
+    # control
+    k = 40 # control gain on target
+    jac = val.get_arm_jacobian("left", True)
+    max_joint_vel = 1.5
+    num_joints = jac.shape[1]
+    Q = np.eye(6)
+    P = jac.T @ Q @ jac
+    q = (-k*eef_twist @ Q @ jac)
+    G = np.vstack((np.eye(num_joints), -np.eye(num_joints)))
+    h = np.ones(num_joints * 2) * max_joint_vel
+    ctrl = solve_qp(P, q, G, h, None, None, solver="cvxopt")
+    print(ctrl)
     #val.torso_control(ctrl)
 
     # Servo
-    J = val.get_arm_jacobian("left",  True)
-    lmda = 0.0000001
-    J_pinv = np.linalg.inv(J.T @ J + lmda * np.eye(9)) @ J.T
-    q_dot = J_pinv @ twist
-    val.velocity_control("left", q_dot)
+    #J = val.get_arm_jacobian("left",  True)
+    #lmda = 0.0000001
+    #J_pinv = np.linalg.inv(J.T @ J + lmda * np.eye(9)) @ J.T
+    #q_dot = J_pinv @ twist
+    val.velocity_control("left", ctrl)
 
     # Visualize camera pose  
     if (uids_camera_marker is not None):
