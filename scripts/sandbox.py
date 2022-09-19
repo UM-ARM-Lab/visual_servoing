@@ -141,12 +141,22 @@ while(True):
     torso_jac = np.hstack((val.get_camera_jacobian(), np.zeros((6, 7))))
 
     Q = np.eye(6)
-    R = np.eye(6) * 0.01
+    # Weigh accurate position more
+    Q[np.arange(3), np.arange(3)] = 50
+    Q[np.arange(3, 6), np.arange(3, 6)] = 1
     # Don't care about position control of camrea
-    R[[0, 1, 2], [0, 1, 2]] = 0
+    R = np.eye(6)
+    R[np.arange(3), np.arange(3)] = 0
+    R[np.arange(3, 6), np.arange(3, 6)] = 1
 
-    P = full_jac.T @ Q @ full_jac + torso_jac.T @ R @ torso_jac
-    q = (-k*eef_twist @ Q @ full_jac - k * torso_twist @ R @ torso_jac)
+    wp = 0.999999999
+    ws = 1 - wp
+
+    # Use a low weight objective on the arm for normal alignment?
+    # Use another objective that accounts for reachability?
+
+    P = wp * (full_jac.T @ Q @ full_jac) + ws*(torso_jac.T @ R @ torso_jac)
+    q = wp*(-k*eef_twist @ Q @ full_jac) + ws*(-k * torso_twist @ R @ torso_jac)
 
     # Inequality for joint vel limits
     max_joint_vel = 1.5 # max joint for limit
