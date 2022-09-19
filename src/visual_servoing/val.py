@@ -81,7 +81,7 @@ class Val(ArmRobot):
         jac_r = np.array(jac_r)
         return np.vstack((jac_t[:, 6+4:6+6], jac_r[:, 6+4:6+6]))  # Jacobian is 6 (end effector dof) x 7 (joints)
 
-    def get_arm_jacobian(self, side):
+    def get_arm_jacobian(self, side, include_torso=False):
         """
         return 6 by 7 jacobian of the 7 dof left or right arm
         """
@@ -106,19 +106,25 @@ class Val(ArmRobot):
         jac_r = np.array(jac_r)
         
         if side == "left": 
-
-            return np.vstack((jac_t[:, 6+6:13+6], jac_r[:, 6+6:13+6]))  # Jacobian is 6 (end effector dof) x 7 (joints)
+            if(include_torso):
+                return np.vstack((jac_t[:, 4+6:13+6], jac_r[:, 4+6:13+6]))  # Jacobian is 6 (end effector dof) x 9 (joints)
+            else:
+                return np.vstack((jac_t[:, 6+6:13+6], jac_r[:, 6+6:13+6]))  # Jacobian is 6 (end effector dof) x 7 (joints)
         else:
             return np.vstack((jac_t[:, 11:18], jac_r[:, 11:18]))
 
-    def get_jacobian_pinv(self,side):
-        J = self.get_arm_jacobian(side)
+    def get_jacobian_pinv(self,side, include_torso=False):
+        J = self.get_arm_jacobian(side, include_torso)
         lmda = 0.0000001
-        J_pinv = np.dot(np.linalg.inv(np.dot(J.T, J) + lmda * np.eye(7)), J.T)
+        dim = 7
+        if(include_torso):
+            dim = 9
+        J_pinv = np.dot(np.linalg.inv(np.dot(J.T, J) + lmda * np.eye(dim)), J.T)
         return J_pinv
 
-    def velocity_control(self, side, targetVelo):
+    def velocity_control(self, side, targetVelo, include_torso=False):
         joint_list = self.left_arm_joints
+        joint_list = self.camera_joints + self.left_arm_joints
         p.setJointMotorControlArray(self.urdf, joint_list, p.VELOCITY_CONTROL, targetVelocities=targetVelo)
     
     def torso_control(self, torso_vel):

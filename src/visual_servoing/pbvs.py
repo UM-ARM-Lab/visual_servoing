@@ -111,10 +111,14 @@ class CheaterPBVS(PBVS):
         Twe = self.cheater()
 
         ctrl = self.get_control(Twe, Two)
+        # normalize both vectors to unit mag
+        #ctrl[:3] = ctrl[:3] / np.linalg.norm(ctrl[:3]) * 100
+        #ctrl[3:] = ctrl[3:] / np.linalg.norm(ctrl[3:]) * 100
 
         # QP form
         Q = np.eye(6)
-        #Q[:3, np.arange(3)] *= 5; 
+        #K = np.eye(7) * 100# regularization
+        Q[:3, np.arange(3)] *= 50; 
         #Q[3:, 3+np.arange(3)] *= 0.1; 
         P = jac.T @ Q @ jac
         num_joints = jac.shape[1]

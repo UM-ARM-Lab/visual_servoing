@@ -71,10 +71,18 @@ def reproject(Tcm, point_marker, camera):
     px2 = pt2_im[0:2].astype(int)
     return px2, pt2_cam
 
+# Target
+Two = np.eye(4) 
+Two[0:3, 3] = np.array([0.8, 0.0, 0.2])
+#Two[0:3, 0:3] = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((np.pi/2, np.pi/4, 0)))).reshape(3, 3) # really hard
+Two[0:3, 3] = np.array([0.75, 0.2, 0.2])
+#Two[0:3, 0:3] = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((np.pi/2, 0, np.pi/10)))).reshape(3, 3) # hard
+Two[0:3, 0:3] = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((np.pi/2, 0, -np.pi/4)))).reshape(3, 3) # really easy
+
 rgb, depth = camera.get_image()
 cv2.imshow("Im", rgb)
 cv2.waitKey(1)
-input()
+
 while(True):
 
     # Step sim
@@ -82,71 +90,24 @@ while(True):
         link_pos, link_rot = val.get_eef_pos("camera")
         camera_rot = np.array(p.getMatrixFromQuaternion(link_rot)).reshape(3,3)
         camera.upate_from_pose(link_pos, camera_rot)
-        #draw_sphere_marker(link_pos, 0.01, (1, 0, 0, 1))
-
         p.stepSimulation()
     
     rgb, depth = camera.get_image()
-    #markers = pbvs.detect_markers(rgb)
-    #ref_marker = pbvs.get_board_pose(markers, pbvs.eef_board, rgb)
-    #Tcm = ref_marker.Tcm
-    #L = get_interaction_mat(ref_marker.c_x, ref_marker.c_y, Tcm[2, 3])
-    #J = val.get_camera_jacobian() 
 
-
-    # Servo
-    Two = np.eye(4) 
-    Two[0:3, 3] = np.array([0.8, 0.0, 0.2])
-    #Two[0:3, 0:3] = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((np.pi/2, np.pi/4, 0)))).reshape(3, 3) # really hard
-    Two[0:3, 3] = np.array([0.75, 0.2, 0.2])
-    Two[0:3, 0:3] = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((np.pi/2, 0, np.pi/10)))).reshape(3, 3) # hard
-    #Two[0:3, 0:3] = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((np.pi/2, 0, -np.pi/4)))).reshape(3, 3) # really easy
-    twist, Twe = pbvs.do_pbvs(rgb, depth, Two, np.eye(4), val.get_arm_jacobian("left"), val.get_jacobian_pinv("left"), 24)
-    dt = 0.1  + 0.3
-    pose_pred = add_global_twist(twist, Twe, dt)
+    # Get the PBVS twist for the eef
+    twist, Twe = pbvs.do_pbvs(rgb, depth, Two, np.eye(4), val.get_arm_jacobian("left", True), val.get_jacobian_pinv("left", True), 24)
 
     # Visualize estimated end effector pose 
     if (uids_eef_marker is not None):
         erase_pos(uids_eef_marker)
     uids_eef_marker = draw_pose(Twe[0:3, 3], Twe[0:3, 0:3], mat=True)
-    #if (uids_pred_eef_marker is not None):
-    #    erase_pos(uids_pred_eef_marker)
-    #uids_pred_eef_marker = draw_pose(pose_pred[0:3, 3], pose_pred[0:3, 0:3], mat=True)
 
     cv2.imshow("Im", rgb)
     cv2.waitKey(1)
 
     # Torso control
-    ref_marker = pbvs.ref_marker
-    try:
-        Tcm = ref_marker.Tcm
-    except:
-        continue
-    Tcw = camera.get_extrinsics()
-    Tcm = Tcw @ pose_pred
 
-    # Get another pt
-    px1, p1 = reproject(Tcm, np.array([0, 0, 0.0, 1]), camera)
-    px2, p2 = reproject(Tcm, np.array([0, 0, 0.1, 1]), camera)
-    cv2.circle(rgb, tuple(px1), 4, (255, 0, 255), -1)
-    cv2.circle(rgb, tuple(px2), 4, (255, 0, 255), -1)
-    
-    L1 = get_interaction_mat(px1[0], px1[1], p1[2])
-    L2 = get_interaction_mat(px2[0], px2[1], p2[2])
-    L = np.vstack((L1, L2))
-
-    ctrl = np.array([
-        (px2[0] - px1[0]), (px2[1] - px1[1]),
-        -(px2[0] - px1[0]), -(px2[1] - px1[1]),
-    ]
-    )
-
-    jac = val.get_camera_jacobian()
-    
-    A = L @ jac
-    lmda = 0.0000001
-    A_pinv = np.linalg.inv(A.T @ A + lmda * np.eye(2)) @ A.T
-    ctrl = 2 * A_pinv @ ctrl
+    #jac = val.get_camera_jacobian()
     #Q = np.eye(4) * 1000
     #P = jac.T @ L.T @ Q @ L @ jac
     #q = (-ctrl @ Q @ L @ jac)
@@ -156,20 +117,20 @@ while(True):
     #num_joints = jac.shape[1]
     #ctrl = solve_qp(P, q, G, h, None, None, solver="cvxopt")
 
-    val.torso_control(ctrl)
+    #val.torso_control(ctrl)
 
     # Servo
-    J = val.get_arm_jacobian("left")
+    J = val.get_arm_jacobian("left",  True)
     lmda = 0.0000001
-    J_pinv = np.linalg.inv(J.T @ J + lmda * np.eye(7)) @ J.T
+    J_pinv = np.linalg.inv(J.T @ J + lmda * np.eye(9)) @ J.T
     q_dot = J_pinv @ twist
     val.velocity_control("left", q_dot)
 
     # Visualize camera pose  
-    #if (uids_camera_marker is not None):
-    #    erase_pos(uids_camera_marker)
-    #Twc = np.linalg.inv(camera.get_extrinsics())
-    #uids_camera_marker = draw_pose(Twc[0:3, 3], Twc[0:3, 0:3], mat=True)
+    if (uids_camera_marker is not None):
+        erase_pos(uids_camera_marker)
+    Twc = np.linalg.inv(camera.get_extrinsics())
+    uids_camera_marker = draw_pose(Twc[0:3, 3], Twc[0:3, 0:3], mat=True)
 
 
     # Visualize target pose 

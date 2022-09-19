@@ -67,7 +67,7 @@ class GtValLoop(PybulletPBVSLoop):
         Twc = np.linalg.inv(self.camera.get_extrinsics())
 
         self.uids_camera_marker = draw_pose(Twc[0:3, 3], Twc[0:3, 0:3], mat=True)
-        #draw_sphere_marker(Twe[0:3, 3], 0.01, (1, 0, 0, 1))
+        draw_sphere_marker(Twe[0:3, 3], 0.01, (1, 0, 0, 1))
 
         # Errors 
         truth = get_eef_gt(self.robot)
