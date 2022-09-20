@@ -248,7 +248,7 @@ class RealsenseCamera(Camera):
 
     def get_intrinsics(self):
         """Return OpenCV style intrinsics 3x3"""
-        return self.intrisnics, self.dist
+        return self.intrisnics
 
     def get_extrinsics(self):
         """Get homogenous extrisnic transform from world to camera Tcw 4x4"""

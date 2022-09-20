@@ -21,7 +21,7 @@ class Marker:
         """
         self.id = id
         self.corners = corners
-        (self.top_left, self.top_right, self.bottom_right, self.bottom_left) = corners.astype(np.int32)
+        (self.top_left, self.top_right, self.bottom_right, self.bottom_left) = [tuple(corner) for corner in corners.astype(np.int32) ]
 
         # Compute centers
         self.c_x = int((self.top_left[0] + self.bottom_right[0]) / 2.0)
@@ -68,7 +68,7 @@ class MarkerBoardDetector:
         for (marker_corner, marker_id) in zip(corners_all, ids):
             # Extract the marker corners
             marker_corner = marker_corner.reshape((4, 2))
-            marker = Marker(marker_corner, marker_id)
+            marker = Marker(marker_id, marker_corner)
             out.append(marker)
 
             # Draw the bounding box of the ArUco detection
@@ -90,7 +90,10 @@ class MarkerBoardDetector:
         ids_all = [marker.id for marker in markers]
 
         # Marker pose estimation with PnP
-        _, self.rvec, self.tvec = cv2.aruco.estimatePoseBoard(corners_all, np.array(ids_all), self.board, intrinsics, 0, self.rvec, self.tvec, True)
+        use_guess = True
+        if(self.rvec is None or self.tvec is None):
+            use_guess = False
+        _, self.rvec, self.tvec = cv2.aruco.estimatePoseBoard(corners_all, np.array(ids_all), self.board, intrinsics, 0, self.rvec, self.tvec, use_guess)
 
         Rcm, _ = cv2.Rodrigues(self.rvec)
         Tcb = np.vstack((np.hstack((Rcm, self.tvec)), np.array([0.0, 0.0, 0.0, 1.0])))

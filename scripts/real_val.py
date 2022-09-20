@@ -1,7 +1,7 @@
 from arm_robots.hdt_michigan import Val
 from arc_utilities import ros_init
-from visual_servoing.marker_pbvs import MarkerPBVS
-from visual_servoing.camera import RealsenseCamera, ZEDCamera
+from visual_servoing.marker_pbvs import MarkerPBVS, MarkerBoardDetector
+from visual_servoing.camera import RealsenseCamera
 import rospy
 import numpy as np
 import cv2
@@ -43,9 +43,9 @@ ids2 = np.array([4,5,6])
 
 @ros_init.with_ros("real_pbvs_servoing")
 def main():
-
+    detector = MarkerBoardDetector(ids, tag_geometry)
     camera = RealsenseCamera(np.zeros(3), np.array([0, 0, 1]), ())
-    pbvs = MarkerPBVS(camera, 1, 1, 1.5, np.eye(4))
+    pbvs = MarkerPBVS(camera, 1, 1, 1.5, detector)
 
     # Create a Val
     #val = Val(raise_on_failure=True)
@@ -55,13 +55,11 @@ def main():
         rgb = camera.get_image()[:, :, :3]
         rgb = np.ascontiguousarray(rgb, dtype=np.uint8)
 
-        markers = pbvs.detect_markers(rgb)
-        ref_marker = pbvs.get_board_pose(markers, pbvs.eef_board, rgb)
-        Two = pbvs.get_target_pose(rgb, None, np.eye(4), True)
+        detector.update(rgb, camera.get_intrinsics())
+        #pbvs.do_pbvs(rgb, None, np.eye(4), np.eye(4))
         #pbvs.do_pbvs(rgb, None, )
         cv2.imshow("image", rgb)
         cv2.waitKey(1)
-
 
     #r = rospy.Rate(10) 
     #for i in range(10):
