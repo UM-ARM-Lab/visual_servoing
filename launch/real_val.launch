@@ -1,0 +1,84 @@
+<?xml version="1.0" ?>
+<launch>
+    <arg name="fake_val" default="false"/>
+    <arg name="gui" default="true"/>
+    <arg name="robot_description" default="hdt_michigan/robot_description"/>
+
+    <node pkg="tf2_ros" type="static_transform_publisher" name="world_broadcaster" required="true"
+          args="0 0 0 0 0 0 robot_root world">
+    </node>
+
+    <!-- launch joystick -->
+    <node name="xbox_joystick" pkg="joy" type="joy_node">
+        <param name="dev"
+               value="/dev/input/by-id/usb-©Microsoft_Xbox_360_Wireless_Receiver_for_Windows_E1AEB500-joystick"/>
+        <param name="deadzone" value="0.2"/>
+    </node>
+
+    <!-- launch coms node -->
+    <node name="joint_state_filter" pkg="hdt_michigan_control" type="joint_state_filter.py">
+        <remap from="hdt_adroit_coms/joint_telem" to="hdt_michigan/joint_states"/>
+    </node>
+    <group>
+        <remap from="hdt_adroit_coms/joint_cmd" to="hdt_adroit_coms/joint_cmd_robot_side"/>
+        <remap from="hdt_adroit_coms/joint_telem" to="hdt_adroit_coms/joint_telem_robot_side"/>
+        <remap to="$(arg robot_description)" from="robot_description"/>
+        <include file="$(find hdt_adroit_driver)/launch/hdt_adroit_coms.launch" unless="$(arg fake_val)">
+            <arg name="coms_interface" value="socketcan"/>
+            <arg name="device" value="can0"/>
+            <arg name="impedance_enabled" value="false"/>
+            <arg name="console_enabled" value="false"/>
+            <arg name="control_enabled" value="true"/>
+            <arg name="current_limit_enabled" default="false"/>
+            <arg name="cont_current_limit" default="5"/>
+            <arg name="peak_current_limit" default="5"/>
+            <arg name="standby_current" default="0.3"/>
+            <arg name="vel_factor_wc" default="10"/>
+            <arg name="current_limit_wc" default="10"/>
+        </include>
+        <node name="fake_val" pkg="hdt_michigan_control" type="fake_val.py" if="$(arg fake_val)"/>
+    </group>
+
+    <!-- launch arm control node -->
+    <node name="generic_torso_control" pkg="hdt_adroit_python" type="generic_torso_control.py" output="screen">
+        <remap from="hdt_adroit_coms/joint_telem" to="hdt_michigan/joint_states"/>
+    </node>
+
+    <arg name="world_name" default="$(find visual_servoing)/launch/walls.world"/>
+
+    <!-- Start gazebo -->
+    <include file="$(find gazebo_ros)/launch/empty_world.launch">
+        <!-- Gazebo's code assumes HOME is set to something -->
+        <env name="HOME" value="/home/ashwin"/>
+        <arg name="world_name" value="$(arg world_name)"/>
+        <arg name="gui" value="$(arg gui)"/>
+        <arg name="paused" value="false"/>
+        <arg name="use_sim_time" value="false"/>
+    </include>
+
+    <!-- to let moveit send trajectories with the real robot -->
+    <include file="$(find arm_robots)/launch/trajectory_follower.launch">
+        <arg name="use_val" value="true"/>
+    </include>
+
+    <!-- ROS control for real hdt_michigan, does nothing at the moment -->
+    <include file="$(find hdt_michigan_control)/launch/hdt_michigan_control.launch">
+        <arg name="robot_namespace" value="hdt_michigan"/>
+    </include>
+
+    <!-- Move it-->
+    <include ns="hdt_michigan" file="$(find hdt_michigan_moveit)/launch/move_group.launch">
+        <arg name="load_robot_description" value="true"/>
+        <arg name="with_husky" value="false"/>
+        <arg name="off_husky" value="true"/>
+        <arg name="allow_trajectory_execution" value="true"/>
+        <arg name="moveit_controller_manager" value="real"/>
+    </include>
+
+    <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher">
+        <remap from="joint_states" to="hdt_michigan/joint_states"/>
+        <remap to="$(arg robot_description)" from="robot_description"/>
+    </node>
+
+</launch>
+

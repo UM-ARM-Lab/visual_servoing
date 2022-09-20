@@ -1,0 +1,59 @@
+<?xml version="1.0" ?>
+<sdf version="1.4">
+    <world name="default">
+        <scene>
+            <grid>false</grid>
+            <origin_visual>false</origin_visual>
+            <sky>
+                <clouds>
+                    <speed>12</speed>
+                </clouds>
+            </sky>
+        </scene>
+
+        <physics name="ode" type="ode">
+            <max_step_size>0.01</max_step_size>
+            <real_time_factor>0.01</real_time_factor>
+            <real_time_update_rate>10</real_time_update_rate>
+        </physics>
+
+        <plugin name="arm_gazebo_ros" filename="libarm_gazebo_ros_plugin.so"/>
+        <model name="moveit_plugin_model">
+            <pose>0 0 0 0 0 0</pose>
+            <plugin name="gazebo_ros_moveit_planning_scene" filename="libgazebo_ros_moveit_planning_scene.so">
+                <robotName>hdt_michigan</robotName> <!-- controls the robot name in the scene msg -->
+                <robotNamespace>hdt_michigan</robotNamespace> <!-- controls the publisher topic name -->
+                <!--  This must be the same as the root frame of the robot you're using, as defined by the URDF -->
+                <frameId>hdt_michigan_root</frameId>
+            </plugin>
+        </model>
+
+        <include>
+            <uri>model://sun</uri>
+        </include>
+
+        <include>
+            <uri>model://box_floor</uri>
+            <pose>0 0 -0.21 0 0 0</pose>
+        </include>
+
+        <include>
+            <name>left_wall</name>
+            <uri>model://fake_wall</uri>
+            <pose>-0.8 0 0 0 0 1.5707</pose>
+        </include>
+
+        <include>
+            <name>right_wall</name>
+            <uri>model://fake_wall</uri>
+            <pose>0.77 0 0 0 0 1.5707</pose>
+        </include>
+
+        <include>
+            <name>back_wall</name>
+            <uri>model://fake_wall</uri>
+            <pose>0 -.4 0 0 0 0</pose>
+        </include>
+
+    </world>
+</sdf>

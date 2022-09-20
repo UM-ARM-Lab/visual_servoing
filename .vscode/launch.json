@@ -26,6 +26,18 @@
                 "PYTHONPATH" : "/home/ashwin/source/lab/catkin_ws/devel/lib/python3/dist-packages:/opt/ros/noetic/lib/python3/dist-packages"
             }
         },
+
+        {
+            "name": "real",
+            "type": "python",
+            "request": "launch",
+            "program": "scripts/real_val.py",
+            "console": "integratedTerminal",
+            "cwd": "/home/ashwin/source/lab/catkin_ws/src/visual_servoing",
+            "env" : {
+                "PYTHONPATH" : "/home/ashwin/source/lab/catkin_ws/devel/lib/python3/dist-packages:/opt/ros/noetic/lib/python3/dist-packages"
+            }
+        },
         {
             "name": "sandbox",
             "type": "python",

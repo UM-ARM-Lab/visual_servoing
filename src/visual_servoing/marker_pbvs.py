@@ -57,13 +57,10 @@ class MarkerPBVS(PBVS):
         # AR Tag detection parameters
         self.aruco_dict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_6X6_250)
         self.aruco_params = cv2.aruco.DetectorParameters_create()
-        #self.aruco_params.adaptiveThreshWinSizeMax = 10
-        #self.aruco_params.adaptiveThreshWinSizeMin = 3
-        #self.aruco_params.adaptiveThreshConstant = 10
 
         # EEF board
         self.eef_board = cv2.aruco.Board_create(eef_tag_geometry, self.aruco_dict, eef_tag_ids)
-        #self.target_board = cv2.aruco.Board_create(target_tag_geometry, self.aruco_dict, target_tag_ids)
+        self.target_board = cv2.aruco.Board_create(target_tag_geometry, self.aruco_dict, target_tag_ids)
         self.prev_pose = start_eef_pose
 
         # PF
@@ -120,7 +117,7 @@ class MarkerPBVS(PBVS):
 
         """
         # Setup stuff we need for pose estimate
-        intrinsics = self.camera.get_intrinsics()
+        intrinsics, dist = self.camera.get_intrinsics()
         corners_all = []
         ids_all = []
         if len(markers) == 0:
@@ -145,7 +142,7 @@ class MarkerPBVS(PBVS):
         # Draw debug pose visualization if a frame is passed in
         if frame is not None:
             #cv2.aruco.drawAxis(frame, self.camera.get_intrinsics(), 0, rvec, tvec, 0.4)
-            cv2.drawFrameAxes(frame, self.camera.get_intrinsics(), 0, rvec, tvec, 0.4)
+            cv2.drawFrameAxes(frame, intrinsics, 0, rvec, tvec, 0.4)
 
         return ref_marker
 

@@ -1,11 +1,12 @@
 import numpy as np
 import pybullet as p
+import pyzed.sl as sl
 
 import ros_numpy
 #############################################
 # Interface for OpenCV style pinhole camera #
 #############################################
-#from arc_utilities.listener import Listener
+from arc_utilities.listener import Listener
 from sensor_msgs.msg import CameraInfo
 from sensor_msgs.msg import Image
 
@@ -236,17 +237,18 @@ class PyBulletCamera(Camera):
 class RealsenseCamera(Camera):
     def __init__(self, camera_eye, camera_look, image_dim=(1280, 800)):
         super().__init__(camera_eye, camera_look, image_dim)
-        self.depth = Listener("/camera/depth/image_rect_raw", Image)
-        self.color = Listener("/camera/color/image_raw", Image)
-        self.params = Listener("/camera/color/camera_info", CameraInfo)
+        #self.depth = Listener("/camera/depth/image_rect_raw", Image)
+        self.color = Listener("/zed2i/zed_node/left/image_rect_color", Image)
+        self.params = Listener("/zed2i/zed_node/left/camera_info", CameraInfo)
         info = self.params.get()
         self.intrisnics = np.array(info.K).reshape(3, 3)
+        self.dist = np.array(info.D)
 
         # print(self.intrisnics)
 
     def get_intrinsics(self):
         """Return OpenCV style intrinsics 3x3"""
-        return self.intrisnics
+        return self.intrisnics, self.dist
 
     def get_extrinsics(self):
         """Get homogenous extrisnic transform from world to camera Tcw 4x4"""
@@ -255,13 +257,69 @@ class RealsenseCamera(Camera):
     def get_image(self):
         """Return RGB image and depth image"""
         color_img: Image = self.color.get()
-        depth_img: Image = self.depth.get()
+        #depth_img: Image = self.depth.get()
 
         color_np = ros_numpy.numpify(color_img)
-        depth_np = ros_numpy.numpify(depth_img)
-        return color_np, depth_np
+        #depth_np = ros_numpy.numpify(depth_img)
+        return np.copy(color_np)
 
     def get_xyz(self, u, v, depth):
         """ Retrieve pointcloud point from depth and image pt """
 
         return np.array([0, 0, 0])
+
+
+
+class ZEDCamera:
+    def __init__(self, camera_eye, camera_look, image_dim):
+        self.camera_eye = camera_eye
+        self.camera_look = camera_look
+        self.image_dim = image_dim
+
+        self.zed = sl.Camera()
+        # Open the camera
+        init = sl.InitParameters()
+        init.camera_resolution = sl.RESOLUTION.HD1080
+        init.depth_mode = sl.DEPTH_MODE.PERFORMANCE
+        init.coordinate_units = sl.UNIT.MILLIMETER
+        err = self.zed.open(init)
+        if err != sl.ERROR_CODE.SUCCESS :
+            print(repr(err))
+            self.zed.close()
+            exit(1)
+        self.image = sl.Mat(self.zed.get_camera_information().camera_resolution.width, self.zed.get_camera_information().camera_resolution.height, sl.MAT_TYPE.U8_C4)
+
+
+    def get_intrinsics(self):
+        """Return OpenCV style intrinsics 3x3"""
+        raise NotImplementedError()
+
+    def get_distortion(self):
+        raise NotImplementedError()
+
+    def get_extrinsics(self):
+        """Get homogenous opencv extrisnic transform from world to camera Tcw 4x4"""
+        raise NotImplementedError()
+
+    def get_view(self):
+        """Get OpenGL style view matrix 4x4"""
+        raise NotImplementedError()
+
+    def get_image(self):
+        """Return RGB image and depth image"""
+        if self.zed.grab() == sl.ERROR_CODE.SUCCESS :
+            # Retrieve the left image in sl.Mat
+            self.zed.retrieve_image(self.image, sl.VIEW.LEFT)
+            # Use get_data() to get the numpy array
+            image_ocv = self.image.get_data()
+        else:
+            print("ERROR GRABBING IMAGE")
+        return image_ocv
+
+    def get_xyz(self, u, v, depth):
+        """ Retrieve pointcloud point from depth and image pt """
+        raise NotImplementedError()
+
+    def get_pointcloud(self, depth):
+        """ Retrieve pointcloud from depth """
+        raise NotImplementedError()
