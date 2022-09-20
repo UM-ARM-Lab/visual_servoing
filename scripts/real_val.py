@@ -45,7 +45,7 @@ ids2 = np.array([4,5,6])
 def main():
 
     camera = RealsenseCamera(np.zeros(3), np.array([0, 0, 1]), ())
-    pbvs = MarkerPBVS(camera, 1, 1, 1.5, np.eye(4), ids, tag_geometry, ids2, tag_geometry)
+    pbvs = MarkerPBVS(camera, 1, 1, 1.5, np.eye(4))
 
     # Create a Val
     #val = Val(raise_on_failure=True)
