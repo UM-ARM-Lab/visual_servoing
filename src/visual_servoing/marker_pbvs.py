@@ -49,6 +49,7 @@ class MarkerBoardDetector:
         self.board = cv2.aruco.Board_create(geometry, self.aruco_dict, ids)
         self.rvec = initial_rvec
         self.tvec = initial_tvec
+        self.ids = ids
     
     def detect_markers(self, frame : np.ndarray, draw_debug : bool = True) -> Optional[List[Marker]]:
         """
@@ -86,8 +87,8 @@ class MarkerBoardDetector:
         Estimate the pose of a marker board, assumes the 
         """
         # Setup stuff we need for pose estimate
-        corners_all = [marker.corners.reshape(-1) for marker in markers]
-        ids_all = [marker.id for marker in markers]
+        corners_all = [marker.corners.reshape(-1) for marker in markers if marker.id in self.ids]
+        ids_all = [marker.id for marker in markers if marker.id in self.ids]
 
         # Marker pose estimation with PnP
         use_guess = True

@@ -44,6 +44,7 @@ ids2 = np.array([4,5,6])
 @ros_init.with_ros("real_pbvs_servoing")
 def main():
     detector = MarkerBoardDetector(ids, tag_geometry)
+    target_detector = MarkerBoardDetector(ids2, tag_geometry)
     camera = RealsenseCamera(np.zeros(3), np.array([0, 0, 1]), ())
     pbvs = MarkerPBVS(camera, 1, 1, 1.5, detector)
 
@@ -56,6 +57,7 @@ def main():
         rgb = np.ascontiguousarray(rgb, dtype=np.uint8)
 
         detector.update(rgb, camera.get_intrinsics())
+        #target_detector.update(rgb, camera.get_intrinsics())
         #pbvs.do_pbvs(rgb, None, np.eye(4), np.eye(4))
         #pbvs.do_pbvs(rgb, None, )
         cv2.imshow("image", rgb)
