@@ -4,38 +4,110 @@ import numpy as np
 from visual_servoing.camera import Camera
 from visual_servoing.pf import ParticleFilter
 from visual_servoing.pbvs import PBVS
+
+from typing import List, Optional
 import time
 
 class Marker:
-    def __init__(self, corners, id, rvec=None, tvec=None):
+    """
+    Represents a detected marker
+    """
+    def __init__(self, id : int, corners : np.ndarray):
         """
         Args:
             corners: 4 by 2 numpy mat for the 4 (u,v) corners of this marker 
             id: id of this marker
-            rvec: Rodrigues of this marker
-            tvec: transform of this marker
-
         """
-        self.corners = corners.reshape((4, 2))
         self.id = id
-        (self.top_left, self.top_right, self.bottom_right, self.bottom_left) = corners
+        self.corners = corners
+        (self.top_left, self.top_right, self.bottom_right, self.bottom_left) = corners.astype(np.int32)
 
         # Compute centers
         self.c_x = int((self.top_left[0] + self.bottom_right[0]) / 2.0)
         self.c_y = int((self.top_left[1] + self.bottom_right[1]) / 2.0)
 
-        # Build homogenous transform if possible
-        if rvec is not None:
-            self.build_transform(rvec, tvec)
 
-    def build_transform(self, rvec, tvec):
+class MarkerBoardDetector:
+    """
+    Used to detect and track a marker board 
+    """
+    def __init__(self, ids : List[int], geometry : List[np.ndarray], initial_rvec : Optional[np.ndarray] = None,
+        initial_tvec : Optional[np.ndarray] = None):
         """
-        Create homogenous transform from marker to camera
-
+        Args: 
+            ids: ids of the aruco tags on the board 
+            geometry: a list of 4x3 numpy arrays, where each array describes the 3D location 
+            of the marker corners in the board frame. The row dim is for each corner, which
+            are top left, top right, bottom right, then bottom left. The col dim is [x, y, z]
+            initial_rvec: initial Rodrigues board in camera frame
+            initial_tvec: initial translation board in camera frame
         """
-        Rcm, _ = cv2.Rodrigues(rvec)
-        self.Tcm = np.vstack((np.hstack((Rcm, tvec)), np.array([0.0, 0, 0, 1])))
+        # AR Tag detection parameters and dictionary
+        self.aruco_dict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_6X6_250)
+        self.aruco_params = cv2.aruco.DetectorParameters_create()
+        self.board = cv2.aruco.Board_create(geometry, self.aruco_dict, ids)
+        self.rvec = initial_rvec
+        self.tvec = initial_tvec
+    
+    def detect_markers(self, frame : np.ndarray, draw_debug : bool = True) -> Optional[List[Marker]]:
+        """
+        Detect ARUCO tags in a given RGB frame and return a list of Marker objects, assumes
+        undistorted image frame
+        ​
+        Args:
+            frame: undistorted rgb camera frame 
+        """
+        out = []
+        (corners_all, ids_all, rejected) = cv2.aruco.detectMarkers(frame, self.aruco_dict, parameters=self.aruco_params)
+        if len(corners_all) == 0:
+            return None
+        ids = ids_all.flatten()
 
+        # Loop over the detected ArUco corners
+        for (marker_corner, marker_id) in zip(corners_all, ids):
+            # Extract the marker corners
+            marker_corner = marker_corner.reshape((4, 2))
+            marker = Marker(marker_corner, marker_id)
+            out.append(marker)
+
+            # Draw the bounding box of the ArUco detection
+            if draw_debug:
+                col_green = (0, 255, 0)
+                cv2.line(frame, marker.top_left, marker.top_right, col_green, 2)
+                cv2.line(frame, marker.top_right, marker.bottom_right, col_green, 2)
+                cv2.line(frame, marker.bottom_right, marker.bottom_left, col_green, 2)
+                cv2.line(frame, marker.bottom_left, marker.top_left, col_green, 2)
+                cv2.circle(frame, (marker.c_x, marker.c_y), 5, col_green, -1)
+        return out
+    
+    def get_board_pose(self, intrinsics : np.ndarray, markers : List[Marker], frame : Optional[np.ndarray]=None) -> np.ndarray:
+        """
+        Estimate the pose of a marker board, assumes the 
+        """
+        # Setup stuff we need for pose estimate
+        corners_all = [marker.corners.reshape(-1) for marker in markers]
+        ids_all = [marker.id for marker in markers]
+
+        # Marker pose estimation with PnP
+        _, self.rvec, self.tvec = cv2.aruco.estimatePoseBoard(corners_all, np.array(ids_all), self.board, intrinsics, 0, self.rvec, self.tvec, True)
+
+        Rcm, _ = cv2.Rodrigues(self.rvec)
+        Tcm = np.vstack((np.hstack((Rcm, self.tvec)), np.array([0.0, 0.0, 0.0, 1.0])))
+
+        # Draw debug pose visualization if a frame is passed in
+        if frame is not None:
+            cv2.drawFrameAxes(frame, intrinsics, 0, self.rvec, self.tvec, 0.4)
+
+        return Tcm
+
+    def update(self, frame : np.ndarray, intrinsics : np.ndarray, ) -> Optional[np.ndarray]:
+        """
+        Attempts to detect markers and estimate the board pose with your frame if possible 
+        """
+        markers = self.detect_markers(frame)
+        if(not markers):
+            return None
+        return self.get_board_pose(intrinsics, markers, frame)
 
 class MarkerPBVS(PBVS):
 
@@ -70,82 +142,6 @@ class MarkerPBVS(PBVS):
         self.pf = ParticleFilter()
         self.max_joint_velo = max_joint_velo
 
-    def detect_markers(self, frame, draw_debug=True):
-        """
-        Detect ARUCO tags in a given RGB frame and return a list of Marker objects
-        ​
-        Args:
-            frame: rgb camera frame
-        ​
-        Returns:
-            out: python list of detected Marker objects
-        ​
-        """
-        out = []
-        (corners_all, ids_all, rejected) = cv2.aruco.detectMarkers(frame, self.aruco_dict, parameters=self.aruco_params)
-        if len(corners_all) == 0:
-            return out
-        ids = ids_all.flatten()
-
-        # Loop over the detected ArUco corners
-        for (marker_corner, marker_id) in zip(corners_all, ids):
-            # Extract the marker corners
-            marker_corner = marker_corner.reshape((4, 2))
-            marker = Marker(marker_corner, marker_id)
-
-            # Convert the (x,y) coordinate pairs to integers
-            top_right = (int(marker.top_right[0]), int(marker.top_right[1]))
-            bottom_right = (int(marker.bottom_right[0]), int(marker.bottom_right[1]))
-            bottom_left = (int(marker.bottom_left[0]), int(marker.bottom_left[1]))
-            top_left = (int(marker.top_left[0]), int(marker.top_left[1]))
-
-            # Draw the bounding box of the ArUco detection
-            if draw_debug:
-                cv2.line(frame, top_left, top_right, (0, 255, 0), 2)
-                cv2.line(frame, top_right, bottom_right, (0, 255, 0), 2)
-                cv2.line(frame, bottom_right, bottom_left, (0, 255, 0), 2)
-                cv2.line(frame, bottom_left, top_left, (0, 255, 0), 2)
-                cv2.circle(frame, (marker.c_x, marker.c_y), 5, (255, 0, 0), -1)
-
-            out.append(marker)
-
-        return out
-
-    def get_board_pose(self, markers, board, frame=None):
-        """
-        Estimate the pose of a predefined marker board given a set of candidate markers that may be in the board
-
-        """
-        # Setup stuff we need for pose estimate
-        intrinsics, dist = self.camera.get_intrinsics()
-        corners_all = []
-        ids_all = []
-        if len(markers) == 0:
-            return None
-
-        # Build up corner and id set for the board 
-        ref_marker = None
-        for marker in markers:
-            corners_all.append(marker.corners.reshape(-1))
-            ids_all.append(marker.id)
-            if marker.id == board.ids[0]:
-                ref_marker = marker
-
-        if ref_marker is None:
-            return ref_marker
-        # Marker pose estimation with PnP
-        _, rvec, tvec = cv2.aruco.estimatePoseBoard(corners_all, np.array(ids_all), board, intrinsics, 0, None, None)
-
-        # The first marker of the board is considered the reference marker and will contain the transform
-        ref_marker.build_transform(rvec, tvec)
-
-        # Draw debug pose visualization if a frame is passed in
-        if frame is not None:
-            #cv2.aruco.drawAxis(frame, self.camera.get_intrinsics(), 0, rvec, tvec, 0.4)
-            cv2.drawFrameAxes(frame, intrinsics, 0, rvec, tvec, 0.4)
-
-        return ref_marker
-
     def generate_marker(self, output, id):
         """
         Generate a particular marker ID from the dictionary
@@ -153,9 +149,9 @@ class MarkerPBVS(PBVS):
         """
         cv2.imwrite(output, cv2.aruco.drawMarker(self.aruco_dict, id, 600))
 
-    def compute_board_to_world(self, ref_marker, depth):
+    def compute_board_to_world(self, Tcm):
         """
-        Get the transform from the world to the ar tag
+        Get the transform from the world to the marker board
 
         """
         Tcm = ref_marker.Tcm
