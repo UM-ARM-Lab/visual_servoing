@@ -67,6 +67,8 @@ class MarkerBoardDetector:
 
         # Loop over the detected ArUco corners
         for (marker_corner, marker_id) in zip(corners_all, ids):
+            if not (marker_id in self.ids):
+                continue
             # Extract the marker corners
             marker_corner = marker_corner.reshape((4, 2))
             marker = Marker(marker_id, marker_corner)
@@ -154,7 +156,7 @@ class MarkerPBVS(PBVS):
         Tcb = self.detector.update(rgb, self.camera.get_intrinsics())
 
         # Return dummy vals when pose can't be estimated
-        if(not Tcb):
+        if(Tcb is None):
             return np.zeros(6), np.eye(4)
 
         # If it was found, compute its world pose using camera extrinsics

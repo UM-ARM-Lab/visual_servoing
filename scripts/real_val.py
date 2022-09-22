@@ -57,7 +57,7 @@ def main():
         rgb = np.ascontiguousarray(rgb, dtype=np.uint8)
 
         detector.update(rgb, camera.get_intrinsics())
-        #target_detector.update(rgb, camera.get_intrinsics())
+        target_detector.update(rgb, camera.get_intrinsics())
         #pbvs.do_pbvs(rgb, None, np.eye(4), np.eye(4))
         #pbvs.do_pbvs(rgb, None, )
         cv2.imshow("image", rgb)
