@@ -123,7 +123,7 @@ class Val(ArmRobot):
         return J_pinv
 
     def velocity_control(self, side, targetVelo, include_torso=False):
-        joint_list = self.camera_joints + self.left_arm_joints if include_torso else self.left_arm_joints
+        joint_list = self.left_arm_joints if include_torso else self.left_arm_joints
         p.setJointMotorControlArray(self.urdf, joint_list, p.VELOCITY_CONTROL, targetVelocities=targetVelo)
     
     def torso_control(self, torso_vel):

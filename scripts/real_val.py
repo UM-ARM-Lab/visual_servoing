@@ -1,5 +1,6 @@
 from arm_robots.hdt_michigan import Val
 from arc_utilities import ros_init
+from arc_utilities.reliable_tf import ReliableTF
 from visual_servoing.marker_pbvs import MarkerPBVS, MarkerBoardDetector
 from visual_servoing.camera import RealsenseCamera
 import rospy
@@ -46,20 +47,51 @@ def main():
     detector = MarkerBoardDetector(ids, tag_geometry)
     target_detector = MarkerBoardDetector(ids2, tag_geometry)
     camera = RealsenseCamera(np.zeros(3), np.array([0, 0, 1]), ())
-    pbvs = MarkerPBVS(camera, 1, 1, 1.5, detector)
+    pbvs = MarkerPBVS(camera, 1, 1, 0.2, detector)
 
+    tf_obj = ReliableTF()
     # Create a Val
-    #val = Val(raise_on_failure=True)
-    #val.connect()
+    val = Val(raise_on_failure=True)
+    val.connect()
+
+    # Target selection
+    while(input("ready") != "y"):
+        rgb = camera.get_image()[:, :, :3]
+        rgb = np.ascontiguousarray(rgb, dtype=np.uint8)
+        Two = target_detector.update(rgb, camera.get_intrinsics())
+        cv2.imshow("image", rgb)
+        cv2.waitKey(0)
 
     while(True):
         rgb = camera.get_image()[:, :, :3]
         rgb = np.ascontiguousarray(rgb, dtype=np.uint8)
 
-        detector.update(rgb, camera.get_intrinsics())
-        target_detector.update(rgb, camera.get_intrinsics())
-        #pbvs.do_pbvs(rgb, None, np.eye(4), np.eye(4))
-        #pbvs.do_pbvs(rgb, None, )
+        #Twe = detector.update(rgb, camera.get_intrinsics())
+        #Two = target_detector.update(rgb, camera.get_intrinsics())
+
+        if(Two is not None):
+            J, _ = val.get_current_right_tool_jacobian()
+            ctrl_cam, Tcb = pbvs.do_pbvs(rgb, None, Two, np.eye(4), None, None, 0, rescale=False)
+
+            # Rotation of torso in camera frame
+            Rct = tf_obj.get_transform("zed2i_left_camera_optical_frame", "torso")[0:3, 0:3]
+            Rtc = np.linalg.inv(Rct)
+
+
+            ctrl_torso = np.zeros(6)
+            ctrl_torso[0:3] = Rtc @ ctrl_cam[0:3]
+            ctrl_torso[3:6] = np.zeros(3)#Rtc @ ctrl_cam[3:6]
+
+
+            lmda = 0.0000001
+            J_pinv = np.dot(np.linalg.inv(np.dot(J.T, J) + lmda * np.eye(7)), J.T)
+            ctrl_limited = pbvs.limit_twist(J, J_pinv, ctrl_torso)
+            ctrl_limited[3:6] = np.zeros(3)#Rtc @ ctrl_cam[3:6]
+            print(ctrl_limited)
+            print(J_pinv @ ctrl_limited)
+
+            val.send_velocity_joint_command(val.get_joint_names("right_arm"), J_pinv @ ctrl_limited)
+        
         cv2.imshow("image", rgb)
         cv2.waitKey(1)
 

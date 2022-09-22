@@ -151,7 +151,7 @@ class MarkerPBVS(PBVS):
         Twb = (np.linalg.inv(self.camera.get_extrinsics()) @ Tcb)
         return Twb
 
-    def do_pbvs(self, rgb, depth, Two, Tbe, jac, jac_inv, dt):
+    def do_pbvs(self, rgb, depth, Two, Tbe, jac, jac_inv, dt, rescale=True):
         # Find the EEF ar tag board and estimate its pose in camera frame
         Tcb = self.detector.update(rgb, self.camera.get_intrinsics())
 
@@ -165,6 +165,7 @@ class MarkerPBVS(PBVS):
 
         # compute twist command based on state estimate and target
         ctrl = self.get_control(Twe, Two)
-        ctrl = self.limit_twist(jac, jac_inv, ctrl)
+        if(rescale):
+            ctrl = self.limit_twist(jac, jac_inv, ctrl)
 
         return ctrl, Twe
