@@ -1,6 +1,6 @@
 import numpy as np
 import pybullet as p
-import pyzed.sl as sl
+#import pyzed.sl as sl
 
 import ros_numpy
 #############################################

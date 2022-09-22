@@ -166,7 +166,7 @@ while(True):
     print(ctrl)
 
     # Send command to val
-    val.velocity_control("left", ctrl)
+    val.velocity_control("left", ctrl, True)
 
     # Visualize camera pose  
     if (uids_camera_marker is not None):
