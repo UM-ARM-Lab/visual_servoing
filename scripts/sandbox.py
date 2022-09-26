@@ -1,5 +1,4 @@
-from dis import get_instructions
-from tkinter import W
+from dataclasses import dataclass
 import cv2
 from visual_servoing.pbvs import CheaterPBVS
 from visual_servoing.marker_pbvs import MarkerPBVS
@@ -10,6 +9,8 @@ import numpy as np
 import pybullet as p
 from qpsolvers import solve_qp
 from pytorch_mppi import mppi
+import torch
+import pytorch3d.transforms
 
 val = Val([0.0, 0.0, -0.5])
 camera = PyBulletCamera(camera_eye=np.array([0.7, -0.8, 0.5]), camera_look=np.array([0.7, 0.0, 0.2]))
@@ -102,12 +103,33 @@ rgb, depth = camera.get_image()
 cv2.imshow("Im", rgb)
 cv2.waitKey(1)
 
+@dataclass
+class ArmDynamics():
+    J : np.ndarray
+    dt : float
 
-def batchable_dynamics_arm():
-    """
-    Arm dynamics function
-    x_(t+1) = x_t + dt J q'
-    """
+    def batchable_dynamics_arm(self, x : torch.Tensor, u : torch.Tensor):
+        """
+        Arm dynamics function
+        x_(t+1) = x_t + dt J q'
+        x : K x nx
+        u : K x nu
+
+        x is a vector [p r]' which has an R3 position and quaternion
+        u is a vector of joint vleocities q'
+        """
+        # Compute velocity in state vector, p' and omega
+        x_dot = (self.J @ u.T).T
+        x_next = torch.zeros(x.shape)
+
+        # Update position 
+        x_next[:, 0:3] = x[:, 0:3] + x_dot[:, 0:3] * self.dt
+
+        # Get the action delta as a quaternion
+        pytorch3d.transforms.axis_angle_to_quaternion()
+
+
+        #x_next[:, 3:7] = x[:, 3:7]
 
 while(True):
 
