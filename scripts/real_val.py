@@ -47,7 +47,7 @@ def main():
     detector = MarkerBoardDetector(ids, tag_geometry)
     target_detector = MarkerBoardDetector(ids2, tag_geometry)
     camera = RealsenseCamera(np.zeros(3), np.array([0, 0, 1]), ())
-    pbvs = MarkerPBVS(camera, 1, 1, 0.2, detector)
+    pbvs = MarkerPBVS(camera, 1, 1, 0.5, detector)
 
     tf_obj = ReliableTF()
     # Create a Val
@@ -55,12 +55,18 @@ def main():
     val.connect()
 
     # Target selection
-    while(input("ready") != "y"):
+    selection = None
+    while(selection != 32):
         rgb = camera.get_image()[:, :, :3]
         rgb = np.ascontiguousarray(rgb, dtype=np.uint8)
         Two = target_detector.update(rgb, camera.get_intrinsics())
+        if(Two is not None):
+            T_offset = np.eye(4)
+            T_offset[0:3, 3] = np.array([0.0, 0.0, 0.0]) #0.15 in last dim
+            Two = Two @ T_offset
+        detector.update(rgb, camera.get_intrinsics())
         cv2.imshow("image", rgb)
-        cv2.waitKey(0)
+        selection = cv2.waitKey(1)
 
     while(True):
         rgb = camera.get_image()[:, :, :3]
@@ -86,10 +92,9 @@ def main():
             lmda = 0.0000001
             J_pinv = np.dot(np.linalg.inv(np.dot(J.T, J) + lmda * np.eye(7)), J.T)
             ctrl_limited = pbvs.limit_twist(J, J_pinv, ctrl_torso)
-            ctrl_limited[3:6] = np.zeros(3)#Rtc @ ctrl_cam[3:6]
+            ctrl_limited[3:6] = Rtc @ ctrl_cam[3:6]
             print(ctrl_limited)
             print(J_pinv @ ctrl_limited)
-
             val.send_velocity_joint_command(val.get_joint_names("right_arm"), J_pinv @ ctrl_limited)
         
         cv2.imshow("image", rgb)
