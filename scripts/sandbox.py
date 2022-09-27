@@ -284,7 +284,10 @@ pos_target = torch.tensor(Two[0:3, 3], device="cuda", dtype=torch.float32)
 dynamics = ArmDynamics(pos_target, rot_target, torch.tensor(J, device='cuda', dtype=torch.float32), 0.1)
 
 controller = mppi.MPPI(dynamics.batchable_dynamics_arm, dynamics.running_cost, 
-    7, 0.2 * torch.eye(9), 100, 15, device="cuda")
+    7, 0.2 * torch.eye(9), 1000, 100, device="cuda",
+    u_min=-1.5 * torch.ones(9, dtype=torch.float32, device='cuda'),
+    u_max=1.5 * torch.ones(9, dtype=torch.float32, device='cuda') 
+    )
 
 while(True):
 
