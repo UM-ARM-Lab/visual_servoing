@@ -58,7 +58,7 @@ ids = np.array([1, 2, 3])
 ids2 = np.array([4,5,6])
 
 #pbvs = MarkerPBVS(camera, 1, 1, 1.5, np.eye(4), ids, tag_geometry, ids2, tag_geometry)
-def get_eef_gt(robot):
+def get_eef_gt(robot, quat=False):
     '''
     Gets the ground truth pose of the end effector from the simulator
     '''
@@ -72,6 +72,8 @@ def get_eef_gt(robot):
     Twe = np.eye(4)
     Twe[0:3, 0:3] = np.array(p.getMatrixFromQuaternion(link_rot)).reshape(3, 3)
     Twe[0:3, 3] = link_trn
+    if(quat):
+        return link_trn, link_rot
     return Twe
 pbvs = CheaterPBVS(camera, 1, 1, 1.5, lambda : get_eef_gt(val))
 
@@ -243,10 +245,11 @@ class ArmDynamics:
     dt : float
 
     def running_cost(self, x : torch.Tensor, u : torch.Tensor):
-        pos_error = torch.norm((x - self.target_pos), 2, dim=1)
+        pos_error = torch.norm((x[:, 0:3] - self.target_pos), 2, dim=1)
         ctrl_error = torch.norm(u, 2, dim=1)
-        rot_delta = quaternion_invert(x)
-        rot_error = torch.norm(quaternion_multiply(rot_delta, self.target_rot), 2, dim=1)
+        target_rot = torch.tensor(self.target_rot, device='cuda', dtype=torch.float32)
+        rot_delta = quaternion_multiply(x[:, 3:7], target_rot.reshape((1, -1)))
+        rot_error = torch.norm(rot_delta ,2, dim=1)
         return pos_error + ctrl_error + rot_error
 
     def batchable_dynamics_arm(self, x : torch.Tensor, u : torch.Tensor):
@@ -261,7 +264,7 @@ class ArmDynamics:
         """
         # Compute velocity in state vector, p' and omega
         x_dot = (self.J @ u.T).T
-        x_next = torch.zeros(x.shape)
+        x_next = torch.zeros(x.shape, device="cuda", dtype=torch.float32)
 
         # Update position 
         x_next[:, 0:3] = x[:, 0:3] + x_dot[:, 0:3] * self.dt
@@ -276,8 +279,12 @@ class ArmDynamics:
         return x_next
 
 J = val.get_arm_jacobian("left", True)
-rot_target = tf.transformations.quaternion_from_matrix(Two)
-dynamics = ArmDynamics(Two[0:3, 3], rot_target, J, 0.1)
+rot_target = torch.tensor(tf.transformations.quaternion_from_matrix(Two), device='cuda', dtype=torch.float32)
+pos_target = torch.tensor(Two[0:3, 3], device="cuda", dtype=torch.float32)
+dynamics = ArmDynamics(pos_target, rot_target, torch.tensor(J, device='cuda', dtype=torch.float32), 0.1)
+
+controller = mppi.MPPI(dynamics.batchable_dynamics_arm, dynamics.running_cost, 
+    7, 0.2 * torch.eye(9), 100, 15, device="cuda")
 
 while(True):
 
@@ -290,11 +297,11 @@ while(True):
     
     rgb, depth = camera.get_image()
 
-    mppi.MPPI(dynamics.batchable_dynamics_arm, dynamics.running_cost, 
-        7, 0.2, 1000, 15,  "gpu")
-
+    pe, re = get_eef_gt(val, True)
+    pose = torch.tensor(np.hstack((pe, re)), device="cuda", dtype=torch.float32)
+    ctrl = controller.command(pose)
     # Send command to val
-    #val.velocity_control("left", ctrl, True)
+    val.velocity_control("left", ctrl, True)
 
     # Visualize camera pose  
     if (uids_camera_marker is not None):
