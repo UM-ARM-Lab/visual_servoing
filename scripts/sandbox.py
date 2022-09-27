@@ -10,7 +10,7 @@ import pybullet as p
 from qpsolvers import solve_qp
 from pytorch_mppi import mppi
 import torch
-import pytorch3d.transforms
+import tf
 
 val = Val([0.0, 0.0, -0.5])
 camera = PyBulletCamera(camera_eye=np.array([0.7, -0.8, 0.5]), camera_look=np.array([0.7, 0.0, 0.2]))
@@ -91,6 +91,138 @@ def reproject(Tcm, point_marker, camera):
     px2 = pt2_im[0:2].astype(int)
     return px2, pt2_cam
 
+def axis_angle_to_quaternion(axis_angle: torch.Tensor) -> torch.Tensor:
+    """
+    Convert rotations given as axis/angle to quaternions.
+
+    Args:
+        axis_angle: Rotations given as a vector in axis angle form,
+            as a tensor of shape (..., 3), where the magnitude is
+            the angle turned anticlockwise in radians around the
+            vector's direction.
+
+    Returns:
+        quaternions with real part first, as tensor of shape (..., 4).
+    """
+    angles = torch.norm(axis_angle, p=2, dim=-1, keepdim=True)
+    half_angles = angles * 0.5
+    eps = 1e-6
+    small_angles = angles.abs() < eps
+    sin_half_angles_over_angles = torch.empty_like(angles)
+    sin_half_angles_over_angles[~small_angles] = (
+        torch.sin(half_angles[~small_angles]) / angles[~small_angles]
+    )
+    # for x small, sin(x/2) is about x/2 - (x/2)^3/6
+    # so sin(x/2)/x is about 1/2 - (x*x)/48
+    sin_half_angles_over_angles[small_angles] = (
+        0.5 - (angles[small_angles] * angles[small_angles]) / 48
+    )
+    quaternions = torch.cat(
+        [torch.cos(half_angles), axis_angle * sin_half_angles_over_angles], dim=-1
+    )
+    return quaternions
+
+def standardize_quaternion(quaternions: torch.Tensor) -> torch.Tensor:
+    """
+    Convert a unit quaternion to a standard form: one in which the real
+    part is non negative.
+
+    Args:
+        quaternions: Quaternions with real part first,
+            as tensor of shape (..., 4).
+
+    Returns:
+        Standardized quaternions as tensor of shape (..., 4).
+    """
+    return torch.where(quaternions[..., 0:1] < 0, -quaternions, quaternions)
+
+
+
+def quaternion_raw_multiply(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
+    """
+    Multiply two quaternions.
+    Usual torch rules for broadcasting apply.
+
+    Args:
+        a: Quaternions as tensor of shape (..., 4), real part first.
+        b: Quaternions as tensor of shape (..., 4), real part first.
+
+    Returns:
+        The product of a and b, a tensor of quaternions shape (..., 4).
+    """
+    aw, ax, ay, az = torch.unbind(a, -1)
+    bw, bx, by, bz = torch.unbind(b, -1)
+    ow = aw * bw - ax * bx - ay * by - az * bz
+    ox = aw * bx + ax * bw + ay * bz - az * by
+    oy = aw * by - ax * bz + ay * bw + az * bx
+    oz = aw * bz + ax * by - ay * bx + az * bw
+    return torch.stack((ow, ox, oy, oz), -1)
+
+
+
+def quaternion_multiply(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
+    """
+    Multiply two quaternions representing rotations, returning the quaternion
+    representing their composition, i.e. the versor with nonnegative real part.
+    Usual torch rules for broadcasting apply.
+
+    Args:
+        a: Quaternions as tensor of shape (..., 4), real part first.
+        b: Quaternions as tensor of shape (..., 4), real part first.
+
+    Returns:
+        The product of a and b, a tensor of quaternions of shape (..., 4).
+    """
+    ab = quaternion_raw_multiply(a, b)
+    return standardize_quaternion(ab)
+
+def quaternion_to_axis_angle(quaternions: torch.Tensor) -> torch.Tensor:
+    """
+    Convert rotations given as quaternions to axis/angle.
+
+    Args:
+        quaternions: quaternions with real part first,
+            as tensor of shape (..., 4).
+
+    Returns:
+        Rotations given as a vector in axis angle form, as a tensor
+            of shape (..., 3), where the magnitude is the angle
+            turned anticlockwise in radians around the vector's
+            direction.
+    """
+    norms = torch.norm(quaternions[..., 1:], p=2, dim=-1, keepdim=True)
+    half_angles = torch.atan2(norms, quaternions[..., :1])
+    angles = 2 * half_angles
+    eps = 1e-6
+    small_angles = angles.abs() < eps
+    sin_half_angles_over_angles = torch.empty_like(angles)
+    sin_half_angles_over_angles[~small_angles] = (
+        torch.sin(half_angles[~small_angles]) / angles[~small_angles]
+    )
+    # for x small, sin(x/2) is about x/2 - (x/2)^3/6
+    # so sin(x/2)/x is about 1/2 - (x*x)/48
+    sin_half_angles_over_angles[small_angles] = (
+        0.5 - (angles[small_angles] * angles[small_angles]) / 48
+    )
+    return quaternions[..., 1:] / sin_half_angles_over_angles
+
+def quaternion_invert(quaternion: torch.Tensor) -> torch.Tensor:
+    """
+    Given a quaternion representing rotation, get the quaternion representing
+    its inverse.
+
+    Args:
+        quaternion: Quaternions as tensor of shape (..., 4), with real part
+            first, which must be versors (unit quaternions).
+
+    Returns:
+        The inverse, a tensor of quaternions of shape (..., 4).
+    """
+
+    scaling = torch.tensor([1, -1, -1, -1], device=quaternion.device)
+    return quaternion * scaling
+
+
 # Target
 Two = np.eye(4) 
 Two[0:3, 3] = np.array([0.8, 0.0, 0.2])
@@ -104,9 +236,18 @@ cv2.imshow("Im", rgb)
 cv2.waitKey(1)
 
 @dataclass
-class ArmDynamics():
+class ArmDynamics:
+    target_pos : np.ndarray # r3
+    target_rot : np.ndarray # quat 
     J : np.ndarray
     dt : float
+
+    def running_cost(self, x : torch.Tensor, u : torch.Tensor):
+        pos_error = torch.norm((x - self.target_pos), 2, dim=1)
+        ctrl_error = torch.norm(u, 2, dim=1)
+        rot_delta = quaternion_invert(x)
+        rot_error = torch.norm(quaternion_multiply(rot_delta, self.target_rot), 2, dim=1)
+        return pos_error + ctrl_error + rot_error
 
     def batchable_dynamics_arm(self, x : torch.Tensor, u : torch.Tensor):
         """
@@ -126,10 +267,17 @@ class ArmDynamics():
         x_next[:, 0:3] = x[:, 0:3] + x_dot[:, 0:3] * self.dt
 
         # Get the action delta as a quaternion
-        pytorch3d.transforms.axis_angle_to_quaternion()
+        # Note that action TFs are in global frame
+        action_quat = axis_angle_to_quaternion(self.dt * x_dot[:, 3:6])
+        
+        # Update rot
+        x_next[:, 3:7] = quaternion_multiply(action_quat, x[:, 3:7])
 
+        return x_next
 
-        #x_next[:, 3:7] = x[:, 3:7]
+J = val.get_arm_jacobian("left", True)
+rot_target = tf.transformations.quaternion_from_matrix(Two)
+dynamics = ArmDynamics(Two[0:3, 3], rot_target, J, 0.1)
 
 while(True):
 
@@ -142,10 +290,11 @@ while(True):
     
     rgb, depth = camera.get_image()
 
-    mppi.MPPI()
+    mppi.MPPI(dynamics.batchable_dynamics_arm, dynamics.running_cost, 
+        7, 0.2, 1000, 15,  "gpu")
 
     # Send command to val
-    val.velocity_control("left", ctrl, True)
+    #val.velocity_control("left", ctrl, True)
 
     # Visualize camera pose  
     if (uids_camera_marker is not None):
