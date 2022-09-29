@@ -110,7 +110,7 @@ class CheaterPBVS(PBVS):
     def do_pbvs(self, rgb, depth, Two, Tle, jac, jac_inv, dt):
         Twe = self.cheater()
 
-        ctrl = self.get_control(Twe, Two)/dt
+        ctrl = self.get_control(Twe, Two)
         # normalize both vectors to unit mag
         #ctrl[:3] = ctrl[:3] / np.linalg.norm(ctrl[:3]) #* 100
         #ctrl[3:] = ctrl[3:] / np.linalg.norm(ctrl[3:]) #* 100

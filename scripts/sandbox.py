@@ -248,9 +248,9 @@ class ArmDynamics:
         pos_error = torch.norm((x[:, 0:3] - self.target_pos), 2, dim=1)
         ctrl_error = torch.norm(u, 2, dim=1)
         target_rot = torch.tensor(self.target_rot, device='cuda', dtype=torch.float32)
-        rot_delta = quaternion_multiply(x[:, 3:7], target_rot.reshape((1, -1)))
+        rot_delta = quaternion_multiply(quaternion_invert(x[:, 3:7]), target_rot.reshape((1, -1)))
         rot_error = torch.norm(rot_delta ,2, dim=1)
-        return pos_error + ctrl_error + rot_error
+        return pos_error # + rot_error #+ ctrl_error +
 
     def batchable_dynamics_arm(self, x : torch.Tensor, u : torch.Tensor):
         """
@@ -284,7 +284,7 @@ pos_target = torch.tensor(Two[0:3, 3], device="cuda", dtype=torch.float32)
 dynamics = ArmDynamics(pos_target, rot_target, torch.tensor(J, device='cuda', dtype=torch.float32), 0.1)
 
 controller = mppi.MPPI(dynamics.batchable_dynamics_arm, dynamics.running_cost, 
-    7, 0.2 * torch.eye(9), 1000, 100, device="cuda",
+    7, 1.5 * torch.eye(9), 1000, 100, device="cuda",
     u_min=-1.5 * torch.ones(9, dtype=torch.float32, device='cuda'),
     u_max=1.5 * torch.ones(9, dtype=torch.float32, device='cuda') 
     )
@@ -302,9 +302,9 @@ while(True):
 
     pe, re = get_eef_gt(val, True)
     pose = torch.tensor(np.hstack((pe, re)), device="cuda", dtype=torch.float32)
-    ctrl = controller.command(pose)
+    #ctrl = controller.command(pose)
     # Send command to val
-    val.velocity_control("left", ctrl, True)
+    #val.velocity_control("left", ctrl, True)
 
     # Visualize camera pose  
     if (uids_camera_marker is not None):
