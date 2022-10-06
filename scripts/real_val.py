@@ -7,6 +7,10 @@ import rospy
 import numpy as np
 import cv2
 
+import tf_conversions
+import tf2_ros
+import geometry_msgs.msg
+
 # Specify the 3D geometry of the end effector marker board
 tag_len = 0.0305
 gap_len = 0.0051
@@ -44,43 +48,65 @@ b0 = np.array([
     [-0.03745, -0.00731, 0.0464], 
     [-0.01645, -0.04368, 0.0464], 
     [-0.01645, -0.04368, 0.0044]
-])
+], dtype=np.float32)
 b1 = np.array([
     [-0.01787, 0.04122, 0.0044], 
     [-0.01787, 0.04122, 0.0464],
     [-0.03887, 0.00485, 0.0464],
     [-0.03887, 0.04485, 0.0044],
-])
+], dtype=np.float32)
 # NOTE THIS IS ID 3
 b3 = np.array([
     [0.03252, 0.04607, 0.0044], 
     [0.03252, 0.04607, 0.0464],
     [-0.00948, 0.04607, 0.0464],
     [-0.00948, 0.04607, 0.0044]
-])
+], dtype=np.float32)
 b4 = np.array([
     [0.06192, 0.00485, 0.0044],
     [0.06192, 0.00485, 0.0464],
     [0.04092, 0.04122, 0.0464],
     [0.04092, 0.04122, 0.0044],
-])
+], dtype=np.float32)
 b5 = np.array([
     [0.04092, -0.04122, 0.0044], 
     [0.04092, -0.04122, 0.0464],
     [0.06192, -0.00485, 0.0464],
     [0.06192, -0.00485, 0.0044]
-])
+], dtype=np.float32)
 b6 = np.array([
     [-0.00948, -0.04607, 0.0044],
     [-0.00948, -0.04607, 0.0464], 
     [0.03252, -0.04607, 0.0464],
     [0.03252, -0.04607, 0.0044]
-])
+], dtype=np.float32)
 
+tag_geometry_new = [b0, b1, b3, b4, b5, b6]
+ids_new = np.array([0, 1, 3, 4, 5, 6])
+
+# publishes a homogenous TF to the TF2 tree
+def publish_tf(tf, ref_frame, frame, static=False):
+    if(not static):
+        br = tf2_ros.TransformBroadcaster()
+    else:
+        br = tf2_ros.StaticTransformBroadcaster()
+    t = geometry_msgs.msg.TransformStamped()
+    t.header.stamp = rospy.Time.now()
+    t.header.frame_id = ref_frame
+    t.child_frame_id = frame
+    t.transform.translation.x = tf[0, 3] 
+    t.transform.translation.y = tf[1, 3]
+    t.transform.translation.z = tf[2, 3]
+    quat = tf_conversions.transformations.quaternion_from_matrix(tf)
+    t.transform.rotation.x = quat[0]
+    t.transform.rotation.y = quat[1]
+    t.transform.rotation.z = quat[2]
+    t.transform.rotation.w = quat[3]
+    br.sendTransform(t)
 
 @ros_init.with_ros("real_pbvs_servoing")
 def main():
-    detector = MarkerBoardDetector(ids, tag_geometry)
+    detector = MarkerBoardDetector(ids_new, tag_geometry_new, cv2.aruco.DICT_4X4_50)
     target_detector = MarkerBoardDetector(ids2, tag_geometry)
     camera = RealsenseCamera(np.zeros(3), np.array([0, 0, 1]), ())
     pbvs = MarkerPBVS(camera, 1, 1, 0.5, detector)
@@ -100,7 +126,11 @@ def main():
             T_offset = np.eye(4)
             T_offset[0:3, 3] = np.array([0.0, 0.0, 0.0]) #0.15 in last dim
             Two = Two @ T_offset
-        detector.update(rgb, camera.get_intrinsics())
+        Twb = detector.update(rgb, camera.get_intrinsics())
+        if(Twb is not None):
+            publish_tf(Twb, "zed2i_left_camera_optical_frame", "eef_estimate")
+        if(Two is not None):
+            publish_tf(Two, "zed2i_left_camera_optical_frame", "target_estimate")
         cv2.imshow("image", rgb)
         selection = cv2.waitKey(1)
 
@@ -131,7 +161,7 @@ def main():
             ctrl_limited[3:6] = Rtc @ ctrl_cam[3:6]
             print(ctrl_limited)
             print(J_pinv @ ctrl_limited)
-            val.send_velocity_joint_command(val.get_joint_names("right_arm"), J_pinv @ ctrl_limited)
+            #val.send_velocity_joint_command(val.get_joint_names("right_arm"), J_pinv @ ctrl_limited)
         
         cv2.imshow("image", rgb)
         cv2.waitKey(1)
