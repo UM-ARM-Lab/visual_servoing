@@ -32,7 +32,7 @@ class MarkerBoardDetector:
     """
     Used to detect and track a marker board 
     """
-    def __init__(self, ids : List[int], geometry : List[np.ndarray], initial_rvec : Optional[np.ndarray] = None,
+    def __init__(self, ids : List[int], geometry : List[np.ndarray], dictionary : int = cv2.aruco.DICT_6X6_250, initial_rvec : Optional[np.ndarray] = None,
         initial_tvec : Optional[np.ndarray] = None):
         """
         Args: 
@@ -44,7 +44,7 @@ class MarkerBoardDetector:
             initial_tvec: initial translation board in camera frame
         """
         # AR Tag detection parameters and dictionary
-        self.aruco_dict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_6X6_250)
+        self.aruco_dict = cv2.aruco.Dictionary_get(dictionary)
         self.aruco_params = cv2.aruco.DetectorParameters_create()
         self.board = cv2.aruco.Board_create(geometry, self.aruco_dict, ids)
         self.rvec = initial_rvec
