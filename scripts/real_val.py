@@ -109,7 +109,7 @@ def main():
     detector = MarkerBoardDetector(ids_new, tag_geometry_new, cv2.aruco.DICT_4X4_50)
     target_detector = MarkerBoardDetector(ids2, tag_geometry)
     camera = RealsenseCamera(np.zeros(3), np.array([0, 0, 1]), ())
-    pbvs = MarkerPBVS(camera, 1, 1, 0.5, detector)
+    pbvs = MarkerPBVS(camera, 3, 1, 0.5, detector)
 
     tf_obj = ReliableTF()
     # Create a Val
@@ -128,9 +128,10 @@ def main():
             Two = Two @ T_offset
         Twb = detector.update(rgb, camera.get_intrinsics())
         if(Twb is not None):
-            publish_tf(Twb, "zed2i_left_camera_optical_frame", "eef_estimate")
+            Tbe = tf_obj.get_transform("end_effector_left", "left_tool")
+            publish_tf(Twb @ Tbe, "zed2i_left_camera_optical_frame", "eef_estimate")
         if(Two is not None):
-            publish_tf(Two, "zed2i_left_camera_optical_frame", "target_estimate")
+            publish_tf(Two, "zed2i_left_camera_optical_frame", "target_estimate", True)
         cv2.imshow("image", rgb)
         selection = cv2.waitKey(1)
 
@@ -142,8 +143,14 @@ def main():
         #Two = target_detector.update(rgb, camera.get_intrinsics())
 
         if(Two is not None):
-            J, _ = val.get_current_right_tool_jacobian()
-            ctrl_cam, Tcb = pbvs.do_pbvs(rgb, None, Two, np.eye(4), None, None, 0, rescale=False)
+            J, _ = val.get_current_left_tool_jacobian()
+            # TF from eef link (board) to gripper tip (eef)
+            Tbe = tf_obj.get_transform("end_effector_left", "left_tool")
+            ctrl_cam, Tcb = pbvs.do_pbvs(rgb, None, Two, Tbe, None, None, 0, rescale=False)
+
+            if(Tcb is not None):
+                Tbe = tf_obj.get_transform("end_effector_left", "left_tool")
+                publish_tf(Tcb @ Tbe, "zed2i_left_camera_optical_frame", "eef_estimate")
 
             # Rotation of torso in camera frame
             Rct = tf_obj.get_transform("zed2i_left_camera_optical_frame", "torso")[0:3, 0:3]
@@ -152,16 +159,16 @@ def main():
 
             ctrl_torso = np.zeros(6)
             ctrl_torso[0:3] = Rtc @ ctrl_cam[0:3]
-            ctrl_torso[3:6] = np.zeros(3)#Rtc @ ctrl_cam[3:6]
+            #ctrl_torso[3:6] = Rtc @ ctrl_cam[3:6]
 
 
             lmda = 0.0000001
             J_pinv = np.dot(np.linalg.inv(np.dot(J.T, J) + lmda * np.eye(7)), J.T)
             ctrl_limited = pbvs.limit_twist(J, J_pinv, ctrl_torso)
-            ctrl_limited[3:6] = Rtc @ ctrl_cam[3:6]
+            #ctrl_limited[3:6] = Rtc @ ctrl_cam[3:6]
             print(ctrl_limited)
             print(J_pinv @ ctrl_limited)
-            #val.send_velocity_joint_command(val.get_joint_names("right_arm"), J_pinv @ ctrl_limited)
+            val.send_velocity_joint_command(val.get_joint_names("left_arm"), J_pinv @ ctrl_limited)
         
         cv2.imshow("image", rgb)
         cv2.waitKey(1)
