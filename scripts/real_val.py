@@ -109,7 +109,7 @@ def main():
     detector = MarkerBoardDetector(ids_new, tag_geometry_new, cv2.aruco.DICT_4X4_50)
     target_detector = MarkerBoardDetector(ids2, tag_geometry)
     camera = RealsenseCamera(np.zeros(3), np.array([0, 0, 1]), ())
-    pbvs = MarkerPBVS(camera, 3, 1, 0.5, detector)
+    pbvs = MarkerPBVS(camera, 0.5, 1, 0.5, detector)
 
     tf_obj = ReliableTF()
     # Create a Val
@@ -124,7 +124,7 @@ def main():
         Two = target_detector.update(rgb, camera.get_intrinsics())
         if(Two is not None):
             T_offset = np.eye(4)
-            T_offset[0:3, 3] = np.array([0.0, 0.0, 0.0]) #0.15 in last dim
+            T_offset[0:3, 3] = np.array([0.0, 0.0, 0.02]) #0.15 in last dim
             Two = Two @ T_offset
         Twb = detector.update(rgb, camera.get_intrinsics())
         if(Twb is not None):
@@ -134,7 +134,8 @@ def main():
             publish_tf(Two, "zed2i_left_camera_optical_frame", "target_estimate", True)
         cv2.imshow("image", rgb)
         selection = cv2.waitKey(1)
-
+    import time
+    time.sleep(10)
     while(True):
         rgb = camera.get_image()[:, :, :3]
         rgb = np.ascontiguousarray(rgb, dtype=np.uint8)
@@ -148,9 +149,11 @@ def main():
             Tbe = tf_obj.get_transform("end_effector_left", "left_tool")
             ctrl_cam, Tcb = pbvs.do_pbvs(rgb, None, Two, Tbe, None, None, 0, rescale=False)
 
+            if(np.linalg.norm(Tcb[0:3, 3] - Two[0:3,3]) < 0.02):
+                break
+
             if(Tcb is not None):
-                Tbe = tf_obj.get_transform("end_effector_left", "left_tool")
-                publish_tf(Tcb @ Tbe, "zed2i_left_camera_optical_frame", "eef_estimate")
+                publish_tf(Tcb, "zed2i_left_camera_optical_frame", "eef_estimate")
 
             # Rotation of torso in camera frame
             Rct = tf_obj.get_transform("zed2i_left_camera_optical_frame", "torso")[0:3, 0:3]
