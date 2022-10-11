@@ -75,7 +75,7 @@ def get_eef_gt(robot, quat=False):
     if(quat):
         return link_trn, link_rot
     return Twe
-pbvs = CheaterPBVS(camera, 1, 1, 1.5, lambda : get_eef_gt(val))
+#pbvs = CheaterPBVS(camera, 1, 1, 1.5, lambda : get_eef_gt(val))
 
 def add_global_twist(twist, pose, dt):
     r3 = dt * twist[:3]
@@ -233,9 +233,9 @@ Two[0:3, 3] = np.array([0.75, 0.2, 0.2])
 Two[0:3, 0:3] = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((np.pi/2, 0, np.pi/10)))).reshape(3, 3) # hard
 #Two[0:3, 0:3] = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((np.pi/2, 0, -np.pi/4)))).reshape(3, 3) # really easy
 
-rgb, depth = camera.get_image()
-cv2.imshow("Im", rgb)
-cv2.waitKey(1)
+#rgb, depth = camera.get_image()
+#cv2.imshow("Im", rgb)
+#cv2.waitKey(1)
 
 @dataclass
 class ArmDynamics:
@@ -271,10 +271,10 @@ class ArmDynamics:
 
         # Get the action delta as a quaternion
         # Note that action TFs are in global frame
-        action_quat = axis_angle_to_quaternion(self.dt * x_dot[:, 3:6])
+        action_quat = axis_angle_to_quaternion(self.dt * x_dot[:, 3:6]).reshape(1, -1)
         
         # Update rot
-        x_next[:, 3:7] = quaternion_multiply(action_quat, x[:, 3:7])
+        #x_next[:, 3:7] = quaternion_multiply(action_quat, x[:, 3:7])
 
         return x_next
 
@@ -289,6 +289,16 @@ controller = mppi.MPPI(dynamics.batchable_dynamics_arm, dynamics.running_cost,
     u_max=1.5 * torch.ones(9, dtype=torch.float32, device='cuda') 
     )
 
+pe, re = get_eef_gt(val, True)
+pose = torch.tensor(np.hstack((pe, re)), device="cuda", dtype=torch.float32).reshape(1, -1)
+
+def get_homogenous(se3):
+    Twe = np.eye(4)
+    Twe[0:3, 0:3] = np.array(p.getMatrixFromQuaternion(se3[3:7])).reshape(3, 3)
+    Twe[0:3, 3] = se3[0:3]
+    return Twe
+
+pbvs = CheaterPBVS(camera, 1, 1, 1.5, lambda : get_homogenous(pose[0, :].cpu()))
 while(True):
 
     # Step sim
@@ -298,13 +308,26 @@ while(True):
         camera.upate_from_pose(link_pos, camera_rot)
         p.stepSimulation()
     
-    rgb, depth = camera.get_image()
+    #rgb, depth = camera.get_image()
 
-    pe, re = get_eef_gt(val, True)
-    pose = torch.tensor(np.hstack((pe, re)), device="cuda", dtype=torch.float32)
+    #pe, re = get_eef_gt(val, True)
+    #pose = torch.tensor(np.hstack((pe, re)), device="cuda", dtype=torch.float32)
+
+    jac = val.get_arm_jacobian("left", True)
+    jac_pinv = val.get_jacobian_pinv("left", True)
+
+    rgb = np.zeros(3)
+    depth = np.zeros(3)
+    ctrl, Twe = pbvs.do_pbvs(rgb, depth, Two, np.eye(4), jac, jac_pinv, 24) 
     #ctrl = controller.command(pose)
     # Send command to val
-    #val.velocity_control("left", ctrl, True)
+    ctrl_limit = pbvs.limit_twist(jac, jac_pinv, ctrl)
+    pred = dynamics.batchable_dynamics_arm(pose.reshape(1, -1), torch.tensor(jac_pinv @ ctrl_limit, device="cuda", dtype=torch.float32).reshape(1, -1))
+    if uids_pred_eef_marker is not None:
+        erase_pos(uids_pred_eef_marker)
+    uids_pred_eef_marker = draw_pose(pred[0, 0:3].cpu(), pred[0, 3:7].cpu())
+    pose = pred
+    #val.velocity_control("left", jac_pinv @ ctrl_limit, True)
 
     # Visualize camera pose  
     if (uids_camera_marker is not None):
@@ -312,8 +335,8 @@ while(True):
     Twc = np.linalg.inv(camera.get_extrinsics())
     uids_camera_marker = draw_pose(Twc[0:3, 3], Twc[0:3, 0:3], mat=True)
 
-    cv2.imshow("Im", rgb)
-    cv2.waitKey(1)
+    #cv2.imshow("Im", rgb)
+    #cv2.waitKey(1)
 
     # Visualize target pose 
     if (uids_target_marker is not None):
