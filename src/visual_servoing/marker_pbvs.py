@@ -93,8 +93,8 @@ class MarkerBoardDetector:
         ids_all = [marker.id for marker in markers if marker.id in self.ids]
 
         # Marker pose estimation with PnP
-        #use_guess = True
-        use_guess= False
+        use_guess = True
+        #use_guess= False
         if(self.rvec is None or self.tvec is None):
             use_guess = False
         _, self.rvec, self.tvec = cv2.aruco.estimatePoseBoard(corners_all, np.array(ids_all), self.board, intrinsics, 0, self.rvec, self.tvec, use_guess)

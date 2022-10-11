@@ -127,7 +127,7 @@ def main():
         if(Two is not None):
             T_offset = np.eye(4)
             T_offset[0:3, 0:3] = tf_conversions.transformations.euler_matrix(np.pi/2, 0, np.pi, "syzx")[0:3, 0:3]
-            T_offset[0:3, 3] = np.array([0.0, 0.0, 0.02]) #0.15 in last dim
+            T_offset[0:3, 3] = np.array([0.0, 0.0, 0.05]) #0.15 in last dim
             #Two[0:3, 0:3] 
             Two = Two @ T_offset
         Twb = detector.update(rgb, camera.get_intrinsics())
@@ -139,7 +139,7 @@ def main():
         cv2.imshow("image", rgb)
         selection = cv2.waitKey(1)
     import time
-    #time.sleep(10)
+    time.sleep(13)
     while(True):
         rgb = camera.get_image()[:, :, :3]
         rgb = np.ascontiguousarray(rgb, dtype=np.uint8)
@@ -154,8 +154,9 @@ def main():
             ctrl_cam, Tcb = pbvs.do_pbvs(rgb, None, Two, Tbe, None, None, 0, rescale=False)
 
             angular_delta, _ = cv2.Rodrigues(Tcb[0:3, 0:3] @ Two[0:3, 0:3].T)
-            if(np.linalg.norm(Tcb[0:3, 3] - Two[0:3,3]) < 0.005 and
-                np.linalg.norm(angular_delta) < 0.04):
+            if(np.linalg.norm(Tcb[0:3, 3] - Two[0:3,3]) < 0.01 and
+                np.linalg.norm(angular_delta) < 0.05):
+                val.send_velocity_joint_command(val.get_joint_names("left_arm"), np.zeros(7))
                 break
 
             if(Tcb is not None):
@@ -181,9 +182,11 @@ def main():
         
         cv2.imshow("image", rgb)
         cv2.waitKey(1)
-
-    #val.close_left_gripper()
-
+    while(not val.is_left_gripper_closed()):
+        #val.close_left_gripper()
+        val.set_left_gripper(0.1)
+        val.send_velocity_joint_command(val.get_joint_names("left_arm"), np.zeros(7))
+    #time.sleep(5)
     #r = rospy.Rate(10) 
     #for i in range(10):
     #    r.sleep()
