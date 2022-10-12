@@ -19,10 +19,6 @@ def get_interaction_mat(u, v, z):
         [-1/z, 0, u/z, u*v, -1* (1+u**2), v],
         [0, -1/z, v/z, (1+v**2), -u*v, -u]
     ])
-uids_camera_marker = None
-uids_eef_marker = None
-uids_target_marker = None
-uids_pred_eef_marker = None
 
 # Specify the 3D geometry of the end effector marker board 
 tag_len = 0.0305
@@ -269,6 +265,10 @@ def get_homogenous(se3):
     Twe[0:3, 3] = se3[0:3]
     return Twe
 
+camera_pose_vis = PoseVisualizer()
+eef_pose_vis = PoseVisualizer()
+target_pose_vis = PoseVisualizer()
+
 # Target
 Two = np.eye(4) 
 Two[0:3, 3] = np.array([0.8, 0.0, 0.2])
@@ -308,17 +308,7 @@ while(True):
     x = val.get_link_pose(0) @ (mppi.chain.forward_kinematics(cur_joint_config).get_matrix()[0]).cpu().numpy()
 
     # Visualize current eef pose
-    if uids_pred_eef_marker is not None:
-        erase_pos(uids_pred_eef_marker)
-    uids_pred_eef_marker = draw_pose(x[0:3, 3], x[0:3, 0:3], mat=True)
-
-    # Visualize camera pose  
-    if (uids_camera_marker is not None):
-        erase_pos(uids_camera_marker)
+    eef_pose_vis.update(x)
     Twc = np.linalg.inv(camera.get_extrinsics())
-    uids_camera_marker = draw_pose(Twc[0:3, 3], Twc[0:3, 0:3], mat=True)
-
-    # Visualize target pose 
-    if (uids_target_marker is not None):
-        erase_pos(uids_target_marker)
-    uids_target_marker = draw_pose(Two[0:3, 3], Two[0:3, 0:3], mat=True)
+    camera_pose_vis.update(Twc)
+    target_pose_vis.update(Two)

@@ -50,3 +50,12 @@ def erase_pos(line_ids):
     if line_ids is not None:
         for line_id in line_ids:
             p.removeUserDebugItem(line_id)
+
+class PoseVisualizer:
+    def __init__(self):
+        self.uids = None
+
+    def update(self, Two): 
+        if self.uids is not None:
+            erase_pos(self.uids)
+        self.uids = draw_pose(Two[0:3, 3], Two[0:3, 0:3], mat=True)
