@@ -5,12 +5,10 @@ from visual_servoing.marker_pbvs import MarkerPBVS
 from visual_servoing.val import Val
 from visual_servoing.utils import *
 from visual_servoing.camera import PyBulletCamera
+from visual_servoing.mppi_vs import VisualServoMPPI
 import numpy as np
 import pybullet as p
-from qpsolvers import solve_qp
-from pytorch_mppi import mppi
 import torch
-import tf
 
 val = Val([0.0, 0.0, -0.5])
 camera = PyBulletCamera(camera_eye=np.array([0.7, -0.8, 0.5]), camera_look=np.array([0.7, 0.0, 0.2]))
@@ -224,19 +222,6 @@ def quaternion_invert(quaternion: torch.Tensor) -> torch.Tensor:
     scaling = torch.tensor([1, -1, -1, -1], device=quaternion.device)
     return quaternion * scaling
 
-
-# Target
-Two = np.eye(4) 
-Two[0:3, 3] = np.array([0.8, 0.0, 0.2])
-#Two[0:3, 0:3] = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((np.pi/2, np.pi/4, 0)))).reshape(3, 3) # really hard
-Two[0:3, 3] = np.array([0.75, 0.2, 0.2])
-Two[0:3, 0:3] = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((np.pi/2, 0, np.pi/10)))).reshape(3, 3) # hard
-#Two[0:3, 0:3] = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((np.pi/2, 0, -np.pi/4)))).reshape(3, 3) # really easy
-
-#rgb, depth = camera.get_image()
-#cv2.imshow("Im", rgb)
-#cv2.waitKey(1)
-
 @dataclass
 class ArmDynamics:
     target_pos : np.ndarray # r3
@@ -278,27 +263,26 @@ class ArmDynamics:
 
         return x_next
 
-J = val.get_arm_jacobian("left", True)
-rot_target = torch.tensor(tf.transformations.quaternion_from_matrix(Two), device='cuda', dtype=torch.float32)
-pos_target = torch.tensor(Two[0:3, 3], device="cuda", dtype=torch.float32)
-dynamics = ArmDynamics(pos_target, rot_target, torch.tensor(J, device='cuda', dtype=torch.float32), 0.1)
-
-controller = mppi.MPPI(dynamics.batchable_dynamics_arm, dynamics.running_cost, 
-    7, 1.5 * torch.eye(9), 1000, 100, device="cuda",
-    u_min=-1.5 * torch.ones(9, dtype=torch.float32, device='cuda'),
-    u_max=1.5 * torch.ones(9, dtype=torch.float32, device='cuda') 
-    )
-
-pe, re = get_eef_gt(val, True)
-pose = torch.tensor(np.hstack((pe, re)), device="cuda", dtype=torch.float32).reshape(1, -1)
-
 def get_homogenous(se3):
     Twe = np.eye(4)
     Twe[0:3, 0:3] = np.array(p.getMatrixFromQuaternion(se3[3:7])).reshape(3, 3)
     Twe[0:3, 3] = se3[0:3]
     return Twe
 
-pbvs = CheaterPBVS(camera, 1, 1, 1.5, lambda : get_homogenous(pose[0, :].cpu()))
+# Target
+Two = np.eye(4) 
+Two[0:3, 3] = np.array([0.8, 0.0, 0.2])
+#Two[0:3, 0:3] = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((np.pi/2, np.pi/4, 0)))).reshape(3, 3) # really hard
+Two[0:3, 3] = np.array([0.75, 0.2, 0.2])
+Two[0:3, 0:3] = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((np.pi/2, 0, np.pi/10)))).reshape(3, 3) # hard
+#Two[0:3, 0:3] = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((np.pi/2, 0, -np.pi/4)))).reshape(3, 3) # really easy
+
+J = val.get_arm_jacobian("left", True)
+
+pbvs = CheaterPBVS(camera, 1, 1, 1.5, lambda : get_eef_gt(val))
+
+mppi = VisualServoMPPI(0.0416, Two[0:3, 3])
+
 while(True):
 
     # Step sim
@@ -308,35 +292,31 @@ while(True):
         camera.upate_from_pose(link_pos, camera_rot)
         p.stepSimulation()
     
-    #rgb, depth = camera.get_image()
-
-    #pe, re = get_eef_gt(val, True)
-    #pose = torch.tensor(np.hstack((pe, re)), device="cuda", dtype=torch.float32)
+    rgb, depth = camera.get_image()
 
     jac = val.get_arm_jacobian("left", True)
     jac_pinv = val.get_jacobian_pinv("left", True)
 
-    rgb = np.zeros(3)
-    depth = np.zeros(3)
-    ctrl, Twe = pbvs.do_pbvs(rgb, depth, Two, np.eye(4), jac, jac_pinv, 24) 
-    #ctrl = controller.command(pose)
     # Send command to val
+
+    ctrl, Twe = pbvs.do_pbvs(rgb, depth, Two, np.eye(4), jac, jac_pinv, 24) 
+
     ctrl_limit = pbvs.limit_twist(jac, jac_pinv, ctrl)
-    pred = dynamics.batchable_dynamics_arm(pose.reshape(1, -1), torch.tensor(jac_pinv @ ctrl_limit, device="cuda", dtype=torch.float32).reshape(1, -1))
+    val.velocity_control("left", jac_pinv @ ctrl_limit, True)
+
+    cur_joint_config = val.get_joint_states_left() 
+    x = val.get_link_pose(0) @ (mppi.chain.forward_kinematics(cur_joint_config).get_matrix()[0]).cpu().numpy()
+
+    # Visualize current eef pose
     if uids_pred_eef_marker is not None:
         erase_pos(uids_pred_eef_marker)
-    uids_pred_eef_marker = draw_pose(pred[0, 0:3].cpu(), pred[0, 3:7].cpu())
-    pose = pred
-    #val.velocity_control("left", jac_pinv @ ctrl_limit, True)
+    uids_pred_eef_marker = draw_pose(x[0:3, 3], x[0:3, 0:3], mat=True)
 
     # Visualize camera pose  
     if (uids_camera_marker is not None):
         erase_pos(uids_camera_marker)
     Twc = np.linalg.inv(camera.get_extrinsics())
     uids_camera_marker = draw_pose(Twc[0:3, 3], Twc[0:3, 0:3], mat=True)
-
-    #cv2.imshow("Im", rgb)
-    #cv2.waitKey(1)
 
     # Visualize target pose 
     if (uids_target_marker is not None):

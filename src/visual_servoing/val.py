@@ -59,6 +59,19 @@ class Val(ArmRobot):
 
         link_trn, link_rot, com_trn, com_rot, frame_pos, frame_rot, link_vt, link_vr = result
         return frame_pos, frame_rot 
+
+    def get_link_pose(self, tool_idx):
+        result = p.getLinkState(self.urdf,
+                                tool_idx,
+                                computeLinkVelocity=1,
+                                computeForwardKinematics=1)
+
+        link_trn, link_rot, com_trn, com_rot, frame_pos, frame_rot, link_vt, link_vr = result
+
+        Twe = np.eye(4)
+        Twe[0:3, 0:3] = np.array(p.getMatrixFromQuaternion(link_rot)).reshape(3, 3)
+        Twe[0:3, 3] = link_trn
+        return Twe 
     
     def get_camera_jacobian(self):
         """
@@ -136,3 +149,10 @@ class Val(ArmRobot):
         #J_pinv = np.dot(np.linalg.inv(np.dot(J.T, J) + lmda * np.eye(2)), J.T)
         J_pinv = J.T @ np.linalg.inv(J @ J.T + lmda * np.eye(6))
         self.torso_control(J_pinv @ torso_twist)
+
+    def get_joint_states_left(self):
+        joint_states = []
+        for idx in self.camera_joints + self.left_arm_joints:
+            pos, vel, force, torque = p.getJointState(self.urdf, idx)
+            joint_states.append(pos)
+        return np.array(joint_states)
