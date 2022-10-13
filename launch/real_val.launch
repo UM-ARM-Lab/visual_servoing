@@ -79,6 +79,15 @@
         <remap from="joint_states" to="hdt_michigan/joint_states"/>
         <remap to="$(arg robot_description)" from="robot_description"/>
     </node>
+    <node pkg="tf2_ros" type="static_transform_publisher" name="val_pedestal_mocap_tf_shim_broadcaster" required="true"
+            args="0 0 0
+                -1.5707 0 0 
+                mocap_val_wood_mount_val_wood_mount hdt_michigan_root">
+    </node>
+
+    <include file="$(find lightweight_vicon_bridge)/launch/vicon_bridge.launch">
+    </include>
+
 
 </launch>
 

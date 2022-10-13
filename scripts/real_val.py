@@ -104,6 +104,7 @@ def publish_tf(tf, ref_frame, frame, static=False):
     t.transform.rotation.w = quat[3]
     br.sendTransform(t)
 
+
 @ros_init.with_ros("real_pbvs_servoing")
 def main():
     detector = MarkerBoardDetector(ids_new, tag_geometry_new, cv2.aruco.DICT_4X4_50)

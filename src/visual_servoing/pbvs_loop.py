@@ -103,6 +103,8 @@ class AbstractPBVSLoop:
 class RealVictorPBVSLoop(AbstractPBVSLoop):
     pass
 
+class RealValPBVSLoop(AbstractPBVSLoop):
+    pass
 
 class PybulletPBVSLoop(AbstractPBVSLoop):
 
