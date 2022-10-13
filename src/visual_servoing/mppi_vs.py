@@ -17,7 +17,7 @@ class VisualServoMPPI:
         #    )
 
         self.chain = pk.build_serial_chain_from_urdf(
-            open("models/val/husky_custom_description/urdf/mic09_description.urdf").read(), "ar_link", "pedestal_link")
+            open("/home/ashwin/source/lab/catkin_ws/src/hdt_robot/hdt_michigan_description/urdf/hdt_michigan.urdf").read(), "bracelet")
         self.chain.to(device="cuda")
 
 

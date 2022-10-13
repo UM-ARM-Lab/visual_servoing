@@ -303,7 +303,7 @@ while(True):
 
     cur_joint_config = val.get_joint_states_left() 
     #cur_joint_config = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
-    x = get_eef_gt(val)#val.get_link_pose(22) @ (mppi.chain.forward_kinematics(cur_joint_config).get_matrix()[0]).cpu().numpy()
+    x = val.get_link_pose(0) @ (mppi.chain.forward_kinematics(cur_joint_config).get_matrix()[0]).cpu().numpy()
 
     # Visualize current eef pose
     eef_pose_vis.update(x)
