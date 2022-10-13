@@ -69,8 +69,8 @@ class Val(ArmRobot):
         link_trn, link_rot, com_trn, com_rot, frame_pos, frame_rot, link_vt, link_vr = result
 
         Twe = np.eye(4)
-        Twe[0:3, 0:3] = np.array(p.getMatrixFromQuaternion(link_rot)).reshape(3, 3)
-        Twe[0:3, 3] = link_trn
+        Twe[0:3, 0:3] = np.array(p.getMatrixFromQuaternion(frame_rot)).reshape(3, 3)
+        Twe[0:3, 3] = frame_pos
         return Twe 
     
     def get_camera_jacobian(self):

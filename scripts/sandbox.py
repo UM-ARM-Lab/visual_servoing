@@ -305,7 +305,8 @@ while(True):
     val.velocity_control("left", jac_pinv @ ctrl_limit, True)
 
     cur_joint_config = val.get_joint_states_left() 
-    x = val.get_link_pose(0) @ (mppi.chain.forward_kinematics(cur_joint_config).get_matrix()[0]).cpu().numpy()
+    #cur_joint_config = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+    x = val.get_link_pose(22) @ (mppi.chain.forward_kinematics(cur_joint_config).get_matrix()[0]).cpu().numpy()
 
     # Visualize current eef pose
     eef_pose_vis.update(x)

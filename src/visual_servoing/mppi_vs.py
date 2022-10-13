@@ -16,7 +16,8 @@ class VisualServoMPPI:
         #    u_max=1.5 * torch.ones(9, dtype=torch.float32, device='cuda') 
         #    )
 
-        self.chain = pk.build_serial_chain_from_urdf(open("models/val/husky_custom_description/urdf/mic09_description.urdf").read(), "ar_link")
+        self.chain = pk.build_serial_chain_from_urdf(
+            open("models/val/husky_custom_description/urdf/mic09_description.urdf").read(), "ar_link", "pedestal_link")
         self.chain.to(device="cuda")
 
 
