@@ -18,10 +18,10 @@ class Val(ArmRobot):
 
         # Load Val URDF
         #self.urdf =  p.loadURDF("models/val/husky_custom_description/urdf/mic09_description.urdf", start_pos, p.getQuaternionFromEuler(start_orientation))
-        self.urdf =  p.loadURDF("/home/ashwin/source/lab/catkin_ws/src/hdt_robot/hdt_michigan_description/urdf/hdt_michigan.urdf", start_pos, p.getQuaternionFromEuler(start_orientation))
+        self.urdf =  p.loadURDF("/home/ashwin/source/lab/catkin_ws/src/hdt_robot/hdt_michigan_description/urdf/hdt_michigan.urdf", start_pos, p.getQuaternionFromEuler(start_orientation), useFixedBase=1)
         #self.urdf = p.loadURDF("models/hdt_michigan_description_orig/urdf/hdt_michigan_generated.urdf", start_pos,
         #                       p.getQuaternionFromEuler(start_orientation))
-        planeId = p.loadURDF("models/short_floor.urdf", [start_pos[0], start_pos[1], start_pos[2]-0.15], useFixedBase=1)
+        #planeId = p.loadURDF("models/short_floor.urdf", [start_pos[0], start_pos[1], start_pos[2]-0.15], useFixedBase=1)
 
         # Organize joints into a dict from name->info
         self.joints_by_name = {}
@@ -36,11 +36,11 @@ class Val(ArmRobot):
         self.left_tool = self.joints_by_name["left_tool_joint"]
         self.right_tool = self.joints_by_name["right_tool_joint"]
 
-        self.left_tag = self.joints_by_name["ar_joint"]
+        self.left_tag = self.joints_by_name["bracelet_joint"]
 
         self.left_arm_joints = []
         self.right_arm_joints = []
-        self.camera_link = self.joints_by_name["torso_to_cam"]
+        self.camera_link = self.joints_by_name["zed2i_base_joint"]
         self.camera_joints = [self.joints_by_name["joint56"][0], self.joints_by_name["joint57"][0]]
         for i in range(1, 8):
             #print(self.joints_by_name["joint4" + str(i)][0])
@@ -121,7 +121,8 @@ class Val(ArmRobot):
         
         if side == "left": 
             if(include_torso):
-                return np.vstack((jac_t[:, 4+6:13+6], jac_r[:, 4+6:13+6]))  # Jacobian is 6 (end effector dof) x 9 (joints)
+                #return np.vstack((jac_t[:, 4+6:13+6], jac_r[:, 4+6:13+6]))  # Jacobian is 6 (end effector dof) x 9 (joints)
+                return np.vstack((jac_t[:, :9], jac_r[:, :9]))  # Jacobian is 6 (end effector dof) x 9 (joints)
             else:
                 return np.vstack((jac_t[:, 6+6:13+6], jac_r[:, 6+6:13+6]))  # Jacobian is 6 (end effector dof) x 7 (joints)
         else:
