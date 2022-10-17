@@ -162,11 +162,13 @@ while(True):
     ctrl, Twe = pbvs.do_pbvs(rgb, depth, Two, np.eye(4), jac, jac_pinv, 24) 
 
     ctrl_limit = pbvs.limit_twist(jac, jac_pinv, ctrl)
-    val.velocity_control("left", jac_pinv @ ctrl_limit, True)
+    q_dot = jac_pinv @ ctrl_limit
+    val.velocity_control("left", q_dot, True)
 
     cur_joint_config = val.get_joint_states_left() 
     #cur_joint_config = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
-    x = val.get_link_pose(0) @ (mppi.chain.forward_kinematics(cur_joint_config).get_matrix()[0]).cpu().numpy()
+    #x = val.get_link_pose(0) @ (mppi.chain.forward_kinematics(cur_joint_config).get_matrix()[0]).cpu().numpy()
+    Twe_pred = mppi.arm_dynamics_tester(Twe, cur_joint_config, q_dot, val.get_link_pose(0))
 
     # Step sim
     for _ in range(24):
@@ -176,7 +178,7 @@ while(True):
         p.stepSimulation()
 
     # Visualize current eef pose
-    eef_pose_vis.update(x)
+    eef_pose_vis.update(Twe_pred)
     Twc = np.linalg.inv(camera.get_extrinsics())
     camera_pose_vis.update(Twc)
     target_pose_vis.update(Two)

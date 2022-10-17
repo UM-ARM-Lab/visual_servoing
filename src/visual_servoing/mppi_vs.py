@@ -4,6 +4,8 @@ import numpy as np
 from pytorch_mppi import mppi
 import pytorch_kinematics as pk
 
+import tf.transformations
+
 from visual_servoing.utils import axis_angle_to_quaternion, quaternion_multiply
 
 class VisualServoMPPI:
@@ -22,30 +24,42 @@ class VisualServoMPPI:
             open("/home/ashwin/source/lab/catkin_ws/src/hdt_robot/hdt_michigan_description/urdf/hdt_michigan.urdf").read(), "bracelet")
         self.chain.to(device="cuda")
 
-    def arm_dynamics_tester(self, T : np.ndarray, q : np.ndarray, u : np.ndarray):
+    def arm_dynamics_tester(self, Twe : np.ndarray, q : np.ndarray, q_dot : np.ndarray, Twb : np.ndarray):
         """
         Interface to arm dynamics for debugging
 
-        x := homogenous transform to EEF (4, 4) in base link frame
+        Twe := homogenous transform to EEF in world frame (4, 4)
         q := joint angles (9, )
-        u := joint vel (9, )
+        q_dot := joint vel (9, )
+        Twb := homogenous transform to base link in world frame (4, 4)
         """
-        pos = torch.tensor(x[:3])
-
-        #rot = torch.tensor()
+        device = "cuda"
+        dtype = torch.float32
+        Tbe = Twb.T @ Twe
+        pos = torch.tensor(Tbe[:3, 3], device=device, dtype=dtype)
+        rot = torch.tensor(tf.transformations.quaternion_from_matrix(Tbe), device=device, dtype=dtype)
+        joint_angle = torch.tensor(q, device=device, dtype=dtype)
+        x = torch.unsqueeze(torch.cat((pos, rot, joint_angle)), dim=0)
+        u = torch.unsqueeze(torch.tensor(q_dot, device=device, dtype=dtype), dim=0) 
+        x_pred = self.arm_dynamics(x, u)[0].cpu().numpy()
+        Tbe_pred = np.eye(4)
+        Tbe_pred[0:3, 0:3] = tf.transformations.quaternion_matrix(x_pred[3:])[0:3, 0:3]
+        Tbe_pred[0:3, 3] = x_pred[:3]
+        Twe_pred = Twb @ Tbe_pred
+        return Twe_pred
 
     def arm_dynamics(self, x : torch.Tensor, u : torch.Tensor):
         """
         x := eef pose + joint angles (k, 9) 
         u := joint vel (k, 9)
         """
-        pos = x[:3]
-        rot = x[3:7]
-        q = x[7:]
+        pos = x[:, :3]
+        rot = x[:, 3:7]
+        q = x[:, 7:]
 
         # get jacobians from current joint configs and compute eef twist
         J = self.chain.jacobian(q)
-        eef_twist = (J @ u.T).T
+        eef_twist = torch.squeeze((J @ u.T).T, dim=2)
 
         # Update EEF position
         pos_next = pos + eef_twist[:, :3] * self.dt
