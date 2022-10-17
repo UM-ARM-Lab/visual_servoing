@@ -61,7 +61,7 @@ class VisualServoMPPI:
         Tbe_pred[0:3, 0:3] = tf.transformations.quaternion_matrix(x_pred[3:])[0:3, 0:3]
         Tbe_pred[0:3, 3] = x_pred[:3]
         Twe_pred = Twb @ Tbe_pred
-        return Twe_pred
+        return Twe_pred, x_pred[7:]
 
     def arm_dynamics(self, x : torch.Tensor, u : torch.Tensor):
         """

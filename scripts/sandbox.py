@@ -154,14 +154,15 @@ mppi = VisualServoMPPI(dt=0.1, eef_target_pos=Two[0:3, 3])
 
 
 # DELETE
-first = True
+ctrl_steps = 0
 
 while(True):
-    if(first):
+    if(ctrl_steps == 0):
         rgb, depth = camera.get_image()
 
         jac = val.get_arm_jacobian("left", True)
         jac_pinv = val.get_jacobian_pinv("left", True)
+        print(jac)
 
         # Send command to val
 
@@ -171,22 +172,24 @@ while(True):
         q_dot = jac_pinv @ ctrl_limit
         val.velocity_control("left", q_dot, True)
 
+    if( ctrl_steps % 5 == 0):
         cur_joint_config = val.get_joint_states_left() 
         #x = val.get_link_pose(0) @ (mppi.chain.forward_kinematics(cur_joint_config).get_matrix()[0]).cpu().numpy()
-        Twe_pred = mppi.arm_dynamics_tester(Twe, cur_joint_config, q_dot, val.get_link_pose(0), 3)
+        Twe_pred, q_pred = mppi.arm_dynamics_tester(Twe, cur_joint_config, q_dot, val.get_link_pose(0), 5)
+        Twe_pred_joint = val.get_link_pose(0) @ (mppi.chain.forward_kinematics(q_pred).get_matrix()[0]).cpu().numpy()
         eef_pose_pred_vis.update(Twe_pred)
-        first = False
 
     # Step sim
     for _ in range(24):
-        link_pos, link_rot = val.get_eef_pos("camera")
-        camera_rot = np.array(p.getMatrixFromQuaternion(link_rot)).reshape(3,3)
-        camera.upate_from_pose(link_pos, camera_rot)
+        #link_pos, link_rot = val.get_eef_pos("camera")
+        #camera_rot = np.array(p.getMatrixFromQuaternion(link_rot)).reshape(3,3)
+        #camera.upate_from_pose(link_pos, camera_rot)
         p.stepSimulation()
 
     # Visualize current eef pose
     Twe = get_eef_gt(val)
     eef_pose_vis.update(Twe)
     Twc = np.linalg.inv(camera.get_extrinsics())
-    camera_pose_vis.update(Twc)
-    target_pose_vis.update(Two)
+    ctrl_steps += 1
+    #camera_pose_vis.update(Twc)
+    #target_pose_vis.update(Two)
