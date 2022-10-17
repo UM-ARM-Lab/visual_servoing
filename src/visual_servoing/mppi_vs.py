@@ -47,10 +47,8 @@ class VisualServoMPPI:
         x = torch.unsqueeze(torch.cat((pos, rot, joint_angle)), dim=0)
         
         # Rotate command into the base link frame
-        q_dot_base_frame = q_dot #np.zeros(6)
-        #q_dot_base_frame[:3] = Tbw[0:3, 0:3] @ q_dot[:3]
-        #q_dot_base_frame[3:] = Tbw[0:3, 0:3] @ q_dot[3:]
-        u = torch.unsqueeze(torch.tensor(q_dot_base_frame, device=device, dtype=dtype), dim=0) # needs frame change
+        q_dot_base_frame = q_dot
+        u = torch.unsqueeze(torch.tensor(q_dot_base_frame, device=device, dtype=dtype), dim=0) 
 
         # Compute a step of dynamics
         for _ in range(n_steps):

@@ -151,25 +151,31 @@ pbvs = CheaterPBVS(camera, 1, 1, 1.5, lambda : get_eef_gt(val))
 
 mppi = VisualServoMPPI(dt=0.1, eef_target_pos=Two[0:3, 3])
 
+
+# DELETE
+first = True
+
 while(True):
-    rgb, depth = camera.get_image()
+    if(first):
+        rgb, depth = camera.get_image()
 
-    jac = val.get_arm_jacobian("left", True)
-    jac_pinv = val.get_jacobian_pinv("left", True)
+        jac = val.get_arm_jacobian("left", True)
+        jac_pinv = val.get_jacobian_pinv("left", True)
 
-    # Send command to val
+        # Send command to val
 
-    ctrl, Twe = pbvs.do_pbvs(rgb, depth, Two, np.eye(4), jac, jac_pinv, 24) 
+        ctrl, Twe = pbvs.do_pbvs(rgb, depth, Two, np.eye(4), jac, jac_pinv, 24) 
 
-    ctrl_limit = pbvs.limit_twist(jac, jac_pinv, ctrl)
-    q_dot = jac_pinv @ ctrl_limit
-    val.velocity_control("left", q_dot, True)
+        ctrl_limit = pbvs.limit_twist(jac, jac_pinv, ctrl)
+        q_dot = jac_pinv @ ctrl_limit
+        val.velocity_control("left", q_dot, True)
 
-    cur_joint_config = val.get_joint_states_left() 
-    #cur_joint_config = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
-    #x = val.get_link_pose(0) @ (mppi.chain.forward_kinematics(cur_joint_config).get_matrix()[0]).cpu().numpy()
-    Twe_pred = mppi.arm_dynamics_tester(Twe, cur_joint_config, q_dot, val.get_link_pose(0))
-    eef_pose_vis.update(Twe_pred)
+        cur_joint_config = val.get_joint_states_left() 
+        #cur_joint_config = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+        #x = val.get_link_pose(0) @ (mppi.chain.forward_kinematics(cur_joint_config).get_matrix()[0]).cpu().numpy()
+        Twe_pred = mppi.arm_dynamics_tester(Twe, cur_joint_config, q_dot, val.get_link_pose(0), 5)
+        eef_pose_vis.update(Twe_pred)
+        first = False
 
     # Step sim
     for _ in range(24):
