@@ -149,7 +149,7 @@ J = val.get_arm_jacobian("left", True)
 
 pbvs = CheaterPBVS(camera, 1, 1, 1.5, lambda : get_eef_gt(val))
 
-mppi = VisualServoMPPI(dt=0.0416, eef_target_pos=Two[0:3, 3])
+mppi = VisualServoMPPI(dt=0.1, eef_target_pos=Two[0:3, 3])
 
 while(True):
     rgb, depth = camera.get_image()
@@ -169,6 +169,7 @@ while(True):
     #cur_joint_config = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
     #x = val.get_link_pose(0) @ (mppi.chain.forward_kinematics(cur_joint_config).get_matrix()[0]).cpu().numpy()
     Twe_pred = mppi.arm_dynamics_tester(Twe, cur_joint_config, q_dot, val.get_link_pose(0))
+    eef_pose_vis.update(Twe_pred)
 
     # Step sim
     for _ in range(24):
@@ -178,7 +179,6 @@ while(True):
         p.stepSimulation()
 
     # Visualize current eef pose
-    eef_pose_vis.update(Twe_pred)
     Twc = np.linalg.inv(camera.get_extrinsics())
     camera_pose_vis.update(Twc)
     target_pose_vis.update(Two)

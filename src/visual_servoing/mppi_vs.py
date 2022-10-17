@@ -24,7 +24,7 @@ class VisualServoMPPI:
             open("/home/ashwin/source/lab/catkin_ws/src/hdt_robot/hdt_michigan_description/urdf/hdt_michigan.urdf").read(), "bracelet")
         self.chain.to(device="cuda")
 
-    def arm_dynamics_tester(self, Twe : np.ndarray, q : np.ndarray, q_dot : np.ndarray, Twb : np.ndarray):
+    def arm_dynamics_tester(self, Twe : np.ndarray, q : np.ndarray, q_dot : np.ndarray, Twb : np.ndarray, n_steps : int = 1):
         """
         Interface to arm dynamics for debugging
 
@@ -35,13 +35,30 @@ class VisualServoMPPI:
         """
         device = "cuda"
         dtype = torch.float32
-        Tbe = Twb.T @ Twe
+
+        # Compute frame transforms to get from world relative to base relative
+        Tbw = np.linalg.inv(Twb)
+        Tbe = Tbw @ Twe
+
+        # Get starting pos, rot, joint angles as GPU tensors in base frame
         pos = torch.tensor(Tbe[:3, 3], device=device, dtype=dtype)
         rot = torch.tensor(tf.transformations.quaternion_from_matrix(Tbe), device=device, dtype=dtype)
         joint_angle = torch.tensor(q, device=device, dtype=dtype)
         x = torch.unsqueeze(torch.cat((pos, rot, joint_angle)), dim=0)
-        u = torch.unsqueeze(torch.tensor(q_dot, device=device, dtype=dtype), dim=0) 
-        x_pred = self.arm_dynamics(x, u)[0].cpu().numpy()
+        
+        # Rotate command into the base link frame
+        q_dot_base_frame = q_dot #np.zeros(6)
+        #q_dot_base_frame[:3] = Tbw[0:3, 0:3] @ q_dot[:3]
+        #q_dot_base_frame[3:] = Tbw[0:3, 0:3] @ q_dot[3:]
+        u = torch.unsqueeze(torch.tensor(q_dot_base_frame, device=device, dtype=dtype), dim=0) # needs frame change
+
+        # Compute a step of dynamics
+        for _ in range(n_steps):
+            x = self.arm_dynamics(x, u)
+            #x_pred = self.arm_dynamics(x, u)[0].cpu().numpy()
+        x_pred = x[0].cpu().numpy()
+
+        # Convert predited pose back to homogenous TF in world frame
         Tbe_pred = np.eye(4)
         Tbe_pred[0:3, 0:3] = tf.transformations.quaternion_matrix(x_pred[3:])[0:3, 0:3]
         Tbe_pred[0:3, 3] = x_pred[:3]
@@ -66,7 +83,7 @@ class VisualServoMPPI:
 
         # EEF rotation
         rot_delta = axis_angle_to_quaternion(self.dt * eef_twist[:, 3:])
-        rot_next = rot #quaternion_multiply(rot, rot_delta)
+        rot_next = quaternion_multiply(rot, rot_delta)
 
         # Update joint config
         q_next = q + u * self.dt
