@@ -1,7 +1,9 @@
 <?xml version="1.0" ?>
 <launch>
+
+    <include file ="$(find zed_wrapper)/launch/zed2i.launch"> </include> 
     <arg name="fake_val" default="false"/>
-    <arg name="gui" default="true"/>
+    <arg name="gui" default="false"/>
     <arg name="robot_description" default="hdt_michigan/robot_description"/>
 
     <node pkg="tf2_ros" type="static_transform_publisher" name="world_broadcaster" required="true"
@@ -79,14 +81,40 @@
         <remap from="joint_states" to="hdt_michigan/joint_states"/>
         <remap to="$(arg robot_description)" from="robot_description"/>
     </node>
+    
+    <!--
     <node pkg="tf2_ros" type="static_transform_publisher" name="val_pedestal_mocap_tf_shim_broadcaster" required="true"
             args="0 0 0
                 -1.5707 0 0 
                 mocap_val_wood_mount_val_wood_mount hdt_michigan_root">
     </node>
+    -->
 
-    <include file="$(find lightweight_vicon_bridge)/launch/vicon_bridge.launch">
-    </include>
+
+    <include file="$(find lightweight_vicon_bridge)/launch/vicon_bridge.launch"></include> 
+    <!-- 
+    <node pkg="tf2_ros" type="static_transform_publisher" name="val_zed_mocap_to_zed_base_publisher" required="true"
+            args="0 0 0
+                0 0 -0.07 
+                mocap_zed_zed zed2i_base_link">
+    </node>
+    -->
+
+    <!-- <include file ="$(find zed_wrapper)/launch/zed2i.launch"> </include> -->
+    <node name="rviz" pkg="rviz" type="rviz" respawn="false" args="-d $(find visual_servoing)/launch/real_val.rviz"/>
+
+
+    <node pkg="tf2_ros" type="static_transform_publisher" name="mocap_aruco_to_center_publisher" required="true"
+            args="0 0 0
+                0.118 -0.118 -0.07
+                mocap_calib0_calib0 mocap_tag">
+    </node>
+
+    <node pkg="tf2_ros" type="static_transform_publisher" name="mocap_zed_to_zed_base" required="true"
+            args="0 0 0
+                0.0 0.0 -0.07
+                mocap_zed_zed mocap_zed_base">
+    </node>
 
 
 </launch>

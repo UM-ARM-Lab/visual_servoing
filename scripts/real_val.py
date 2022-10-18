@@ -84,6 +84,16 @@ b6 = np.array([
 tag_geometry_new = [b0, b1, b3, b4, b5, b6]
 ids_new = np.array([0, 1, 3, 4, 5, 6])
 
+tag_geometry_mocap = [
+    np.array([
+        [-0.129/2, 0.129/2, 0.0],
+        [0.129/2, 0.129/2, 0.0],
+        [0.129/2, -0.129/2, 0.0],
+        [-0.129/2, -0.129/2, 0.0],
+    ], dtype=np.float32)
+]
+ids_mocap = np.array([0])
+
 # publishes a homogenous TF to the TF2 tree
 def publish_tf(tf, ref_frame, frame, static=False):
     if(not static):
@@ -108,7 +118,8 @@ def publish_tf(tf, ref_frame, frame, static=False):
 @ros_init.with_ros("real_pbvs_servoing")
 def main():
     detector = MarkerBoardDetector(ids_new, tag_geometry_new, cv2.aruco.DICT_4X4_50)
-    target_detector = MarkerBoardDetector(ids2, tag_geometry)
+    #target_detector = MarkerBoardDetector(ids2, tag_geometry)
+    target_detector = MarkerBoardDetector(ids_mocap, tag_geometry_mocap, cv2.aruco.DICT_5X5_50)
     camera = RealsenseCamera(np.zeros(3), np.array([0, 0, 1]), ())
     pbvs = MarkerPBVS(camera, 0.5, 1, 0.5, detector)
 
@@ -127,7 +138,8 @@ def main():
         Two = target_detector.update(rgb, camera.get_intrinsics())
         if(Two is not None):
             T_offset = np.eye(4)
-            T_offset[0:3, 0:3] = tf_conversions.transformations.euler_matrix(np.pi/2, 0, np.pi, "syzx")[0:3, 0:3]
+            #T_offset[0:3, 0:3] = tf_conversions.transformations.euler_matrix(np.pi/2, 0, np.pi, "syzx")[0:3, 0:3]
+            T_offset[0:3, 0:3] = tf_conversions.transformations.euler_matrix(-np.pi/2, -np.pi/2, 0, "syzx")[0:3, 0:3]
             T_offset[0:3, 3] = np.array([0.0, 0.0, 0.05]) #0.15 in last dim
             #Two[0:3, 0:3] 
             Two = Two @ T_offset
@@ -140,7 +152,7 @@ def main():
         cv2.imshow("image", rgb)
         selection = cv2.waitKey(1)
     import time
-    time.sleep(13)
+    #time.sleep(13)
     while(True):
         rgb = camera.get_image()[:, :, :3]
         rgb = np.ascontiguousarray(rgb, dtype=np.uint8)
