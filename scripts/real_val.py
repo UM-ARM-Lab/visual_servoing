@@ -6,6 +6,7 @@ from visual_servoing.camera import RealsenseCamera
 import rospy
 import numpy as np
 import cv2
+import pickle
 
 import tf_conversions
 import tf2_ros
@@ -128,7 +129,24 @@ def main():
     val = Val(raise_on_failure=True)
     val.connect()
 
-    #val.open_left_gripper()
+    Tbe = tf_obj.get_transform("end_effector_left", "left_tool")
+    Tzedbase_leftoptical = tf_obj.get_transform("zed2i_base_link", "zed2i_left_camera_optical_frame")
+    # Offset of the target to servo to
+    T_offset = np.eye(4)
+    #T_offset[0:3, 0:3] = tf_conversions.transformations.euler_matrix(np.pi/2, 0, np.pi, "syzx")[0:3, 0:3]
+    T_offset[0:3, 0:3] = tf_conversions.transformations.euler_matrix(-np.pi/2, -np.pi/2, 0, "syzx")[0:3, 0:3]
+    T_offset[0:3, 3] = np.array([0.0, 0.0, 0.07]) #0.05 in last dim
+
+    data = {
+            "T[mocap_zed_base]_[mocap_val_braclet]" : [],
+            "T[zed2i_left_optical]_[left_tool]" : [],
+            "T[mocap_zed_base]_[mocap_tag]" : np.array([]),
+            "T[zed2i_left_optical]_[target]" : np.array([]),
+            "T[zed_base]_[zed2i_left_optical]" : Tzedbase_leftoptical,
+            "T[target]_[target_adj]" : T_offset,
+            "T[bracelet]_[left_tool]" : Tbe,
+            # [mocap_tag] = [target]
+    } 
 
     # Target selection
     selection = None
@@ -137,34 +155,33 @@ def main():
         rgb = np.ascontiguousarray(rgb, dtype=np.uint8)
         Two = target_detector.update(rgb, camera.get_intrinsics())
         if(Two is not None):
-            T_offset = np.eye(4)
-            #T_offset[0:3, 0:3] = tf_conversions.transformations.euler_matrix(np.pi/2, 0, np.pi, "syzx")[0:3, 0:3]
-            T_offset[0:3, 0:3] = tf_conversions.transformations.euler_matrix(-np.pi/2, -np.pi/2, 0, "syzx")[0:3, 0:3]
-            T_offset[0:3, 3] = np.array([0.0, 0.0, 0.05]) #0.15 in last dim
-            #Two[0:3, 0:3] 
+            # Save 
+            data["T[zed2i_left_optical][target]"] = np.copy(Two)
+            data["T[mocap_zed_base]_[mocap_tag]"] = tf_obj.get_transform("mocap_zed_base", "mocap_tag")
+            # Transform
             Two = Two @ T_offset
+            publish_tf(Two, "zed2i_left_camera_optical_frame", "target_estimate", True)
+
         Twb = detector.update(rgb, camera.get_intrinsics())
         if(Twb is not None):
             Tbe = tf_obj.get_transform("end_effector_left", "left_tool")
             publish_tf(Twb @ Tbe, "zed2i_left_camera_optical_frame", "eef_estimate")
-        if(Two is not None):
-            publish_tf(Two, "zed2i_left_camera_optical_frame", "target_estimate", True)
+
         cv2.imshow("image", rgb)
         selection = cv2.waitKey(1)
+    
     import time
     #time.sleep(13)
     while(True):
         rgb = camera.get_image()[:, :, :3]
         rgb = np.ascontiguousarray(rgb, dtype=np.uint8)
 
-        #Twe = detector.update(rgb, camera.get_intrinsics())
-        #Two = target_detector.update(rgb, camera.get_intrinsics())
-
         if(Two is not None):
             J, _ = val.get_current_left_tool_jacobian()
             # TF from eef link (board) to gripper tip (eef)
-            Tbe = tf_obj.get_transform("end_effector_left", "left_tool")
             ctrl_cam, Tcb = pbvs.do_pbvs(rgb, None, Two, Tbe, None, None, 0, rescale=False)
+            data["T[zed2i_left_optical]_[left_tool]"].append(np.copy(Tcb))
+            data["T[mocap_zed_base]_[mocap_val_braclet]"].append(tf_obj.get_transform("mocap_zed_base", "mocap_val_left_bracelet_val_left_bracelet"))
 
             angular_delta, _ = cv2.Rodrigues(Tcb[0:3, 0:3] @ Two[0:3, 0:3].T)
             if(np.linalg.norm(Tcb[0:3, 3] - Two[0:3,3]) < 0.01 and
@@ -195,14 +212,27 @@ def main():
         
         cv2.imshow("image", rgb)
         cv2.waitKey(1)
-    while(not val.is_left_gripper_closed()):
-        #val.close_left_gripper()
-        val.set_left_gripper(0.1)
-        val.send_velocity_joint_command(val.get_joint_names("left_arm"), np.zeros(7))
-    #time.sleep(5)
-    #r = rospy.Rate(10) 
-    #for i in range(10):
-    #    r.sleep()
-    #    #val.send_velocity_joint_command(val.get_joint_names("right_arm"), np.array([1, 0, 0, 0, 0, 0, 0]))
+    #try:
+    #    while(not val.is_left_gripper_closed()):
+    #        #val.close_left_gripper()
+    #        val.set_left_gripper(0.1)
+    #        val.send_velocity_joint_command(val.get_joint_names("left_arm"), np.zeros(7))
+    #except:
+    #    print("val gripper exception")
+    
+    import datetime
+    import pickle
+    import os
+    print('trying to store results')
+    # Create folder for storing result
+    now = datetime.datetime.now()
+    dirname = now.strftime("test-results/%Y%m%d-%H%M%S")
+    if not os.path.exists(dirname):
+        os.makedirs(dirname)
+
+    # Dump result pkl into folder
+    result_file = open(f'{dirname}/result.pkl', 'wb')
+    pickle.dump(data, result_file)
+    result_file.close()
 
 main()
