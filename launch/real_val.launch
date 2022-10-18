@@ -106,7 +106,7 @@
 
     <node pkg="tf2_ros" type="static_transform_publisher" name="mocap_aruco_to_center_publisher" required="true"
             args="0 0 0
-                0.118 -0.118 -0.07
+                0.08343 -0.08343 -0.07
                 mocap_calib0_calib0 mocap_tag">
     </node>
 

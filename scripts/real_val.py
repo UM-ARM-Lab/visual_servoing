@@ -156,7 +156,7 @@ def main():
         Two = target_detector.update(rgb, camera.get_intrinsics())
         if(Two is not None):
             # Save 
-            data["T[zed2i_left_optical][target]"] = np.copy(Two)
+            data["T[zed2i_left_optical]_[target]"] = np.copy(Two)
             data["T[mocap_zed_base]_[mocap_tag]"] = tf_obj.get_transform("mocap_zed_base", "mocap_tag")
             # Transform
             Two = Two @ T_offset
