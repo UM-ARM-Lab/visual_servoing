@@ -64,7 +64,22 @@ class Trial:
             gt_tool_to_target_rot_error.append( 180/np.pi * np.linalg.norm(rvec))
         return gt_tool_to_target_pos_error, gt_tool_to_target_rot_error
 
-def pos_rot_ax_metric_plotter(
+def pos_rot_metric_plotter(
+    pos_metric : List[float] , rot_metric : List[float],
+    plotter_functor : Callable[[plt.Axes, List[float]], None],
+    x_label : str, y_label_pos : str, y_label_rot : str, title : str, 
+):
+    fig, (pos_ax, rot_ax) = plt.subplots(2, 1)
+    
+    plotter_functor(pos_ax, pos_metric)
+    pos_ax.set_ylabel(y_label_pos)
+    pos_ax.set_title(title)
+
+    plotter_functor(rot_ax, rot_metric)
+    rot_ax.set_xlabel(x_label)
+    rot_ax.set_ylabel(y_label_rot)
+
+def cross_trial_pos_rot_plotter(
     trials : List[Trial], 
     trial_functor : Callable[[Trial], Tuple[float, float]],
     plotter_functor : Callable[[plt.Axes, List[float]], None],
@@ -76,16 +91,8 @@ def pos_rot_ax_metric_plotter(
         pos, rot = trial_functor(trial)
         pos_metric.append(pos)
         rot_metric.append(rot)
-
-    fig, (pos_ax, rot_ax) = plt.subplots(2, 1)
-    
-    plotter_functor(pos_ax, pos_metric)
-    pos_ax.set_ylabel(y_label_pos)
-    pos_ax.set_title(title)
-
-    plotter_functor(rot_ax, rot_metric)
-    rot_ax.set_xlabel(x_label)
-    rot_ax.set_ylabel(y_label_rot)
+    pos_rot_metric_plotter(pos_metric, rot_metric, plotter_functor,
+        x_label, y_label_pos, y_label_rot, title)
 
 
 class ResultGUI(QWidget):
@@ -122,41 +129,35 @@ class ResultGUI(QWidget):
     
     def compute_metrics(self):
         # Error to target final iteration across trajectories
-        pos_rot_ax_metric_plotter(
+        cross_trial_pos_rot_plotter(
             self.trials, lambda t : [e[-1] for e in t.get_gripper_vs_target_error()],
             lambda ax, data : ax.boxplot(data), "iteration", "error (m)", "error (deg)",
-            "Tool error to target after servoing"
+            "Tool error to target after final servoing iteration (10 trials)"
         )
 
         # Error in gripper pose estimation on final iteration across trajectories
-
+        cross_trial_pos_rot_plotter(
+            self.trials, lambda t : [e[-1] for e in t.get_tool_pose_error()],
+            lambda ax, data : ax.boxplot(data), "iteration", "error (m)", "error (deg)",
+            "Tool pose estimation error on final servoing iteration (10 trials)"
+        )
         plt.show()
     
     # Callback for trial selection
     def trial_select(self, i):
         t = self.trials[i]
-        tool_error_fig, (tool_pos_error_ax, tool_rot_error_ax) = plt.subplots(2, 1)
         tool_pos_error, tool_rot_error = t.get_tool_pose_error()
-        tool_pos_error_ax.set_xlabel("iteration")
-        tool_pos_error_ax.set_ylabel("error (m)")
-        tool_pos_error_ax.plot(tool_pos_error)
-        tool_pos_error_ax.set_title("Tool position estimate error (mocap vs aruco)")
-        tool_rot_error_ax.set_xlabel("iteration")
-        tool_rot_error_ax.set_ylabel("error (deg)")
-        tool_rot_error_ax.plot(tool_rot_error)
-        tool_rot_error_ax.set_title("Tool rotation estimate error (mocap vs aruco)")
+        pos_rot_metric_plotter(
+            tool_pos_error, tool_rot_error, lambda ax, data : ax.plot(data),
+            "iteration", "error (m)", "error (deg)", "Tool pose estimate error (mocap vs aruco)"
+        )
 
         # Plot gripper vs target over iter
         gt_tool_to_target_pos_error, gt_tool_to_target_rot_error = t.get_gripper_vs_target_error()
-        tool_target_error_fig, (gt_tool_to_target_pos_error_ax, gt_tool_to_target_rot_error_ax) = plt.subplots(2, 1)
-        gt_tool_to_target_pos_error_ax.set_xlabel("iteration")
-        gt_tool_to_target_pos_error_ax.set_ylabel("error (m)")
-        gt_tool_to_target_pos_error_ax.set_title("position error to target (mocap)")
-        gt_tool_to_target_pos_error_ax.plot(gt_tool_to_target_pos_error)
-        gt_tool_to_target_rot_error_ax.set_xlabel("iteration")
-        gt_tool_to_target_rot_error_ax.set_ylabel("error (deg)")
-        gt_tool_to_target_rot_error_ax.set_title("rotation error to target (mocap)")
-        gt_tool_to_target_rot_error_ax.plot(gt_tool_to_target_rot_error)
+        pos_rot_metric_plotter(
+            gt_tool_to_target_pos_error, gt_tool_to_target_rot_error, lambda ax, data : ax.plot(data),
+            "iteration", "error (m)", "error (deg)", "Gripper vs target error (mocap)"
+        )
 
         plt.show()
 
