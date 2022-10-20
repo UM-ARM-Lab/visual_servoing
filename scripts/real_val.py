@@ -227,11 +227,8 @@ def main():
     # Create folder for storing result
     now = datetime.datetime.now()
     dirname = now.strftime("test-results/%Y%m%d-%H%M%S")
-    if not os.path.exists(dirname):
-        os.makedirs(dirname)
-
-    # Dump result pkl into folder
-    result_file = open(f'{dirname}/result.pkl', 'wb')
+    # Dump result pkl 
+    result_file = open(f'{dirname}.pkl', 'wb')
     pickle.dump(data, result_file)
     result_file.close()
 

@@ -14,6 +14,7 @@ class Trial:
     """
     def __init__(self, dir : Path):
         result = pkl.load(open(dir, "rb"))
+        self.datestr = dir.stem
 
         # Get mocap and aruco data into the same frames
         Tbt = result["T[bracelet]_[left_tool]"]
@@ -76,47 +77,58 @@ class ResultGUI(QWidget):
         
         # File select dialog
         self.file_selector = QFileDialog()
-        self.file_selector.setFileMode(QFileDialog.AnyFile)
-        self.file_selector.setDirectory("/home/ashwin/catkin_ws/src/Val-Visual-Servo/test-results")
+        self.file_selector.setFileMode(QFileDialog.ExistingFiles)
+        self.file_selector.setDirectory("/home/ashwin/source/lab/catkin_ws/src/visual_servoing/test-results")
 
-        # Trajectory chooser combo box
-        self.traj_choice = QComboBox()
-        self.traj_choice.currentIndexChanged.connect(self.traj_select)
-        self.layout.addWidget(self.traj_choice)
+        # Trial chooser combo box
+        self.trial_choice = QComboBox()
+        self.trial_choice.currentIndexChanged.connect(self.trial_select)
+        self.layout.addWidget(self.trial_choice)
 
 
     # Callback for file open button press
     def select_log_click(self):
         self.file_selector.exec_()
-        filename = self.file_selector.selectedFiles()
-        self.load_result_file(str(filename[0]))
+        filenames = self.file_selector.selectedFiles()
+        self.trials = [Trial(Path(filename)) for filename in filenames]
+        for trial in self.trials:
+            self.trial_choice.addItem(trial.datestr)
     
-    # Callback for trajectory selection
-    def traj_select(self, i):
-        traj_len = len(self.result['traj'][i]['joint_config'])
-        self.traj_slider.setMinimum(0)
-        self.traj_slider.setMaximum(traj_len-1)
-        self.traj_slider.setValue(0)
-        self.compute_traj_metrics(i)
-        self.publish_playback_state(i, 0)
-    
-    # Callback for slider change
-    def slider_change(self):
-        self.publish_playback_state(self.traj_choice.currentIndex(), self.traj_slider.value())
+    # Callback for trial selection
+    def trial_select(self, i):
+        t = self.trials[i]
+        tool_error_fig, (tool_pos_error_ax, tool_rot_error_ax) = plt.subplots(2, 1)
+        tool_pos_error, tool_rot_error = t.get_tool_pose_error()
+        tool_pos_error_ax.set_xlabel("iteration")
+        tool_pos_error_ax.set_ylabel("error (m)")
+        tool_pos_error_ax.plot(tool_pos_error)
+        tool_pos_error_ax.set_title("Tool position estimate error (mocap vs aruco)")
+        tool_rot_error_ax.set_xlabel("iteration")
+        tool_rot_error_ax.set_ylabel("error (deg)")
+        tool_rot_error_ax.plot(tool_rot_error)
+        tool_rot_error_ax.set_title("Tool rotation estimate error (mocap vs aruco)")
 
-    # Loads result file
-    def load_result_file(self, filename):
-        self.result = pkl.load(open(filename, "rb"))
-        self.num_traj = len(self.result['traj'])
-        for i in range(self.num_traj):
-            self.traj_choice.addItem(f"traj {i}")
-        self.compute_global_metrics()
+        # Plot gripper vs target over iter
+        gt_tool_to_target_pos_error, gt_tool_to_target_rot_error = t.get_gripper_vs_target_error()
+        tool_target_error_fig, (gt_tool_to_target_pos_error_ax, gt_tool_to_target_rot_error_ax) = plt.subplots(2, 1)
+        gt_tool_to_target_pos_error_ax.set_xlabel("iteration")
+        gt_tool_to_target_pos_error_ax.set_ylabel("error (m)")
+        gt_tool_to_target_pos_error_ax.set_title("position error to target (mocap)")
+        gt_tool_to_target_pos_error_ax.plot(gt_tool_to_target_pos_error)
+        gt_tool_to_target_rot_error_ax.set_xlabel("iteration")
+        gt_tool_to_target_rot_error_ax.set_ylabel("error (deg)")
+        gt_tool_to_target_rot_error_ax.set_title("rotation error to target (mocap)")
+        gt_tool_to_target_rot_error_ax.plot(gt_tool_to_target_rot_error)
+
+        plt.show()
+
+    
 
 if __name__ == "__main__":
-    #app = QApplication([])
-    #gui = ResultGUI()
-    #gui.show()
-    #app.exec()
+    app = QApplication([])
+    gui = ResultGUI()
+    gui.show()
+    app.exec()
 
     # Plot tool pose estimation error
     t = Trial("test-results/20221020-142233/result.pkl")
