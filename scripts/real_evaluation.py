@@ -6,7 +6,7 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 
 from pathlib import Path
-from typing import Tuple, List
+from typing import Callable, Tuple, List
 
 class Trial:
     """
@@ -64,6 +64,29 @@ class Trial:
             gt_tool_to_target_rot_error.append( 180/np.pi * np.linalg.norm(rvec))
         return gt_tool_to_target_pos_error, gt_tool_to_target_rot_error
 
+def pos_rot_ax_metric_plotter(
+    trials : List[Trial], 
+    trial_functor : Callable[[Trial], Tuple[float, float]],
+    plotter_functor : Callable[[plt.Axes, List[float]], None],
+    x_label : str, y_label_pos : str, y_label_rot : str, title : str, 
+):
+    pos_metric = []
+    rot_metric = []
+    for trial in trials:
+        pos, rot = trial_functor(trial)
+        pos_metric.append(pos)
+        rot_metric.append(rot)
+
+    fig, (pos_ax, rot_ax) = plt.subplots(2, 1)
+    
+    plotter_functor(pos_ax, pos_metric)
+    pos_ax.set_ylabel(y_label_pos)
+    pos_ax.set_title(title)
+
+    plotter_functor(rot_ax, rot_metric)
+    rot_ax.set_xlabel(x_label)
+    rot_ax.set_ylabel(y_label_rot)
+
 
 class ResultGUI(QWidget):
     def __init__(self):
@@ -99,22 +122,14 @@ class ResultGUI(QWidget):
     
     def compute_metrics(self):
         # Error to target final iteration across trajectories
-        gripper_v_target_pos_final = []
-        gripper_v_target_rot_final = []
-        for trial in self.trials:
-            pos, rot = trial.get_gripper_vs_target_error()
-            gripper_v_target_pos_final.append(pos[-1])
-            gripper_v_target_rot_final.append(rot[-1])
-        error_to_target_fig, (pos_error_to_target_ax, rot_error_to_target_ax) = plt.subplots(2, 1)
-        pos_error_to_target_ax.boxplot(gripper_v_target_pos_final) 
-        pos_error_to_target_ax.set_xlabel("iteration")
-        pos_error_to_target_ax.set_ylabel("error (m)")
-        pos_error_to_target_ax.set_title("Tool position error to target after servoing")
+        pos_rot_ax_metric_plotter(
+            self.trials, lambda t : [e[-1] for e in t.get_gripper_vs_target_error()],
+            lambda ax, data : ax.boxplot(data), "iteration", "error (m)", "error (deg)",
+            "Tool error to target after servoing"
+        )
 
-        rot_error_to_target_ax.boxplot(gripper_v_target_rot_final) 
-        rot_error_to_target_ax.set_xlabel("iteration")
-        rot_error_to_target_ax.set_ylabel("error (deg)")
-        rot_error_to_target_ax.set_title("Tool rotation error to target after servoing")
+        # Error in gripper pose estimation on final iteration across trajectories
+
         plt.show()
     
     # Callback for trial selection
