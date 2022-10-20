@@ -91,8 +91,31 @@ class ResultGUI(QWidget):
         self.file_selector.exec_()
         filenames = self.file_selector.selectedFiles()
         self.trials = [Trial(Path(filename)) for filename in filenames]
+
+        self.compute_metrics()
+
         for trial in self.trials:
             self.trial_choice.addItem(trial.datestr)
+    
+    def compute_metrics(self):
+        # Error to target final iteration across trajectories
+        gripper_v_target_pos_final = []
+        gripper_v_target_rot_final = []
+        for trial in self.trials:
+            pos, rot = trial.get_gripper_vs_target_error()
+            gripper_v_target_pos_final.append(pos[-1])
+            gripper_v_target_rot_final.append(rot[-1])
+        error_to_target_fig, (pos_error_to_target_ax, rot_error_to_target_ax) = plt.subplots(2, 1)
+        pos_error_to_target_ax.boxplot(gripper_v_target_pos_final) 
+        pos_error_to_target_ax.set_xlabel("iteration")
+        pos_error_to_target_ax.set_ylabel("error (m)")
+        pos_error_to_target_ax.set_title("Tool position error to target after servoing")
+
+        rot_error_to_target_ax.boxplot(gripper_v_target_rot_final) 
+        rot_error_to_target_ax.set_xlabel("iteration")
+        rot_error_to_target_ax.set_ylabel("error (deg)")
+        rot_error_to_target_ax.set_title("Tool rotation error to target after servoing")
+        plt.show()
     
     # Callback for trial selection
     def trial_select(self, i):
@@ -129,32 +152,3 @@ if __name__ == "__main__":
     gui = ResultGUI()
     gui.show()
     app.exec()
-
-    # Plot tool pose estimation error
-    t = Trial("test-results/20221020-142233/result.pkl")
-
-    print(t.get_target_pose_error())
-    tool_error_fig, (tool_pos_error_ax, tool_rot_error_ax) = plt.subplots(2, 1)
-    tool_pos_error, tool_rot_error = t.get_tool_pose_error()
-    tool_pos_error_ax.set_xlabel("iteration")
-    tool_pos_error_ax.set_ylabel("error (m)")
-    tool_pos_error_ax.plot(tool_pos_error)
-    tool_pos_error_ax.set_title("Tool position estimate error (mocap vs aruco)")
-    tool_rot_error_ax.set_xlabel("iteration")
-    tool_rot_error_ax.set_ylabel("error (deg)")
-    tool_rot_error_ax.plot(tool_rot_error)
-    tool_rot_error_ax.set_title("Tool rotation estimate error (mocap vs aruco)")
-
-    # Plot gripper vs target over iter
-    gt_tool_to_target_pos_error, gt_tool_to_target_rot_error = t.get_gripper_vs_target_error()
-    tool_target_error_fig, (gt_tool_to_target_pos_error_ax, gt_tool_to_target_rot_error_ax) = plt.subplots(2, 1)
-    gt_tool_to_target_pos_error_ax.set_xlabel("iteration")
-    gt_tool_to_target_pos_error_ax.set_ylabel("error (m)")
-    gt_tool_to_target_pos_error_ax.set_title("position error to target (mocap)")
-    gt_tool_to_target_pos_error_ax.plot(gt_tool_to_target_pos_error)
-    gt_tool_to_target_rot_error_ax.set_xlabel("iteration")
-    gt_tool_to_target_rot_error_ax.set_ylabel("error (deg)")
-    gt_tool_to_target_rot_error_ax.set_title("rotation error to target (mocap)")
-    gt_tool_to_target_rot_error_ax.plot(gt_tool_to_target_rot_error)
-
-    plt.show()
