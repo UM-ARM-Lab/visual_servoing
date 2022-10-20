@@ -105,14 +105,16 @@
 
 
     <node pkg="tf2_ros" type="static_transform_publisher" name="mocap_aruco_to_center_publisher" required="true"
-            args="0 0 0
-                0.08343 -0.08343 -0.07
+            args="
+                0.08343 -0.08343 -0.007
+                0 0 0
                 mocap_calib0_calib0 mocap_tag">
     </node>
 
     <node pkg="tf2_ros" type="static_transform_publisher" name="mocap_zed_to_zed_base" required="true"
-            args="0 0 0
-                0.0 0.0 -0.07
+            args="
+                0.0 0.0 -0.007
+                0 0 0
                 mocap_zed_zed mocap_zed_base">
     </node>
 
