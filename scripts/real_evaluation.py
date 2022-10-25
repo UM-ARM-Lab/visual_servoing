@@ -128,6 +128,13 @@ class ResultGUI(QWidget):
             self.trial_choice.addItem(trial.datestr)
     
     def compute_metrics(self):
+        final_tool_pos_errors = [t.get_tool_pose_error()[0][-1] for t in self.trials]
+        final_target_pos_errors = [t.get_target_pose_error()[0] for t in self.trials]
+        print(np.mean(final_tool_pos_errors))
+        print(np.std(final_tool_pos_errors))
+        print(np.mean(final_target_pos_errors))
+        print(np.std(final_target_pos_errors))
+
         # Error to target final iteration across trajectories
         cross_trial_pos_rot_plotter(
             self.trials, lambda t : [e[-1] for e in t.get_gripper_vs_target_error()],
@@ -140,6 +147,12 @@ class ResultGUI(QWidget):
             self.trials, lambda t : [e[-1] for e in t.get_tool_pose_error()],
             lambda ax, data : ax.boxplot(data), "iteration", "error (m)", "error (deg)",
             "Tool pose estimation error on final servoing iteration (10 trials)"
+        )
+        # Error in target pose estimation on final iteration across trajectories
+        cross_trial_pos_rot_plotter(
+            self.trials, lambda t : [e for e in t.get_target_pose_error()],
+            lambda ax, data : ax.boxplot(data), "iteration", "error (m)", "error (deg)",
+            "Target pose estimation error on final servoing iteration (10 trials)"
         )
         plt.show()
     
