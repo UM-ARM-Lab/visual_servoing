@@ -122,7 +122,7 @@ def main():
     #target_detector = MarkerBoardDetector(ids2, tag_geometry)
     target_detector = MarkerBoardDetector(ids_mocap, tag_geometry_mocap, cv2.aruco.DICT_5X5_50)
     camera = RealsenseCamera(np.zeros(3), np.array([0, 0, 1]), ())
-    pbvs = MarkerPBVS(camera, 0.5, 1, 0.5, detector)
+    pbvs = MarkerPBVS(camera, 0.001, 0.0, 0.25, detector)
 
     tf_obj = ReliableTF()
     # Create a Val
@@ -184,9 +184,9 @@ def main():
             data["T[mocap_zed_base]_[mocap_val_braclet]"].append(tf_obj.get_transform("mocap_zed_base", "mocap_val_left_bracelet_val_left_bracelet"))
 
             angular_delta, _ = cv2.Rodrigues(Tcb[0:3, 0:3] @ Two[0:3, 0:3].T)
-            if(np.linalg.norm(Tcb[0:3, 3] - Two[0:3,3]) < 0.01 and
-                np.linalg.norm(angular_delta) < 0.05):
-                val.send_velocity_joint_command(val.get_joint_names("left_arm"), np.zeros(7))
+            if(np.linalg.norm(Tcb[0:3, 3] - Two[0:3,3]) < 0.001 and
+                np.linalg.norm(angular_delta) < np.deg2rad(0.5)):
+                #val.send_velocity_joint_command(val.get_joint_names("left_arm"), np.zeros(7))
                 break
 
             if(Tcb is not None):
@@ -219,6 +219,7 @@ def main():
     #        val.send_velocity_joint_command(val.get_joint_names("left_arm"), np.zeros(7))
     #except:
     #    print("val gripper exception")
+    val.disconnect()
     
     import datetime
     import pickle
