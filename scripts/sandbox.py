@@ -139,6 +139,7 @@ def get_homogenous(se3):
 camera_pose_vis = PoseVisualizer()
 eef_pose_vis = PoseVisualizer()
 eef_pose_pred_vis = PoseVisualizer()
+eef_pose_joint_vis = PoseVisualizer()
 target_pose_vis = PoseVisualizer()
 
 # Target
@@ -173,11 +174,13 @@ while(True):
         val.velocity_control("left", q_dot, True)
 
     if( ctrl_steps % 5 == 0):
+        Twe = get_eef_gt(val)
         cur_joint_config = val.get_joint_states_left() 
         #x = val.get_link_pose(0) @ (mppi.chain.forward_kinematics(cur_joint_config).get_matrix()[0]).cpu().numpy()
         Twe_pred, q_pred = mppi.arm_dynamics_tester(Twe, cur_joint_config, q_dot, val.get_link_pose(0), 5)
         Twe_pred_joint = val.get_link_pose(0) @ (mppi.chain.forward_kinematics(q_pred).get_matrix()[0]).cpu().numpy()
         eef_pose_pred_vis.update(Twe_pred)
+        eef_pose_joint_vis.update(Twe_pred_joint)
 
     # Step sim
     for _ in range(24):

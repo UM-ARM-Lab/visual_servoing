@@ -58,7 +58,7 @@ class VisualServoMPPI:
 
         # Convert predited pose back to homogenous TF in world frame
         Tbe_pred = np.eye(4)
-        Tbe_pred[0:3, 0:3] = tf.transformations.quaternion_matrix(x_pred[3:])[0:3, 0:3]
+        Tbe_pred[0:3, 0:3] = tf.transformations.quaternion_matrix(x_pred[3:7])[0:3, 0:3]
         Tbe_pred[0:3, 3] = x_pred[:3]
         Twe_pred = Twb @ Tbe_pred
         return Twe_pred, x_pred[7:]
@@ -81,7 +81,7 @@ class VisualServoMPPI:
 
         # EEF rotation
         rot_delta = axis_angle_to_quaternion(self.dt * eef_twist[:, 3:])
-        rot_next = quaternion_multiply(rot, rot_delta)
+        rot_next =  quaternion_multiply(rot, rot_delta)
 
         # Update joint config
         q_next = q + u * self.dt
