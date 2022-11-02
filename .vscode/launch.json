@@ -5,6 +5,7 @@
     "version": "0.2.0",
     "configurations": [
 
+
         {
             "name": "marker_pbvs_demo",
             "type": "python",
@@ -77,6 +78,18 @@
             "type": "python",
             "request": "launch",
             "program": "scripts/real_evaluation.py",
+            "console": "integratedTerminal",
+            "cwd": "/home/ashwin/source/lab/catkin_ws/src/visual_servoing",
+            "env" : {
+                "PYTHONPATH" : "/home/ashwin/catkin_ws/devel/lib/python3/dist-packages:/opt/ros/noetic/lib/python3/dist-packages"
+            }
+        },
+
+        {
+            "name": "zed",
+            "type": "python",
+            "request": "launch",
+            "program": "scripts/zed.py",
             "console": "integratedTerminal",
             "cwd": "/home/ashwin/source/lab/catkin_ws/src/visual_servoing",
             "env" : {

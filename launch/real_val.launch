@@ -1,7 +1,7 @@
 <?xml version="1.0" ?>
 <launch>
 
-    <include file ="$(find zed_wrapper)/launch/zed2i.launch"> </include> 
+    <!-- <include file ="$(find zed_wrapper)/launch/zed2i.launch"> </include>  -->
     <arg name="fake_val" default="false"/>
     <arg name="gui" default="false"/>
     <arg name="robot_description" default="hdt_michigan/robot_description"/>

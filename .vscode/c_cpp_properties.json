@@ -1,0 +1,37 @@
+{
+  "configurations": [
+    {
+      "browse": {
+        "databaseFilename": "",
+        "limitSymbolsToIncludedHeaders": true
+      },
+      "includePath": [
+        "/home/ashwin/source/lab/catkin_ws/devel/include/**",
+        "/opt/ros/noetic/include/**",
+        "/home/ashwin/source/lab/catkin_ws/src/arc_utilities/include/**",
+        "/home/ashwin/source/lab/catkin_ws/src/arm_gazebo/arm_gazebo_plugins/include/**",
+        "/home/ashwin/source/lab/catkin_ws/src/bio_ik/include/**",
+        "/home/ashwin/source/lab/catkin_ws/src/hdt_robot/hdt_adroit_driver/include/**",
+        "/home/ashwin/source/lab/catkin_ws/src/hdt_robot/hdt_common/include/**",
+        "/home/ashwin/source/lab/catkin_ws/src/hdt_robot/hdt_hocu_driver/include/**",
+        "/home/ashwin/source/lab/catkin_ws/src/hdt_robot/hdt_michigan_control/include/**",
+        "/home/ashwin/source/lab/catkin_ws/src/hdt_robot/husky_base/include/**",
+        "/home/ashwin/source/lab/catkin_ws/src/kuka_iiwa_interface/iiwa_robot_controllers/include/**",
+        "/home/ashwin/source/lab/catkin_ws/src/arm_robots/jacobian_follower/include/**",
+        "/home/ashwin/source/lab/catkin_ws/src/kuka_iiwa_interface/lcm/include/**",
+        "/home/ashwin/source/lab/catkin_ws/src/kuka_iiwa_interface/linux_fri_client/include/**",
+        "/home/ashwin/source/lab/catkin_ws/src/pyrosmsg/include/**",
+        "/home/ashwin/source/lab/catkin_ws/src/robotiq/robotiq_3f_gripper_articulated_gazebo_plugins/include/**",
+        "/home/ashwin/source/lab/catkin_ws/src/sdf_tools/include/**",
+        "/home/ashwin/source/lab/catkin_ws/src/kuka_iiwa_interface/victor_hardware_interface/include/**",
+        "/home/ashwin/source/lab/catkin_ws/src/kuka_iiwa_interface/victor_ikfast_plugins/victor_ikfast_left_arm_plugin/include/**",
+        "/home/ashwin/source/lab/catkin_ws/src/kuka_iiwa_interface/victor_ikfast_plugins/victor_ikfast_right_arm_plugin/include/**",
+        "/home/ashwin/source/lab/catkin_ws/src/wsg50-ros-pkg/wsg_50_driver/include/**",
+        "/home/ashwin/source/lab/catkin_ws/src/zed-ros-wrapper/zed-ros-interfaces/include/**",
+        "/usr/include/**"
+      ],
+      "name": "ROS"
+    }
+  ],
+  "version": 4
+}

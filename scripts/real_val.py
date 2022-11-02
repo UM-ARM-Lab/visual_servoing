@@ -2,7 +2,7 @@ from arm_robots.hdt_michigan import Val
 from arc_utilities import ros_init
 from arc_utilities.reliable_tf import ReliableTF
 from visual_servoing.marker_pbvs import MarkerPBVS, MarkerBoardDetector
-from visual_servoing.camera import RealsenseCamera
+from visual_servoing.camera import RealsenseCamera, ZEDCamera
 import rospy
 import numpy as np
 import cv2
@@ -121,8 +121,9 @@ def main():
     detector = MarkerBoardDetector(ids_new, tag_geometry_new, cv2.aruco.DICT_4X4_50)
     #target_detector = MarkerBoardDetector(ids2, tag_geometry)
     target_detector = MarkerBoardDetector(ids_mocap, tag_geometry_mocap, cv2.aruco.DICT_5X5_50)
-    camera = RealsenseCamera(np.zeros(3), np.array([0, 0, 1]), ())
-    pbvs = MarkerPBVS(camera, 0.001, 0.0, 0.25, detector)
+    #camera = RealsenseCamera(np.zeros(3), np.array([0, 0, 1]), ())
+    camera = ZEDCamera()
+    pbvs = MarkerPBVS(camera, 3.4, 1.8, 0.25, detector)
 
     tf_obj = ReliableTF()
     # Create a Val
@@ -141,7 +142,7 @@ def main():
             "T[mocap_zed_base]_[mocap_val_braclet]" : [],
             "T[zed2i_left_optical]_[left_tool]" : [],
             "T[mocap_zed_base]_[mocap_tag]" : np.array([]),
-            "T[zed2i_left_optical]_[target]" : np.array([]),
+            "T[zed2i_left_optical]_[tazed sdk rget]" : np.array([]),
             "T[zed_base]_[zed2i_left_optical]" : Tzedbase_leftoptical,
             "T[target]_[target_adj]" : T_offset,
             "T[bracelet]_[left_tool]" : Tbe,
@@ -172,7 +173,7 @@ def main():
     
     import time
     #time.sleep(13)
-    while(True):
+    while(selection != 13):
         rgb = camera.get_image()[:, :, :3]
         rgb = np.ascontiguousarray(rgb, dtype=np.uint8)
 
@@ -211,7 +212,7 @@ def main():
             val.send_velocity_joint_command(val.get_joint_names("left_arm"), J_pinv @ ctrl_limited)
         
         cv2.imshow("image", rgb)
-        cv2.waitKey(1)
+        selection = cv2.waitKey(1)
     #try:
     #    while(not val.is_left_gripper_closed()):
     #        #val.close_left_gripper()
