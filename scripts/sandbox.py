@@ -180,8 +180,9 @@ while(True):
         Twe_pred, q_pred = mppi.arm_dynamics_tester(Twe, cur_joint_config, q_dot, val.get_link_pose(0), 5)
         Twe_pred_joint = val.get_link_pose(0) @ (mppi.chain.forward_kinematics(q_pred).get_matrix()[0]).cpu().numpy()
         eef_pose_pred_vis.update(Twe_pred)
-        eef_pose_joint_vis.update(Twe_pred_joint)
+        #eef_pose_joint_vis.update(Twe_pred_joint)
 
+    a = 1
     # Step sim
     for _ in range(24):
         #link_pos, link_rot = val.get_eef_pos("camera")

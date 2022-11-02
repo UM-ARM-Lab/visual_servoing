@@ -5,8 +5,9 @@ from pytorch_mppi import mppi
 import pytorch_kinematics as pk
 
 import tf.transformations
+import pybullet as p
 
-from visual_servoing.utils import axis_angle_to_quaternion, quaternion_multiply
+from visual_servoing.utils import axis_angle_to_quaternion, quaternion_invert, quaternion_multiply
 
 class VisualServoMPPI:
 
@@ -37,6 +38,7 @@ class VisualServoMPPI:
         dtype = torch.float32
 
         # Compute frame transforms to get from world relative to base relative
+        self.Twb = Twb
         Tbw = np.linalg.inv(Twb)
         Tbe = Tbw @ Twe
 
@@ -75,13 +77,24 @@ class VisualServoMPPI:
         # get jacobians from current joint configs and compute eef twist
         J = self.chain.jacobian(q)
         eef_twist = torch.squeeze((J @ u.T).T, dim=2)
+        print(eef_twist[:, 3:])
+        print(torch.linalg.norm(eef_twist[:, 3:].squeeze()) * 180/np.pi)
+        #p.addUserDebugLine()
+
+        Twb_torch = torch.tensor(self.Twb, dtype=torch.float32)
+        world_axis = Twb_torch[:3, :3] @ eef_twist[:, 3:].cpu().T
+        p1 = Twb_torch[:3, :3] @ pos.cpu().squeeze() + Twb_torch[:3, 3]
+        p2 = Twb_torch[:3, :3] @ pos.cpu().squeeze() + world_axis.squeeze() * 10 + Twb_torch[:3, 3]
+        p.addUserDebugLine(p1.squeeze().tolist(), p2.squeeze().tolist())
 
         # Update EEF position
         pos_next = pos + eef_twist[:, :3] * self.dt
 
         # EEF rotation
         rot_delta = axis_angle_to_quaternion(self.dt * eef_twist[:, 3:])
-        rot_next =  quaternion_multiply(rot, rot_delta)
+        rot_next =  quaternion_multiply(rot, quaternion_invert(rot_delta))
+        #rot_next =  quaternion_multiply(rot, quaternion_invert(rot_delta))
+        #rot_next =  quaternion_multiply(quaternion_invert(rot_delta), rot)
 
         # Update joint config
         q_next = q + u * self.dt
