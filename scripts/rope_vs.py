@@ -138,7 +138,7 @@ def main():
     target_detector = MarkerBoardDetector(ids_mocap, tag_geometry_mocap, cv2.aruco.DICT_5X5_50)
     camera = RealsenseCamera(np.zeros(3), np.array([0, 0, 1]), ())
     #camera = ZEDCamera()
-    pbvs = MarkerPBVS(camera, 6.4, 1.8, 0.25, detector)
+    pbvs = MarkerPBVS(camera, 3.4, 1.8, 0.25, detector)
 
     tf_obj = ReliableTF()
     listener_obj = Listener("/cdcpd/output", PointCloud2)
@@ -202,11 +202,13 @@ def main():
         # Construct transformation matrix from camera to tool of end effector
         Two = np.eye(4)
         Two[:3, :3] = camera2tool_rot
-        Two[:3, 3] = points[5] # pick point 5
+        Two[:3, 3] = points[10] # pick point 5
         publish_tf(Two, "zed2i_left_camera_optical_frame", "grasp_frame", True)
 
         rgb = camera.get_image()[:, :, :3]
         rgb = np.ascontiguousarray(rgb, dtype=np.uint8)
+
+        Twb = detector.update(rgb, camera.get_intrinsics())
         cv2.imshow("image", rgb)
         selection = cv2.waitKey(1)
     
@@ -225,8 +227,8 @@ def main():
 
             angular_delta, _ = cv2.Rodrigues(Tcb[0:3, 0:3] @ Two[0:3, 0:3].T)
             if(np.linalg.norm(Tcb[0:3, 3] - Two[0:3,3]) < 0.01 and
-                np.linalg.norm(angular_delta) < np.deg2rad(2.5)):
-                #val.send_velocity_joint_command(val.get_joint_names("left_arm"), np.zeros(7))
+                np.linalg.norm(angular_delta) < np.deg2rad(6.5)):
+                val.send_velocity_joint_command(val.get_joint_names("left_arm"), np.zeros(7))
                 break
 
             if(Tcb is not None):
@@ -245,6 +247,8 @@ def main():
             lmda = 0.0000001
             J_pinv = np.dot(np.linalg.inv(np.dot(J.T, J) + lmda * np.eye(7)), J.T)
             ctrl_limited = pbvs.limit_twist(J, J_pinv, ctrl_torso)
+            if(np.linalg.norm(ctrl_limited) == 0):
+                raise Exception
             #ctrl_limited[3:6] = Rtc @ ctrl_cam[3:6]
             #print(ctrl_limited)
             print(J_pinv @ ctrl_limited)
@@ -253,9 +257,10 @@ def main():
         cv2.imshow("image", rgb)
         selection = cv2.waitKey(1)
     try:
-        while(not val.is_left_gripper_closed()):
-            #val.close_left_gripper()
-            val.set_left_gripper(0.1)
+        while(True):
+            print('trying to close gripper')
+            val.close_left_gripper()
+            #val.set_left_gripper(0.01)
             val.send_velocity_joint_command(val.get_joint_names("left_arm"), np.zeros(7))
     except:
         print("val gripper exception")
