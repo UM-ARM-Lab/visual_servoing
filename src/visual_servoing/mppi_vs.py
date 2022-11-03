@@ -24,6 +24,7 @@ class VisualServoMPPI:
         self.chain = pk.build_serial_chain_from_urdf(
             open("/home/ashwin/source/lab/catkin_ws/src/hdt_robot/hdt_michigan_description/urdf/hdt_michigan.urdf").read(), "bracelet")
         self.chain.to(device="cuda")
+        self.line_id = None
 
     def arm_dynamics_tester(self, Twe : np.ndarray, q : np.ndarray, q_dot : np.ndarray, Twb : np.ndarray, n_steps : int = 1):
         """
@@ -77,15 +78,19 @@ class VisualServoMPPI:
         # get jacobians from current joint configs and compute eef twist
         J = self.chain.jacobian(q)
         eef_twist = torch.squeeze((J @ u.T).T, dim=2)
-        print(eef_twist[:, 3:])
-        print(torch.linalg.norm(eef_twist[:, 3:].squeeze()) * 180/np.pi)
+        #print(eef_twist[:, 3:])
+        #print(torch.linalg.norm(eef_twist[:, 3:].squeeze()) * 180/np.pi)
         #p.addUserDebugLine()
 
         Twb_torch = torch.tensor(self.Twb, dtype=torch.float32)
         world_axis = Twb_torch[:3, :3] @ eef_twist[:, 3:].cpu().T
+        self.world_axis = world_axis
         p1 = Twb_torch[:3, :3] @ pos.cpu().squeeze() + Twb_torch[:3, 3]
         p2 = Twb_torch[:3, :3] @ pos.cpu().squeeze() + world_axis.squeeze() * 10 + Twb_torch[:3, 3]
-        p.addUserDebugLine(p1.squeeze().tolist(), p2.squeeze().tolist())
+
+        if self.line_id is not None: 
+            p.removeUserDebugItem(self.line_id)
+        self.line_id = p.addUserDebugLine(p1.squeeze().tolist(), p2.squeeze().tolist())
 
         # Update EEF position
         pos_next = pos + eef_twist[:, :3] * self.dt
@@ -103,7 +108,7 @@ class VisualServoMPPI:
         x_next = torch.cat((pos_next, rot_next, q_next), dim=1)
         return x_next
     
-    def cost(self, q : torch.Tensor, u : torch.Tensor):
+    def cost(self, x : torch.Tensor, u : torch.Tensor):
         """
         q := eef_pose + joint angles (k, 9) 
         u := joint vel (k, 9)
@@ -111,12 +116,11 @@ class VisualServoMPPI:
         c(x, u) = (x - x_r)'Q(x - x_r)  
         """ 
         # compute the forward kinematic configuration from q
-        x = self.chain.forward_kinematics(q) 
+        #x = self.chain.forward_kinematics(q) 
+        self.eef_target_pos - self.x[:, 3] 
 
-
-    def get_control(self, q : np.ndarray):
+    def get_control(self, x : np.ndarray):
         """
         x := current joint angles
         """
-
         ctrl = self.controller.command(x)

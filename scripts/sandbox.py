@@ -171,16 +171,20 @@ while(True):
 
         ctrl_limit = pbvs.limit_twist(jac, jac_pinv, ctrl)
         q_dot = jac_pinv @ ctrl_limit
+        #q_dot= np.array([0.05, 0.05, 1, 1, 0.5, 1.0, 1.0, 0.8, 0.9])
         val.velocity_control("left", q_dot, True)
 
-    if( ctrl_steps % 5 == 0):
+    step = 1
+    if( ctrl_steps % step == 0):
         Twe = get_eef_gt(val)
         cur_joint_config = val.get_joint_states_left() 
         #x = val.get_link_pose(0) @ (mppi.chain.forward_kinematics(cur_joint_config).get_matrix()[0]).cpu().numpy()
-        Twe_pred, q_pred = mppi.arm_dynamics_tester(Twe, cur_joint_config, q_dot, val.get_link_pose(0), 5)
+        Twe_pred, q_pred = mppi.arm_dynamics_tester(Twe, cur_joint_config, q_dot, val.get_link_pose(0), step)
         Twe_pred_joint = val.get_link_pose(0) @ (mppi.chain.forward_kinematics(q_pred).get_matrix()[0]).cpu().numpy()
-        eef_pose_pred_vis.update(Twe_pred)
+        #eef_pose_pred_vis.update(Twe_pred)
         #eef_pose_joint_vis.update(Twe_pred_joint)
+
+    Twe_prev = Twe.copy()
 
     a = 1
     # Step sim
@@ -197,3 +201,11 @@ while(True):
     ctrl_steps += 1
     #camera_pose_vis.update(Twc)
     #target_pose_vis.update(Two)
+    ax, _ = cv2.Rodrigues((Twe @ np.linalg.inv(Twe_prev))[:3, :3])  
+    #print( f"ground truth: \n ax: {ax / np.linalg.norm(ax)}, angle: {np.linalg.norm(ax)}" ) 
+    #print( f"MPPI: \n ax: {mppi.world_axis / torch.linalg.norm(mppi.world_axis)}, angle: {mppi.dt*torch.linalg.norm(mppi.world_axis)}" ) 
+    ax_gt = ax.squeeze()
+    ax_mes = mppi.world_axis.squeeze().numpy() * mppi.dt
+    ax_diff = np.arccos(np.dot(ax_gt, ax_mes) / (np.linalg.norm(ax_gt) * np.linalg.norm(ax_mes))) * 180/np.pi
+    #print(f"axis variation: {ax_diff} degrees -- magnitude variation { 100* (np.linalg.norm(ax_gt) - np.linalg.norm(ax_mes))/np.linalg.norm(ax_mes)}%")
+    #print("next...")
