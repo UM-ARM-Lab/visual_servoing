@@ -41,6 +41,17 @@
             }
         },
         {
+            "name": "rope",
+            "type": "python",
+            "request": "launch",
+            "program": "scripts/rope_vs.py",
+            "console": "integratedTerminal",
+            "cwd": "/home/ashwin/source/lab/catkin_ws/src/visual_servoing",
+            "env" : {
+                "PYTHONPATH" : "/home/ashwin/source/lab/catkin_ws/devel/lib/python3/dist-packages:/opt/ros/noetic/lib/python3/dist-packages"
+            }
+        },
+        {
             "name": "sandbox",
             "type": "python",
             "request": "launch",
