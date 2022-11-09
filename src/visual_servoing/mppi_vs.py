@@ -13,13 +13,13 @@ class VisualServoMPPI:
 
     def __init__(self, dt : float, eef_target_pos : np.ndarray):
         self.dt = dt    
-        self.eef_target_pos = eef_target_pos
+        self.eef_target_pos = torch.tensor(eef_target_pos, device="cuda", dtype=torch.float32)
 
-        #self.controller = mppi.MPPI(self.arm_dynamics, self.cost, 
-        #    9, 1.5 * torch.eye(9), 1000, 100, device="cuda",
-        #    u_min=-1.5 * torch.ones(9, dtype=torch.float32, device='cuda'),
-        #    u_max=1.5 * torch.ones(9, dtype=torch.float32, device='cuda') 
-        #    )
+        self.controller = mppi.MPPI(self.arm_dynamics, self.cost, 
+            9, 1.5 * torch.eye(9), 100, 15, device="cuda",
+            u_min=-1.5 * torch.ones(9, dtype=torch.float32, device='cuda'),
+            u_max=1.5 * torch.ones(9, dtype=torch.float32, device='cuda') 
+            )
 
         self.chain = pk.build_serial_chain_from_urdf(
             open("/home/ashwin/source/lab/catkin_ws/src/hdt_robot/hdt_michigan_description/urdf/hdt_michigan.urdf").read(), "bracelet")
@@ -115,12 +115,22 @@ class VisualServoMPPI:
         
         c(x, u) = (x - x_r)'Q(x - x_r)  
         """ 
-        # compute the forward kinematic configuration from q
-        #x = self.chain.forward_kinematics(q) 
-        self.eef_target_pos - self.x[:, 3] 
+        cost_pos = torch.linalg.norm(self.eef_target_pos - x[:, 3], dim=0)
+        return cost_pos
 
-    def get_control(self, x : np.ndarray):
+    def get_control(self, Twe : np.ndarray, Twb : np.ndarray):
         """
-        x := current joint angles
+        x := current EEF pose estimate
         """
+        # Get starting pos, rot, joint angles as GPU tensors in base frame
+        pos = torch.tensor(Tbe[:3, 3], device=device, dtype=dtype)
+        rot = torch.tensor(tf.transformations.quaternion_from_matrix(Tbe), device=device, dtype=dtype)
+        joint_angle = torch.tensor(q, device=device, dtype=dtype)
+        x = torch.unsqueeze(torch.cat((pos, rot, joint_angle)), dim=0)
+        
+        # Rotate command into the base link frame
+        q_dot_base_frame = q_dot
+        u = torch.unsqueeze(torch.tensor(q_dot_base_frame, device=device, dtype=dtype), dim=0) 
+
         ctrl = self.controller.command(x)
+        return ctrl
