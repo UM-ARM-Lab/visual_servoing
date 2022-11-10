@@ -114,7 +114,7 @@ class VisualServoMPPI:
         delta_rot = quaternion_multiply(x[:, 3:7], quaternion_invert(self.eef_target_rot))
         cost_rot = torch.linalg.norm(quaternion_to_axis_angle(delta_rot), dim=1)
 
-        return cost_pos + 0.01*cost_rot
+        return cost_pos #+ 0.1*cost_rot
 
     def get_control(self, Twe : np.ndarray, Twb : np.ndarray, q : np.ndarray):
         """
