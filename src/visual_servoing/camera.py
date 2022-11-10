@@ -1,6 +1,6 @@
 import numpy as np
 import pybullet as p
-#import pyzed.sl as sl
+import pyzed.sl as sl
 
 import ros_numpy
 #############################################
@@ -271,15 +271,15 @@ class RealsenseCamera(Camera):
 
 
 class ZEDCamera:
-    def __init__(self, camera_eye, camera_look, image_dim):
-        self.camera_eye = camera_eye
-        self.camera_look = camera_look
-        self.image_dim = image_dim
+    def __init__(self):
 
         self.zed = sl.Camera()
         # Open the camera
         init = sl.InitParameters()
         init.camera_resolution = sl.RESOLUTION.HD1080
+        #init.camera_resolution = sl.RESOLUTION.HD2K
+        #init.camera_resolution = sl.RESOLUTION.HD720
+        #init.camera_fps = 30
         init.depth_mode = sl.DEPTH_MODE.PERFORMANCE
         init.coordinate_units = sl.UNIT.MILLIMETER
         err = self.zed.open(init)
@@ -289,17 +289,25 @@ class ZEDCamera:
             exit(1)
         self.image = sl.Mat(self.zed.get_camera_information().camera_resolution.width, self.zed.get_camera_information().camera_resolution.height, sl.MAT_TYPE.U8_C4)
 
+        self.calibration_params = self.zed.get_camera_information().camera_configuration.calibration_parameters
+        print(self.calibration_params)
+
 
     def get_intrinsics(self):
         """Return OpenCV style intrinsics 3x3"""
-        raise NotImplementedError()
+        m = np.eye(3)
+        m[0, 0] = self.calibration_params.left_cam.fx
+        m[1, 1] = self.calibration_params.left_cam.fy
+        m[0, 2] = self.calibration_params.left_cam.cx
+        m[1, 2] = self.calibration_params.left_cam.cy
+        return m
 
     def get_distortion(self):
         raise NotImplementedError()
 
     def get_extrinsics(self):
         """Get homogenous opencv extrisnic transform from world to camera Tcw 4x4"""
-        raise NotImplementedError()
+        return np.eye(4)
 
     def get_view(self):
         """Get OpenGL style view matrix 4x4"""

@@ -1,16 +1,22 @@
 from arm_robots.hdt_michigan import Val
 from arc_utilities import ros_init
 from arc_utilities.reliable_tf import ReliableTF
+from arc_utilities.listener import Listener
 from visual_servoing.marker_pbvs import MarkerPBVS, MarkerBoardDetector
 from visual_servoing.camera import RealsenseCamera, ZEDCamera
+from sensor_msgs.msg import PointCloud2
 import rospy
 import numpy as np
 import cv2
 import pickle
+from sklearn.decomposition import PCA
 
+
+import ros_numpy
 import tf_conversions
 import tf2_ros
 import geometry_msgs.msg
+import tf2_sensor_msgs
 
 # Specify the 3D geometry of the end effector marker board
 tag_len = 0.0305
@@ -115,6 +121,15 @@ def publish_tf(tf, ref_frame, frame, static=False):
     t.transform.rotation.w = quat[3]
     br.sendTransform(t)
 
+def project(u, n):
+    """
+    This functions projects a vector "u" to a plane "n" following a mathematical equation.
+    :param u: vector that is going to be projected. (numpy array)
+    :param n: normal vector of the plane (numpy array)
+    :return: vector projected onto the plane (numpy array)
+    """
+    return u - np.dot(u, n) / np.linalg.norm(n) * n
+
 
 @ros_init.with_ros("real_pbvs_servoing")
 def main():
@@ -126,6 +141,7 @@ def main():
     pbvs = MarkerPBVS(camera, 3.4, 1.8, 0.25, detector)
 
     tf_obj = ReliableTF()
+    listener_obj = Listener("/cdcpd/output", PointCloud2)
     # Create a Val
     val = Val(raise_on_failure=True)
     val.connect()
@@ -152,22 +168,47 @@ def main():
     # Target selection
     selection = None
     while(selection != 32):
+        points_cdcpd_frame = listener_obj.get()#rospy.wait_for_message("/cdcpd/output", PointCloud2)
+        transform = tf_obj.get_transform_msg("zed2i_left_camera_optical_frame", points_cdcpd_frame.header.frame_id)
+        cdcpd_points_vs_frame = tf2_sensor_msgs.do_transform_cloud(points_cdcpd_frame, transform)
+        cdcpd_points_array = ros_numpy.numpify(cdcpd_points_vs_frame)
+        x = cdcpd_points_array['x']
+        y = cdcpd_points_array['y']
+        z = cdcpd_points_array['z']
+        points = np.stack([x, y, z], axis=-1) 
+        #points[0]
+        pca = PCA(n_components=1)
+        # Fit the PCA to the inlier points
+        pca.fit(points)
+        # The first component (vector) is the normal of the plane we are looking for
+        normal = pca.components_[0]
+
+        # Transform of (current) tool in camera
+        Tct = tf_obj.get_transform("zed2i_left_camera_optical_frame", "left_tool")
+        tool_z_in_cam = Tct[:3, 2]
+
+        # Call the project function to get the cut direction vector
+        cut_direction = project(tool_z_in_cam, normal)
+        # Normalize the projected vector
+        cut_direction_normalized = cut_direction / np.linalg.norm(cut_direction)
+        # Cross product between normalized cut director vector and the normal of the plane to obtain the
+        # 2nd principal component
+        cut_y = np.cross(cut_direction_normalized, normal)
+
+        # Get 3x3 rotation matrix
+        # The first row is the x-axis of the tool frame in the camera frame
+        camera2tool_rot = np.array([normal, cut_y, cut_direction_normalized]).T
+
+        # Construct transformation matrix from camera to tool of end effector
+        Two = np.eye(4)
+        Two[:3, :3] = camera2tool_rot
+        Two[:3, 3] = points[10] # pick point 5
+        publish_tf(Two, "zed2i_left_camera_optical_frame", "grasp_frame", True)
+
         rgb = camera.get_image()[:, :, :3]
         rgb = np.ascontiguousarray(rgb, dtype=np.uint8)
-        Two = target_detector.update(rgb, camera.get_intrinsics())
-        if(Two is not None):
-            # Save 
-            data["T[zed2i_left_optical]_[target]"] = np.copy(Two)
-            data["T[mocap_zed_base]_[mocap_tag]"] = tf_obj.get_transform("mocap_zed_base", "mocap_tag")
-            # Transform
-            Two = Two @ T_offset
-            publish_tf(Two, "zed2i_left_camera_optical_frame", "target_estimate", True)
 
         Twb = detector.update(rgb, camera.get_intrinsics())
-        if(Twb is not None):
-            Tbe = tf_obj.get_transform("end_effector_left", "left_tool")
-            publish_tf(Twb @ Tbe, "zed2i_left_camera_optical_frame", "eef_estimate")
-
         cv2.imshow("image", rgb)
         selection = cv2.waitKey(1)
     
@@ -185,9 +226,9 @@ def main():
             data["T[mocap_zed_base]_[mocap_val_braclet]"].append(tf_obj.get_transform("mocap_zed_base", "mocap_val_left_bracelet_val_left_bracelet"))
 
             angular_delta, _ = cv2.Rodrigues(Tcb[0:3, 0:3] @ Two[0:3, 0:3].T)
-            if(np.linalg.norm(Tcb[0:3, 3] - Two[0:3,3]) < 0.001 and
-                np.linalg.norm(angular_delta) < np.deg2rad(0.5)):
-                #val.send_velocity_joint_command(val.get_joint_names("left_arm"), np.zeros(7))
+            if(np.linalg.norm(Tcb[0:3, 3] - Two[0:3,3]) < 0.01 and
+                np.linalg.norm(angular_delta) < np.deg2rad(6.5)):
+                val.send_velocity_joint_command(val.get_joint_names("left_arm"), np.zeros(7))
                 break
 
             if(Tcb is not None):
@@ -206,20 +247,23 @@ def main():
             lmda = 0.0000001
             J_pinv = np.dot(np.linalg.inv(np.dot(J.T, J) + lmda * np.eye(7)), J.T)
             ctrl_limited = pbvs.limit_twist(J, J_pinv, ctrl_torso)
+            if(np.linalg.norm(ctrl_limited) == 0):
+                raise Exception
             #ctrl_limited[3:6] = Rtc @ ctrl_cam[3:6]
-            print(ctrl_limited)
+            #print(ctrl_limited)
             print(J_pinv @ ctrl_limited)
             val.send_velocity_joint_command(val.get_joint_names("left_arm"), J_pinv @ ctrl_limited)
         
         cv2.imshow("image", rgb)
         selection = cv2.waitKey(1)
-    #try:
-    #    while(not val.is_left_gripper_closed()):
-    #        #val.close_left_gripper()
-    #        val.set_left_gripper(0.1)
-    #        val.send_velocity_joint_command(val.get_joint_names("left_arm"), np.zeros(7))
-    #except:
-    #    print("val gripper exception")
+    try:
+        while(True):
+            print('trying to close gripper')
+            val.close_left_gripper()
+            #val.set_left_gripper(0.01)
+            val.send_velocity_joint_command(val.get_joint_names("left_arm"), np.zeros(7))
+    except:
+        print("val gripper exception")
     val.disconnect()
     
     import datetime

@@ -1,0 +1,15 @@
+<launch>
+    <param name="rope_num_points" value="25"/>
+    <param name="max_rope_length" value="0.8"/>
+
+    <node pkg="cdcpd" type="cdcpd_node" name="cdcpd_node" respawn="false" output="screen">
+        <param name="points" value="/zed2i/zed_node/point_cloud/cloud_registered"/>
+        <param name="camera_frame" value="zed2i_left_camera_frame"/>
+        <param name="min_distance_threshold" value="0.01"/>
+        <param name="lambda" value="1.0"/>
+        <param name="moveit_enabled" value="false"/>
+        <!-- gripper info should be a space seperated list of [TF_NAME IDX TF_NAME IDX ...] -->
+        <param name="grippers_info" value="$(find visual_servoing)/gripper_info.yaml"/>
+    </node>
+</launch>
+
