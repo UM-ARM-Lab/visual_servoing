@@ -17,7 +17,8 @@ class VisualServoMPPI:
         """
         self.dt = dt    
         self.eef_target_pos = torch.tensor(eef_target_pos, device="cuda", dtype=torch.float32)
-        self.eef_target_rot = torch.tensor(eef_target_pos, device="cuda", dtype=torch.float32)
+        self.eef_target_rot = torch.tensor(tf.transformations.quaternion_from_matrix(eef_target_pos), 
+            device="cuda", dtype=torch.float32)
 
         self.controller = mppi.MPPI(self.arm_dynamics, self.cost, 
             9, 5 * torch.eye(9), num_samples=1000, horizon=15, device="cuda",
