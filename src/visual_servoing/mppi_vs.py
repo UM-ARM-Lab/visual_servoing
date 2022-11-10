@@ -16,7 +16,7 @@ class VisualServoMPPI:
         self.eef_target_pos = torch.tensor(eef_target_pos, device="cuda", dtype=torch.float32)
 
         self.controller = mppi.MPPI(self.arm_dynamics, self.cost, 
-            9, 1.5 * torch.eye(9), 100, 15, device="cuda",
+            9, 0.05 * torch.eye(9), num_samples=100, horizon=15, device="cuda",
             u_min=-1.5 * torch.ones(9, dtype=torch.float32, device='cuda'),
             u_max=1.5 * torch.ones(9, dtype=torch.float32, device='cuda') 
             )
@@ -77,20 +77,10 @@ class VisualServoMPPI:
 
         # get jacobians from current joint configs and compute eef twist
         J = self.chain.jacobian(q)
-        eef_twist = torch.squeeze((J @ u.T).T, dim=2)
+        eef_twist = torch.squeeze((J @ u.unsqueeze(dim=2)), dim=2)
         #print(eef_twist[:, 3:])
         #print(torch.linalg.norm(eef_twist[:, 3:].squeeze()) * 180/np.pi)
         #p.addUserDebugLine()
-
-        Twb_torch = torch.tensor(self.Twb, dtype=torch.float32)
-        world_axis = Twb_torch[:3, :3] @ eef_twist[:, 3:].cpu().T
-        self.world_axis = world_axis
-        p1 = Twb_torch[:3, :3] @ pos.cpu().squeeze() + Twb_torch[:3, 3]
-        p2 = Twb_torch[:3, :3] @ pos.cpu().squeeze() + world_axis.squeeze() * 10 + Twb_torch[:3, 3]
-
-        if self.line_id is not None: 
-            p.removeUserDebugItem(self.line_id)
-        self.line_id = p.addUserDebugLine(p1.squeeze().tolist(), p2.squeeze().tolist())
 
         # Update EEF position
         pos_next = pos + eef_twist[:, :3] * self.dt
@@ -115,22 +105,26 @@ class VisualServoMPPI:
         
         c(x, u) = (x - x_r)'Q(x - x_r)  
         """ 
-        cost_pos = torch.linalg.norm(self.eef_target_pos - x[:, 3], dim=0)
+        cost_pos = torch.linalg.norm(self.eef_target_pos - x[:, :3], dim=1)
         return cost_pos
 
-    def get_control(self, Twe : np.ndarray, Twb : np.ndarray):
+    def get_control(self, Twe : np.ndarray, Twb : np.ndarray, q : np.ndarray):
         """
         x := current EEF pose estimate
         """
+        device = "cuda"
+        dtype = torch.float32
+
         # Get starting pos, rot, joint angles as GPU tensors in base frame
+        Tbw = np.linalg.inv(Twb)
+        Tbe = Tbw @ Twe
         pos = torch.tensor(Tbe[:3, 3], device=device, dtype=dtype)
         rot = torch.tensor(tf.transformations.quaternion_from_matrix(Tbe), device=device, dtype=dtype)
         joint_angle = torch.tensor(q, device=device, dtype=dtype)
         x = torch.unsqueeze(torch.cat((pos, rot, joint_angle)), dim=0)
         
-        # Rotate command into the base link frame
-        q_dot_base_frame = q_dot
-        u = torch.unsqueeze(torch.tensor(q_dot_base_frame, device=device, dtype=dtype), dim=0) 
 
         ctrl = self.controller.command(x)
-        return ctrl
+        
+
+        return ctrl.cpu().numpy()

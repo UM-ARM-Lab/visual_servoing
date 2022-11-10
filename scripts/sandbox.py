@@ -151,7 +151,8 @@ J = val.get_arm_jacobian("left", True)
 
 pbvs = CheaterPBVS(camera, 1, 1, 1.5, lambda : get_eef_gt(val))
 
-mppi = VisualServoMPPI(dt=0.1, eef_target_pos=Two[0:3, 3])
+Twb = val.get_link_pose(0)
+mppi = VisualServoMPPI(dt=0.1, eef_target_pos=(np.linalg.inv(Twb) @ Two[0:4, 3])[:3])
 
 
 # DELETE
@@ -163,7 +164,9 @@ while(True):
 
     # Send command to val
     Twe = get_eef_gt(val)
-    q_dot = mppi.get_control(Twe)
+
+    cur_joint_config = val.get_joint_states_left() 
+    q_dot = mppi.get_control(Twe, val.get_link_pose(0), cur_joint_config)
     val.velocity_control("left", q_dot, True)
 
     Twe_prev = Twe.copy()
@@ -179,4 +182,4 @@ while(True):
     Twc = np.linalg.inv(camera.get_extrinsics())
     ctrl_steps += 1
     #camera_pose_vis.update(Twc)
-    #target_pose_vis.update(Two)
+    target_pose_vis.update(Two)
