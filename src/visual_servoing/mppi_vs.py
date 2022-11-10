@@ -16,7 +16,7 @@ class VisualServoMPPI:
         self.eef_target_pos = torch.tensor(eef_target_pos, device="cuda", dtype=torch.float32)
 
         self.controller = mppi.MPPI(self.arm_dynamics, self.cost, 
-            9, 0.05 * torch.eye(9), num_samples=100, horizon=15, device="cuda",
+            9, 5 * torch.eye(9), num_samples=1000, horizon=15, device="cuda",
             u_min=-1.5 * torch.ones(9, dtype=torch.float32, device='cuda'),
             u_max=1.5 * torch.ones(9, dtype=torch.float32, device='cuda') 
             )
