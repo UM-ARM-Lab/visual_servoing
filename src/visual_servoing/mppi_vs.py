@@ -92,9 +92,10 @@ class VisualServoMPPI:
 
         # EEF rotation
         rot_delta = axis_angle_to_quaternion(self.dt * eef_twist[:, 3:])
-        rot_next =  quaternion_multiply(rot, quaternion_invert(rot_delta))
+        #rot_next =  quaternion_multiply(rot, quaternion_invert(rot_delta))
         #rot_next =  quaternion_multiply(rot, quaternion_invert(rot_delta))
         #rot_next =  quaternion_multiply(quaternion_invert(rot_delta), rot)
+        rot_next =  quaternion_multiply(quaternion_invert(rot_delta), rot)
 
         # Update joint config
         q_next = q + u * self.dt
@@ -114,7 +115,7 @@ class VisualServoMPPI:
         delta_rot = quaternion_multiply(x[:, 3:7], quaternion_invert(self.eef_target_rot))
         cost_rot = torch.linalg.norm(quaternion_to_axis_angle(delta_rot), dim=1)
 
-        return cost_pos #+ 0.1*cost_rot
+        return cost_pos + 0.1*cost_rot
 
     def get_control(self, Twe : np.ndarray, Twb : np.ndarray, q : np.ndarray):
         """
