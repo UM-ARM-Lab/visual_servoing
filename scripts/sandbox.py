@@ -145,14 +145,15 @@ target_pose_vis = PoseVisualizer()
 # Target
 Two = np.eye(4) 
 Two[0:3, 3] = np.array([-0.2, 0.4, -0.1])
-Two[0:3, 0:3] = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((np.pi/2, np.pi/2, np.pi/2)))).reshape(3, 3) # hard
+Two[0:3, 0:3] = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((-np.pi/2, 0, 0)))).reshape(3, 3) # hard
 
 J = val.get_arm_jacobian("left", True)
 
 pbvs = CheaterPBVS(camera, 1, 1, 1.5, lambda : get_eef_gt(val))
 
 Twb = val.get_link_pose(0)
-mppi = VisualServoMPPI(dt=0.1, eef_target_pos=(np.linalg.inv(Twb) @ Two[0:4, 3])[:3])
+Tbw = np.linalg.inv(Twb)
+mppi = VisualServoMPPI(dt=0.1, eef_target_baselink=Tbw @ Two)
 
 
 # DELETE

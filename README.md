@@ -18,3 +18,6 @@ Dependencies:
 - Tensorflow (working on removing this)
 
 You will need to run: `rosdep install -y -r --from-paths . --ignore-src`
+
+** Credits **
+- Using transformation functions from PyTorch 3D in utils.py

@@ -7,17 +7,17 @@ import pytorch_kinematics as pk
 import tf.transformations
 import pybullet as p
 
-from visual_servoing.utils import axis_angle_to_quaternion, quaternion_invert, quaternion_multiply
+from visual_servoing.utils import axis_angle_to_quaternion, quaternion_invert, quaternion_multiply, quaternion_to_axis_angle
 
 class VisualServoMPPI:
 
-    def __init__(self, dt : float, eef_target_pos : np.ndarray, eef_target_rot : np.ndarray):
+    def __init__(self, dt : float, eef_target_baselink : np.ndarray):
         """
         Targets in base link frame
         """
         self.dt = dt    
-        self.eef_target_pos = torch.tensor(eef_target_pos, device="cuda", dtype=torch.float32)
-        self.eef_target_rot = torch.tensor(tf.transformations.quaternion_from_matrix(eef_target_pos), 
+        self.eef_target_pos = torch.tensor(eef_target_baselink[0:3, 3], device="cuda", dtype=torch.float32)
+        self.eef_target_rot = torch.tensor(tf.transformations.quaternion_from_matrix(eef_target_baselink), 
             device="cuda", dtype=torch.float32)
 
         self.controller = mppi.MPPI(self.arm_dynamics, self.cost, 
@@ -111,9 +111,10 @@ class VisualServoMPPI:
         c(x, u) = (x - x_r)'Q(x - x_r)  
         """ 
         cost_pos = torch.linalg.norm(self.eef_target_pos - x[:, :3], dim=1)
-        cost_rot = quaternion_multiply(x[:, 3:7], quaternion_invert(rot_delta))
+        delta_rot = quaternion_multiply(x[:, 3:7], quaternion_invert(self.eef_target_rot))
+        cost_rot = torch.linalg.norm(quaternion_to_axis_angle(delta_rot), dim=1)
 
-        return cost_pos
+        return cost_pos + 0.01*cost_rot
 
     def get_control(self, Twe : np.ndarray, Twb : np.ndarray, q : np.ndarray):
         """
