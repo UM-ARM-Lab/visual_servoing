@@ -151,29 +151,46 @@ J = val.get_arm_jacobian("left", True)
 
 pbvs = CheaterPBVS(camera, 1, 1, 1.5, lambda : get_eef_gt(val))
 
-Twb = val.get_link_pose(0)
-mppi = VisualServoMPPI(dt=0.1, eef_target_pos=(np.linalg.inv(Twb) @ Two[0:4, 3])[:3])
+mppi = VisualServoMPPI(dt=0.1, eef_target_pos=Two[0:3, 3])
 
 
 # DELETE
 ctrl_steps = 0
 
 while(True):
-    # Get image
-    rgb, depth = camera.get_image()
+    if(ctrl_steps == 0):
+        rgb, depth = camera.get_image()
 
-    # Send command to val
-    Twe = get_eef_gt(val)
+        jac = val.get_arm_jacobian("left", True)
+        jac_pinv = val.get_jacobian_pinv("left", True)
+        print(jac)
 
-    cur_joint_config = val.get_joint_states_left() 
-    q_dot = mppi.get_control(Twe, val.get_link_pose(0), cur_joint_config)
-    val.velocity_control("left", q_dot, True)
+        # Send command to val
+
+        ctrl, Twe = pbvs.do_pbvs(rgb, depth, Two, np.eye(4), jac, jac_pinv, 24) 
+
+        ctrl_limit = pbvs.limit_twist(jac, jac_pinv, ctrl)
+        q_dot = jac_pinv @ ctrl_limit
+        val.velocity_control("left", q_dot, True)
+
+    step = 1
+    if( ctrl_steps % step == 0):
+        Twe = get_eef_gt(val)
+        cur_joint_config = val.get_joint_states_left() 
+        #x = val.get_link_pose(0) @ (mppi.chain.forward_kinematics(cur_joint_config).get_matrix()[0]).cpu().numpy()
+        Twe_pred, q_pred = mppi.arm_dynamics_tester(Twe, cur_joint_config, q_dot, val.get_link_pose(0), step)
+        Twe_pred_joint = val.get_link_pose(0) @ (mppi.chain.forward_kinematics(q_pred).get_matrix()[0]).cpu().numpy()
+        #eef_pose_pred_vis.update(Twe_pred)
+        #eef_pose_joint_vis.update(Twe_pred_joint)
 
     Twe_prev = Twe.copy()
 
     a = 1
     # Step sim
     for _ in range(24):
+        #link_pos, link_rot = val.get_eef_pos("camera")
+        #camera_rot = np.array(p.getMatrixFromQuaternion(link_rot)).reshape(3,3)
+        #camera.upate_from_pose(link_pos, camera_rot)
         p.stepSimulation()
 
     # Visualize current eef pose
@@ -182,4 +199,12 @@ while(True):
     Twc = np.linalg.inv(camera.get_extrinsics())
     ctrl_steps += 1
     #camera_pose_vis.update(Twc)
-    target_pose_vis.update(Two)
+    #target_pose_vis.update(Two)
+    ax, _ = cv2.Rodrigues((Twe @ np.linalg.inv(Twe_prev))[:3, :3])  
+    #print( f"ground truth: \n ax: {ax / np.linalg.norm(ax)}, angle: {np.linalg.norm(ax)}" ) 
+    #print( f"MPPI: \n ax: {mppi.world_axis / torch.linalg.norm(mppi.world_axis)}, angle: {mppi.dt*torch.linalg.norm(mppi.world_axis)}" ) 
+    ax_gt = ax.squeeze()
+    ax_mes = mppi.world_axis.squeeze().numpy() * mppi.dt
+    ax_diff = np.arccos(np.dot(ax_gt, ax_mes) / (np.linalg.norm(ax_gt) * np.linalg.norm(ax_mes))) * 180/np.pi
+    #print(f"axis variation: {ax_diff} degrees -- magnitude variation { 100* (np.linalg.norm(ax_gt) - np.linalg.norm(ax_mes))/np.linalg.norm(ax_mes)}%")
+    #print("next...")
