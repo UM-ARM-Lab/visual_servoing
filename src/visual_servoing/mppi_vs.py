@@ -7,7 +7,8 @@ import pytorch_kinematics as pk
 import tf.transformations
 import pybullet as p
 
-from visual_servoing.utils import axis_angle_to_quaternion, quaternion_invert, quaternion_multiply, quaternion_to_axis_angle
+from visual_servoing.utils import axis_angle_to_quaternion, quaternion_invert, quaternion_multiply, quaternion_to_axis_angle, quaternion_to_matrix, matrix_to_quaternion
+from visual_servoing.se3 import se3_exp_map
 
 class VisualServoMPPI:
 
@@ -83,19 +84,20 @@ class VisualServoMPPI:
         # get jacobians from current joint configs and compute eef twist
         J = self.chain.jacobian(q)
         eef_twist = torch.squeeze((J @ u.unsqueeze(dim=2)), dim=2)
-        #print(eef_twist[:, 3:])
-        #print(torch.linalg.norm(eef_twist[:, 3:].squeeze()) * 180/np.pi)
-        #p.addUserDebugLine()
+
+        delta = se3_exp_map(eef_twist * self.dt)
+        Tbe = torch.zeros((x.shape[0], 4, 4), device='cuda', dtype=torch.float32)
+        Tbe[:, :3, :3] = quaternion_to_matrix(rot) 
+        Tbe[:, :3, 3] = pos
+        Tbe[:, 3, 3] = 1
+        #Tbe_new = delta @ Tbe
+        #Tbe_new = delta @ Tbe
+        Tbe_new = Tbe @ torch.linalg.inv(delta)
+
+        pos_next = Tbe_new[:, :3, 3]
 
         # Update EEF position
-        pos_next = pos + eef_twist[:, :3] * self.dt
-
-        # EEF rotation
-        rot_delta = axis_angle_to_quaternion(self.dt * eef_twist[:, 3:])
-        #rot_next =  quaternion_multiply(rot, quaternion_invert(rot_delta))
-        #rot_next =  quaternion_multiply(rot, quaternion_invert(rot_delta))
-        #rot_next =  quaternion_multiply(quaternion_invert(rot_delta), rot)
-        rot_next =  quaternion_multiply(quaternion_invert(rot_delta), rot)
+        rot_next = matrix_to_quaternion(Tbe_new[:, :3, :3])
 
         # Update joint config
         q_next = q + u * self.dt
