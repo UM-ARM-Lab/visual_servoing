@@ -19,11 +19,11 @@ class VisualServoMPPI:
         self.eef_target_pos = torch.tensor(eef_target_baselink[0:3, 3], device="cuda", dtype=torch.float32)
         self.eef_target_rot = torch.tensor(tf.transformations.quaternion_from_matrix(eef_target_baselink), 
             device="cuda", dtype=torch.float32)
-
         self.controller = mppi.MPPI(self.arm_dynamics, self.cost, 
             9, 5 * torch.eye(9), num_samples=1000, horizon=15, device="cuda",
             u_min=-1.5 * torch.ones(9, dtype=torch.float32, device='cuda'),
-            u_max=1.5 * torch.ones(9, dtype=torch.float32, device='cuda') 
+            u_max=1.5 * torch.ones(9, dtype=torch.float32, device='cuda'),
+            terminal_state_cost=self.terminal_cost
             )
 
         self.chain = pk.build_serial_chain_from_urdf(
@@ -116,6 +116,9 @@ class VisualServoMPPI:
         cost_rot = torch.linalg.norm(quaternion_to_axis_angle(delta_rot), dim=1)
 
         return cost_pos + 0.1*cost_rot
+    
+    def terminal_cost(self, x : torch.Tensor, u : torch.Tensor):
+        return x.shape[2] * self.cost(x[0, :, -1], None)
 
     def get_control(self, Twe : np.ndarray, Twb : np.ndarray, q : np.ndarray):
         """
