@@ -140,6 +140,13 @@ class Val(ArmRobot):
     def velocity_control(self, side, targetVelo, include_torso=False):
         joint_list = self.camera_joints + self.left_arm_joints if include_torso else self.left_arm_joints
         p.setJointMotorControlArray(self.urdf, joint_list, p.VELOCITY_CONTROL, targetVelocities=targetVelo)
+
+    def pos_vel_control(self, side, targetVelo, targetPos, include_torso=False):
+        joint_list = self.camera_joints + self.left_arm_joints if include_torso else self.left_arm_joints
+        p.setJointMotorControlArray(self.urdf, joint_list, p.POSITION_CONTROL, 
+        targetVelocities=targetVelo,
+        targetPositions=targetPos
+        )
     
     def torso_control(self, torso_vel):
         joint_list = self.camera_joints
@@ -157,4 +164,11 @@ class Val(ArmRobot):
         for idx in self.camera_joints + self.left_arm_joints:
             pos, vel, force, torque = p.getJointState(self.urdf, idx)
             joint_states.append(pos)
+        return np.array(joint_states)
+
+    def get_joint_vel_left(self):
+        joint_states = []
+        for idx in self.camera_joints + self.left_arm_joints:
+            pos, vel, force, torque = p.getJointState(self.urdf, idx)
+            joint_states.append(vel)
         return np.array(joint_states)

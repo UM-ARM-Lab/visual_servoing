@@ -20,9 +20,9 @@ class VisualServoMPPI:
         self.eef_target_rot = torch.tensor(tf.transformations.quaternion_from_matrix(eef_target_baselink), 
             device="cuda", dtype=torch.float32)
         self.controller = mppi.MPPI(self.arm_dynamics, self.cost, 
-            9, 5 * torch.eye(9), num_samples=1000, horizon=15, device="cuda",
-            u_min=-1.5 * torch.ones(9, dtype=torch.float32, device='cuda'),
-            u_max=1.5 * torch.ones(9, dtype=torch.float32, device='cuda'),
+            9, 0.5 * torch.eye(9), num_samples=1000, horizon=15, device="cuda",
+            u_min=-0.1 * torch.ones(9, dtype=torch.float32, device='cuda'),
+            u_max=0.1 * torch.ones(9, dtype=torch.float32, device='cuda'),
             terminal_state_cost=self.terminal_cost
             )
 
@@ -95,7 +95,9 @@ class VisualServoMPPI:
         #rot_next =  quaternion_multiply(rot, quaternion_invert(rot_delta))
         #rot_next =  quaternion_multiply(rot, quaternion_invert(rot_delta))
         #rot_next =  quaternion_multiply(quaternion_invert(rot_delta), rot)
+
         rot_next =  quaternion_multiply(quaternion_invert(rot_delta), rot)
+        #rot_next =  quaternion_multiply(rot_delta, rot)
 
         # Update joint config
         q_next = q + u * self.dt
@@ -114,8 +116,7 @@ class VisualServoMPPI:
         cost_pos = torch.linalg.norm(self.eef_target_pos - x[:, :3], dim=1)
         delta_rot = quaternion_multiply(x[:, 3:7], quaternion_invert(self.eef_target_rot))
         cost_rot = torch.linalg.norm(quaternion_to_axis_angle(delta_rot), dim=1)
-
-        return cost_pos + 0.1*cost_rot
+        return 0.0*cost_pos + cost_rot
     
     def terminal_cost(self, x : torch.Tensor, u : torch.Tensor):
         return x.shape[2] * self.cost(x[0, :, -1], None)
@@ -134,7 +135,8 @@ class VisualServoMPPI:
         rot = torch.tensor(tf.transformations.quaternion_from_matrix(Tbe), device=device, dtype=dtype)
         joint_angle = torch.tensor(q, device=device, dtype=dtype)
         x = torch.unsqueeze(torch.cat((pos, rot, joint_angle)), dim=0)
-        
+
+        print(self.cost(x, None))
 
         ctrl = self.controller.command(x)
         

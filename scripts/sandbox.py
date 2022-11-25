@@ -170,7 +170,8 @@ while(True):
     q_dot = mppi.get_control(Twe, val.get_link_pose(0), cur_joint_config)
     #q_dot = val.get_jacobian_pinv("left", True) @ pbvs.get_control(Twe, Two)
     
-    val.velocity_control("left", q_dot, True)
+    #val.velocity_control("left", q_dot, True)
+    val.pos_vel_control("left", q_dot, cur_joint_config + q_dot*0.1, True)
 
     Twe_prev = Twe.copy()
 

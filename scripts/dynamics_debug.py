@@ -149,13 +149,14 @@ Two[0:3, 0:3] = np.array(p.getMatrixFromQuaternion(p.getQuaternionFromEuler((np.
 
 J = val.get_arm_jacobian("left", True)
 
-pbvs = CheaterPBVS(camera, 1, 1, 1.5, lambda : get_eef_gt(val))
+pbvs = CheaterPBVS(camera, 1, 1, 0.1, lambda : get_eef_gt(val))
 
 mppi = VisualServoMPPI(dt=0.1, eef_target_baselink= np.linalg.inv(val.get_link_pose(0)) @ Two)
 
 
 # DELETE
 ctrl_steps = 0
+p.setTimeStep(1/240)
 
 while(True):
     if(ctrl_steps == 0):
@@ -171,7 +172,27 @@ while(True):
 
         ctrl_limit = pbvs.limit_twist(jac, jac_pinv, ctrl)
         q_dot = jac_pinv @ ctrl_limit
+        #q_dot[8] = 0
         val.velocity_control("left", q_dot, True)
+        start_joint_config = val.get_joint_states_left() 
+
+    cur_joint_config = val.get_joint_states_left() 
+
+    val.velocity_control("left", q_dot, True)
+    q_dot = np.zeros(9)
+    q_dot[0] = 0.1
+    q_dot[1] = -0.1
+    #q_dot[4] = -0.1
+    q_dot[7] = -0.1
+    q_dot[8] = 0.1
+
+    val.velocity_control("left", q_dot, True)
+    #val.pos_vel_control("left", q_dot, start_joint_config + q_dot * 0.1*(ctrl_steps), True)
+
+    #print(q_dot)
+    #print(val.get_joint_vel_left())
+    print(np.max(val.get_joint_vel_left() - q_dot))
+    print(np.argmax(val.get_joint_vel_left() - q_dot))
 
     step = 5
     if( ctrl_steps % step == 0):
@@ -200,7 +221,7 @@ while(True):
     ctrl_steps += 1
 
     #camera_pose_vis.update(Twc)
-    #target_pose_vis.update(Two)
+    target_pose_vis.update(Two)
     #ax, _ = cv2.Rodrigues((Twe @ np.linalg.inv(Twe_prev))[:3, :3])  
     #print( f"ground truth: \n ax: {ax / np.linalg.norm(ax)}, angle: {np.linalg.norm(ax)}" ) 
     #print( f"MPPI: \n ax: {mppi.world_axis / torch.linalg.norm(mppi.world_axis)}, angle: {mppi.dt*torch.linalg.norm(mppi.world_axis)}" ) 
