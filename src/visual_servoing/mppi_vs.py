@@ -20,9 +20,9 @@ class VisualServoMPPI:
         self.eef_target_rot = torch.tensor(tf.transformations.quaternion_from_matrix(eef_target_baselink), 
             device="cuda", dtype=torch.float32)
         self.controller = mppi.MPPI(self.arm_dynamics, self.cost, 
-            9, 0.5 * torch.eye(9), num_samples=1000, horizon=15, device="cuda",
-            u_min=-0.1 * torch.ones(9, dtype=torch.float32, device='cuda'),
-            u_max=0.1 * torch.ones(9, dtype=torch.float32, device='cuda'),
+            16, 5 * torch.eye(9), num_samples=1000, horizon=15, device="cuda",
+            u_min=-0.4 * torch.ones(9, dtype=torch.float32, device='cuda'),
+            u_max=0.4 * torch.ones(9, dtype=torch.float32, device='cuda'),
             terminal_state_cost=self.terminal_cost
             )
 
@@ -30,6 +30,7 @@ class VisualServoMPPI:
             open("/home/ashwin/source/lab/catkin_ws/src/hdt_robot/hdt_michigan_description/urdf/hdt_michigan.urdf").read(), "bracelet")
         self.chain.to(device="cuda")
         self.line_id = None
+        self.rollout = None
 
     def arm_dynamics_tester(self, Twe : np.ndarray, q : np.ndarray, q_dot : np.ndarray, Twb : np.ndarray, n_steps : int = 1):
         """
@@ -119,6 +120,8 @@ class VisualServoMPPI:
         return 0.0*cost_pos + cost_rot
     
     def terminal_cost(self, x : torch.Tensor, u : torch.Tensor):
+        #self.rollout = np.copy(x.cpu().numpy())
+        
         return x.shape[2] * self.cost(x[0, :, -1], None)
 
     def get_control(self, Twe : np.ndarray, Twb : np.ndarray, q : np.ndarray):
